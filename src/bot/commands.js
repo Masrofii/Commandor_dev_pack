@@ -1,6 +1,6 @@
 'use strict';
 const fs = require('fs');
-const { t } = require('./i18n');
+const { t, detectLanguage, getLanguageMeta, SUPPORTED_LANGUAGES } = require('./i18n');
 const { createAlias, getUserAliases, getAllowedDomains } = require('../services/aliasService');
 const { getEmails, getEmailById, markRead } = require('../services/emailService');
 const { getUserStorageStats } = require('../services/quotaService');
@@ -9,6 +9,7 @@ const { sendReply } = require('../email/reply');
 const {
   mainMenuKeyboard,
   startInlineKeyboard,
+  languageSelectionKeyboard,
   tosPromptKeyboard,
   tosFullKeyboard,
   tosDeclinedKeyboard,
@@ -25,7 +26,9 @@ const {
   hostingMainMenuKeyboard,
   hostingSitesListKeyboard,
   hostingSiteActionsKeyboard,
-  hostingNodesKeyboard
+  hostingNodesKeyboard,
+  hostingNodeActionsKeyboard,
+  broadcastConfirmKeyboard
 } = require('./keyboards');
 const {
   logChange,
@@ -66,6 +69,7 @@ const { truncate, formatBytes, escapeHtml, extractVerificationCode } = require('
 const { parseSearchQuery } = require('../utils/validation');
 const { createLoginToken } = require('../auth/loginToken');
 const {
+  clearAllUserStates,
   setSearch, peekSearch, takeSearch,
   setReply, peekReply, takeReply,
   setCustomAlias, peekCustomAlias, takeCustomAlias,
@@ -108,8 +112,9 @@ async function registerUser(ctx) {
   const initialRole = isAdmin ? 'admin' : 'user';
   const e = db.prepare('SELECT tg_id,role FROM users WHERE tg_id=?').get(tgId);
   if (!e) {
-    db.prepare('INSERT INTO users(tg_id,username,first_name,last_name,role,alias_limit,storage_limit) VALUES(?,?,?,?,?,999999,107374182400)')
-      .run(tgId, ctx.from.username || null, ctx.from.first_name || null, ctx.from.last_name || null, initialRole);
+    const detectedLang = detectLanguage(ctx);
+    db.prepare('INSERT INTO users(tg_id,username,first_name,last_name,role,alias_limit,storage_limit,language) VALUES(?,?,?,?,?,999999,107374182400,?)')
+      .run(tgId, ctx.from.username || null, ctx.from.first_name || null, ctx.from.last_name || null, initialRole, detectedLang);
   } else {
     if (isAdmin && e.role !== 'admin') {
       db.prepare("UPDATE users SET role='admin',last_seen_at=datetime('now') WHERE tg_id=?").run(tgId);
@@ -595,21 +600,19 @@ async function showStats(ctx) {
   });
 }
 
+async function showLanguageSelection(ctx) {
+  const lang = getLang(ctx);
+  const u = getDb().prepare('SELECT language FROM users WHERE tg_id=?').get(ctx.from.id);
+  const currentLang = u?.language || lang || 'en';
+  return send(ctx, t('language.select', currentLang), languageSelectionKeyboard(currentLang));
+}
+
 async function showSettings(ctx) {
   const lang = getLang(ctx);
   const u = getDb().prepare('SELECT language FROM users WHERE tg_id=?').get(ctx.from.id);
-  const currentLang = (u?.language || 'en').toUpperCase();
-  return send(ctx, t('settings.header', lang, { language: currentLang }), {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: currentLang === 'EN' ? '✅ 🇬🇧 English' : '🇬🇧 English', callback_data: 'set_lang:en' },
-          { text: currentLang === 'AR' ? '✅ 🇸🇦 العربية' : '🇸🇦 العربية', callback_data: 'set_lang:ar' }
-        ],
-        [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
-      ]
-    }
-  });
+  const currentLang = u?.language || lang || 'en';
+  const meta = getLanguageMeta(currentLang);
+  return send(ctx, t('settings.header', lang, { language: `${meta.flag} ${meta.nativeName}` }), languageSelectionKeyboard(currentLang));
 }
 
 async function createThrowaway(ctx, lang) {
@@ -875,76 +878,165 @@ async function showAdminUserDirectory(ctx, page = 1) {
   });
 }
 
-async function promptBroadcastPreview(ctx, messageText) {
+let isBroadcastSending = false;
+
+async function promptBroadcastPreview(ctx, payload) {
   if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
-  const text = (messageText || '').trim();
-  if (!text) {
-    return replyHtml(ctx, '❌ Broadcast announcement message cannot be empty.');
+  
+  let broadcastData = null;
+  if (typeof payload === 'string') {
+    const text = payload.trim();
+    if (!text) {
+      return replyHtml(ctx, t('broadcast.empty', getLang(ctx)));
+    }
+    broadcastData = { type: 'text', text };
+  } else if (payload && typeof payload === 'object') {
+    broadcastData = payload;
   }
+  
+  if (!broadcastData || (!broadcastData.text && !broadcastData.fileId && !broadcastData.caption)) {
+    return replyHtml(ctx, t('broadcast.empty', getLang(ctx)));
+  }
+
   const db = getDb();
   const userCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_banned=0').get()?.c || 0;
 
-  setBroadcastConfirm(ctx.from.id, { text });
+  setBroadcastConfirm(ctx.from.id, broadcastData);
 
-  const previewMsg = `📢 <b>Commandor Mail — Broadcast Announcement Preview</b>\n──────────────────────────────\n<b>Message Content:</b>\n${escapeHtml(text)}\n──────────────────────────────\n👥 <b>Target Audience:</b> <b>${userCount}</b> registered users\n🛡️ <b>Engine:</b> Safe rate-limited delivery (~30 msg/sec)\n\n⚠️ <i>Please review the announcement above. Tap confirm to broadcast to all users.</i>`;
+  const textPreview = broadcastData.text || broadcastData.caption || '';
+  const mediaNote = broadcastData.type !== 'text' ? `\n📎 <b>Media:</b> <code>${broadcastData.type.toUpperCase()}</code>` : '';
+
+  const previewMsg = `📢 <b>Commandor Mail — Broadcast Announcement Preview</b>\n──────────────────────────────${mediaNote}\n<b>Message Content:</b>\n${escapeHtml(textPreview)}\n──────────────────────────────\n👥 <b>Target Audience:</b> <b>${userCount}</b> registered users\n🛡️ <b>Engine:</b> Safe rate-limited delivery (~30 msg/sec)\n\n⚠️ <i>Please review the announcement above. Tap confirm to broadcast to all users.</i>`;
+
+  if (broadcastData.type === 'photo' && broadcastData.fileId) {
+    return ctx.replyWithPhoto(broadcastData.fileId, {
+      caption: previewMsg,
+      parse_mode: 'HTML',
+      ...broadcastConfirmKeyboard()
+    });
+  } else if (broadcastData.type === 'video' && broadcastData.fileId) {
+    return ctx.replyWithVideo(broadcastData.fileId, {
+      caption: previewMsg,
+      parse_mode: 'HTML',
+      ...broadcastConfirmKeyboard()
+    });
+  } else if (broadcastData.type === 'document' && broadcastData.fileId) {
+    return ctx.replyWithDocument(broadcastData.fileId, {
+      caption: previewMsg,
+      parse_mode: 'HTML',
+      ...broadcastConfirmKeyboard()
+    });
+  }
 
   return send(ctx, previewMsg, broadcastConfirmKeyboard());
 }
 
 async function handleConfirmedBroadcast(ctx) {
   if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+  if (isBroadcastSending) {
+    return replyHtml(ctx, t('broadcast.in_progress', getLang(ctx)));
+  }
+
   const state = takeBroadcastConfirm(ctx.from.id);
-  if (!state || !state.text) {
+  if (!state || (!state.text && !state.fileId && !state.caption)) {
     return replyHtml(ctx, '❌ No pending broadcast found or session expired. Please start over with /broadcast.');
   }
 
-  const db = getDb();
-  const users = db.prepare('SELECT tg_id FROM users WHERE is_banned=0').all();
-  let delivered = 0;
-  let blocked = 0;
-  let failed = 0;
-  const startTime = Date.now();
+  isBroadcastSending = true;
+  try {
+    const db = getDb();
+    const users = db.prepare('SELECT tg_id FROM users WHERE is_banned=0').all();
+    let delivered = 0;
+    let blocked = 0;
+    let failed = 0;
+    const startTime = Date.now();
 
-  const statusMsg = await ctx.reply(`⏳ <b>Broadcasting announcement...</b>\nProgress: 0 / ${users.length}`, { parse_mode: 'HTML' });
+    const statusMsg = await ctx.reply(`⏳ <b>Broadcasting announcement...</b>\nProgress: 0 / ${users.length}`, { parse_mode: 'HTML' });
 
-  for (let i = 0; i < users.length; i++) {
-    const u = users[i];
-    try {
-      await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.text}`, { parse_mode: 'HTML' });
-      delivered++;
-    } catch (err) {
-      const errMsg = err?.message || '';
-      if (errMsg.includes('blocked') || errMsg.includes('chat not found') || errMsg.includes('deactivated')) {
-        blocked++;
-      } else {
-        failed++;
-      }
-    }
-
-    if ((i + 1) % 25 === 0 || i === users.length - 1) {
+    for (let i = 0; i < users.length; i++) {
+      const u = users[i];
       try {
-        await ctx.telegram.editMessageText(
-          ctx.chat.id,
-          statusMsg.message_id,
-          undefined,
-          `⏳ <b>Broadcasting announcement...</b>\nProgress: ${i + 1} / ${users.length}\n• Delivered: ${delivered}\n• Blocked: ${blocked}\n• Failed: ${failed}`,
-          { parse_mode: 'HTML' }
-        );
-      } catch {}
+        if (state.type === 'photo' && state.fileId) {
+          await ctx.telegram.sendPhoto(u.tg_id, state.fileId, {
+            caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+            parse_mode: 'HTML'
+          });
+        } else if (state.type === 'video' && state.fileId) {
+          await ctx.telegram.sendVideo(u.tg_id, state.fileId, {
+            caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+            parse_mode: 'HTML'
+          });
+        } else if (state.type === 'document' && state.fileId) {
+          await ctx.telegram.sendDocument(u.tg_id, state.fileId, {
+            caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+            parse_mode: 'HTML'
+          });
+        } else {
+          await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.text}`, { parse_mode: 'HTML' });
+        }
+        delivered++;
+      } catch (err) {
+        if (err.response?.parameters?.retry_after) {
+          const waitSec = err.response.parameters.retry_after;
+          await new Promise(r => setTimeout(r, waitSec * 1000));
+          try {
+            if (state.type === 'photo' && state.fileId) {
+              await ctx.telegram.sendPhoto(u.tg_id, state.fileId, {
+                caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+                parse_mode: 'HTML'
+              });
+            } else {
+              await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.text}`, { parse_mode: 'HTML' });
+            }
+            delivered++;
+          } catch {
+            failed++;
+          }
+        } else {
+          const errMsg = (err?.message || '').toLowerCase();
+          if (errMsg.includes('blocked') || errMsg.includes('chat not found') || errMsg.includes('deactivated') || err?.code === 403) {
+            blocked++;
+          } else {
+            failed++;
+          }
+        }
+      }
+
+      if ((i + 1) % 25 === 0 || i === users.length - 1) {
+        try {
+          await ctx.telegram.editMessageText(
+            ctx.chat.id,
+            statusMsg.message_id,
+            undefined,
+            `⏳ <b>Broadcasting announcement...</b>\nProgress: ${i + 1} / ${users.length}\n• Delivered: ${delivered}\n• Blocked: ${blocked}\n• Failed: ${failed}`,
+            { parse_mode: 'HTML' }
+          );
+        } catch {}
+      }
+
+      await new Promise(r => setTimeout(r, 35));
     }
 
-    await new Promise(r => setTimeout(r, 35));
+    const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    logChange({
+      tgId: ctx.from.id,
+      category: 'broadcast',
+      action: 'broadcast_sent',
+      details: `Broadcast delivered to ${delivered}/${users.length} users in ${elapsedSec}s`,
+      metadata: { total: users.length, delivered, blocked, failed, type: state.type }
+    }).catch(() => {});
+
+    const reportText = `✅ <b>Broadcast Delivery Report</b>\n──────────────────────────────\n📢 <b>Status:</b> Completed\n👥 <b>Total Target Users:</b> <b>${users.length}</b>\n📨 <b>Successfully Delivered:</b> <b>${delivered}</b>\n🚫 <b>Blocked / Deactivated:</b> <b>${blocked}</b>\n⚠️ <b>Other Failures:</b> <b>${failed}</b>\n⏱ <b>Elapsed Time:</b> <b>${elapsedSec}s</b>\n──────────────────────────────`;
+
+    return send(ctx, reportText, {
+      reply_markup: {
+        inline_keyboard: [[{ text: '⬅️ Back to Admin Panel', callback_data: 'admin:dashboard' }]]
+      }
+    });
+  } finally {
+    isBroadcastSending = false;
   }
-
-  const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
-
-  const reportText = `✅ <b>Broadcast Delivery Report</b>\n──────────────────────────────\n📢 <b>Status:</b> Completed\n👥 <b>Total Target Users:</b> <b>${users.length}</b>\n📨 <b>Successfully Delivered:</b> <b>${delivered}</b>\n🚫 <b>Blocked / Deactivated:</b> <b>${blocked}</b>\n⚠️ <b>Other Failures:</b> <b>${failed}</b>\n⏱ <b>Elapsed Time:</b> <b>${elapsedSec}s</b>\n──────────────────────────────`;
-
-  return send(ctx, reportText, {
-    reply_markup: {
-      inline_keyboard: [[{ text: '⬅️ Back to Admin Panel', callback_data: 'admin:dashboard' }]]
-    }
-  });
 }
 
 async function showHostingNodeDetails(ctx, nodeId) {
@@ -1130,7 +1222,17 @@ async function handleAdminVacuum(ctx) {
   }
 }
 
+async function handleCancel(ctx) {
+  clearAllUserStates(ctx.from.id);
+  const lang = getLang(ctx);
+  return replyHtml(ctx, t('cancel.success', lang), {
+    reply_markup: mainMenuKeyboard(isOwnerOrAdmin(ctx.from?.id)).reply_markup
+  });
+}
+
 function setupCommands(bot) {
+  bot.command('cancel', wrap(handleCancel, { allowWithoutTos: true }));
+  bot.command(['language', 'lang'], wrap(showLanguageSelection, { allowWithoutTos: true }));
   bot.start(wrap(async ctx => {
     if (ctx.startPayload === 'login') {
       const lang = getLang(ctx);
@@ -1303,6 +1405,8 @@ function setupCommands(bot) {
     setSearch(ctx.from.id, {});
     return replyHtml(ctx, t('search.prompt', getLang(ctx)));
   }));
+  bot.hears(['🌐 Language', 'Language', '🌐 لغة', 'لغة', 'Sprache', 'Langue', 'Idioma', 'Dil'], wrap(showLanguageSelection));
+  bot.hears(['❌ Cancel', 'Cancel', 'إلغاء', 'Abbrechen', 'Annuler', 'Cancelar', 'İptal', 'Отмена', '取消', 'रद्द करें'], wrap(handleCancel));
   bot.hears('⚙️ Settings', wrap(ctx => showSettings(ctx)));
   bot.hears(['📊 Usage & Stats', '📊 Statistics', 'Statistics', 'Stats'], wrap(ctx => showStats(ctx)));
   bot.hears(['👑 Commandor Admin Panel', '👑 Owner Admin Panel', 'Admin Panel', '👑 Admin Panel'], wrap(ctx => showAdminDashboard(ctx)));
@@ -1319,8 +1423,32 @@ function setupCommands(bot) {
     });
   }));
 
+  bot.on(['photo', 'video', 'document', 'animation'], wrap(async ctx => {
+    if (isOwnerOrAdmin(ctx.from.id) && peekBroadcast(ctx.from.id)) {
+      takeBroadcast(ctx.from.id);
+      let payload = null;
+      if (ctx.message.photo) {
+        const p = ctx.message.photo;
+        payload = { type: 'photo', fileId: p[p.length - 1].file_id, caption: ctx.message.caption || '' };
+      } else if (ctx.message.video) {
+        payload = { type: 'video', fileId: ctx.message.video.file_id, caption: ctx.message.caption || '' };
+      } else if (ctx.message.document) {
+        payload = { type: 'document', fileId: ctx.message.document.file_id, caption: ctx.message.caption || '' };
+      } else if (ctx.message.animation) {
+        payload = { type: 'animation', fileId: ctx.message.animation.file_id, caption: ctx.message.caption || '' };
+      }
+      if (payload) {
+        return promptBroadcastPreview(ctx, payload);
+      }
+    }
+  }));
+
   bot.on('text', wrap(async ctx => {
-    if (ctx.message.text.startsWith('/')) return;
+    const rawText = (ctx.message.text || '').trim();
+    if (rawText.toLowerCase() === '/cancel' || rawText === '❌ Cancel' || rawText === 'Cancel') {
+      return handleCancel(ctx);
+    }
+    if (rawText.startsWith('/')) return;
 
     // Check custom alias creation state
     const customState = peekCustomAlias(ctx.from.id);
@@ -1932,5 +2060,7 @@ module.exports = {
   showSubdomainHub,
   showApiHub,
   showChangeLog,
-  showAdminAuditLogs
+  showAdminAuditLogs,
+  showLanguageSelection,
+  handleCancel
 };

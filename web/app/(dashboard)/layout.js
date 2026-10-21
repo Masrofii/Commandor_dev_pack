@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { isAuthenticated, getUser, clearToken } from '../../lib/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { api } from '../../lib/api';
+import { applyLanguage, getSavedLanguage } from '../../lib/i18n';
 import {
   Squares2X2Icon,
   InboxIcon,
@@ -80,6 +81,10 @@ export default function DashboardLayout({ children }) {
     const t = localStorage.getItem('theme') || 'system';
     const darkActive = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     setIsDark(darkActive);
+
+    // Initialize language & RTL/LTR direction
+    const savedLang = getSavedLanguage();
+    applyLanguage(savedLang);
   }, [router]);
 
   function toggleTheme() {

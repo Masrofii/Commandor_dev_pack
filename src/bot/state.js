@@ -13,10 +13,29 @@ const pendingAddNode=new Map();
 const pendingDeploySite=new Map();
 const pendingSiteHtml=new Map();
 const TTL=5*60*1000;
-function set(map,tgId,value){map.set(tgId,{...value,at:Date.now()});}
+function set(map,tgId,value){
+  const obj = (typeof value === 'object' && value !== null) ? value : { val: value };
+  map.set(tgId,{...obj,at:Date.now()});
+}
 function take(map,tgId){const v=map.get(tgId);if(!v)return null;if(Date.now()-v.at>TTL){map.delete(tgId);return null;}map.delete(tgId);return v;}
 function peek(map,tgId){const v=map.get(tgId);if(!v)return null;if(Date.now()-v.at>TTL){map.delete(tgId);return null;}return v;}
+
+function clearAllUserStates(tgId) {
+  pendingSearch.delete(tgId);
+  pendingReply.delete(tgId);
+  pendingCustomAlias.delete(tgId);
+  pendingBroadcast.delete(tgId);
+  pendingBroadcastConfirm.delete(tgId);
+  pendingSubdomain.delete(tgId);
+  pendingSubdomainTarget.delete(tgId);
+  pendingSubdomainBody.delete(tgId);
+  pendingAddNode.delete(tgId);
+  pendingDeploySite.delete(tgId);
+  pendingSiteHtml.delete(tgId);
+}
+
 module.exports={
+  clearAllUserStates,
   setSearch:(tgId,v)=>set(pendingSearch,tgId,v),
   takeSearch:tgId=>take(pendingSearch,tgId),
   peekSearch:tgId=>peek(pendingSearch,tgId),

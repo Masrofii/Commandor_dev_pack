@@ -50,7 +50,8 @@ const {
   showSubdomainHub,
   showApiHub,
   showChangeLog,
-  showAdminAuditLogs
+  showAdminAuditLogs,
+  showLanguageSelection
 } = require('./commands');
 const { logChange } = require('../services/auditLogger');
 const {
@@ -66,7 +67,7 @@ const { deleteSite, getSiteById } = require('../services/hostingService');
 const { generateQRBuffer } = require('../utils/qr');
 const { truncate, escapeHtml, extractVerificationCode } = require('../utils/helpers');
 const { createLoginToken } = require('../auth/loginToken');
-const { t } = require('./i18n');
+const { t, getLanguageMeta } = require('./i18n');
 const config = require('../../config/config');
 const logger = require('../monitoring/logger');
 
@@ -166,6 +167,8 @@ function setupCallbacks(bot) {
             }
           } else if (param === 'settings') {
             await showSettings(ctx);
+          } else if (param === 'language') {
+            await showLanguageSelection(ctx);
           } else if (param === 'search') {
             const { setSearch } = require('./state');
             setSearch(ctx.from.id, {});
@@ -622,8 +625,9 @@ function setupCallbacks(bot) {
 
         case 'set_lang': {
           getDb().prepare('UPDATE users SET language=? WHERE tg_id=?').run(param, ctx.from.id);
-          await ctx.answerCbQuery('✅ Language updated!').catch(() => {});
-          await showSettings(ctx);
+          const meta = getLanguageMeta(param);
+          await ctx.answerCbQuery(t('language.updated', param, { langName: meta.nativeName })).catch(() => {});
+          await showLanguageSelection(ctx);
           break;
         }
 

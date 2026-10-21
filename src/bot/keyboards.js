@@ -36,7 +36,7 @@ function startInlineKeyboard(webUrl = null, isAdmin = false, unreadCount = 0) {
     ],
     [
       { text: '📝 Change Log', callback_data: 'menu:changelog' },
-      { text: '⚙️ Settings & ToS', callback_data: 'menu:settings' }
+      { text: '🌐 Language', callback_data: 'menu:language' }
     ]
   ];
   if (isAdmin) {
@@ -422,6 +422,33 @@ function hostingNodeActionsKeyboard(node) {
   };
 }
 
+function languageSelectionKeyboard(currentLang = 'en') {
+  const langs = [
+    { code: 'en', flag: '🇬🇧', name: 'English' },
+    { code: 'ar', flag: '🇸🇦', name: 'العربية' },
+    { code: 'ru', flag: '🇷🇺', name: 'Русский' },
+    { code: 'fr', flag: '🇫🇷', name: 'Français' },
+    { code: 'es', flag: '🇪🇸', name: 'Español' },
+    { code: 'de', flag: '🇩🇪', name: 'Deutsch' },
+    { code: 'tr', flag: '🇹🇷', name: 'Türkçe' },
+    { code: 'pt', flag: '🇵🇹', name: 'Português' },
+    { code: 'zh', flag: '🇨🇳', name: '简体中文' },
+    { code: 'hi', flag: '🇮🇳', name: 'हिन्दी' },
+    { code: 'id', flag: '🇮🇩', name: 'Indonesia' },
+    { code: 'ur', flag: '🇵🇰', name: 'اردو' }
+  ];
+  const rows = [];
+  for (let i = 0; i < langs.length; i += 2) {
+    const pair = langs.slice(i, i + 2);
+    rows.push(pair.map(l => ({
+      text: `${l.code === currentLang ? '✅ ' : ''}${l.flag} ${l.name}`,
+      callback_data: `set_lang:${l.code}`
+    })));
+  }
+  rows.push([{ text: '🏠 Back to Menu', callback_data: 'menu:home' }]);
+  return { reply_markup: { inline_keyboard: rows } };
+}
+
 function broadcastConfirmKeyboard() {
   return {
     reply_markup: {
@@ -436,6 +463,7 @@ function broadcastConfirmKeyboard() {
 module.exports = {
   mainMenuKeyboard,
   startInlineKeyboard,
+  languageSelectionKeyboard,
   tosPromptKeyboard,
   tosFullKeyboard,
   tosDeclinedKeyboard,

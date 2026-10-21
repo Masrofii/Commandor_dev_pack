@@ -25,6 +25,7 @@ export const api = {
   loginWithToken: (token) => apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ token }) }),
   loginWithTelegram: (i, t) => apiFetch('/api/auth/telegram', { method: 'POST', body: JSON.stringify({ initData: i, totpToken: t }) }),
   logout: () => apiFetch('/api/auth/logout', { method: 'POST' }),
+  updateProfile: (d) => apiFetch('/api/auth/profile', { method: 'PATCH', body: JSON.stringify(d) }),
   getAliases: (p = {}) => apiFetch('/api/aliases?' + new URLSearchParams(p)),
   createAlias: (d) => apiFetch('/api/aliases', { method: 'POST', body: JSON.stringify(d) }),
   createBurner: (domain) => apiFetch('/api/aliases/burner', { method: 'POST', body: JSON.stringify({ domain }) }),

@@ -4,6 +4,8 @@ const router=express.Router();
 const{consumeLoginToken}=require('../auth/loginToken');
 const{createWebSession}=require('../auth/sessions');
 const{getDb}=require('../../database/database');
+const{requireAuth}=require('../middleware/auth');
+
 // Exchanges a single-use Telegram login token (created by the bot's /login
 // command) for a regular web session token.
 router.post('/login',(req,res)=>{
@@ -17,4 +19,18 @@ router.post('/login',(req,res)=>{
   getDb().prepare('INSERT INTO audit_logs(tg_id,action,ip_address,user_agent)VALUES(?,?,?,?)').run(user.tg_id,'auth.login_bot',ip,req.headers['user-agent']);
   res.json({token:rawToken,sessionId,user:{tgId:user.tg_id,role:user.role,language:user.language,timezone:user.timezone}});
 });
+
+router.patch('/profile', requireAuth, (req, res) => {
+  const { language, timezone } = req.body || {};
+  const db = getDb();
+  if (language) {
+    db.prepare('UPDATE users SET language=? WHERE tg_id=?').run(language, req.tgId);
+  }
+  if (timezone) {
+    db.prepare('UPDATE users SET timezone=? WHERE tg_id=?').run(timezone, req.tgId);
+  }
+  const updated = db.prepare('SELECT tg_id, role, language, timezone FROM users WHERE tg_id=?').get(req.tgId);
+  res.json({ success: true, user: updated });
+});
+
 module.exports=router;

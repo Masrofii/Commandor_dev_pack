@@ -13,6 +13,7 @@ import {
   KeyIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
+import { SUPPORTED_LANGUAGES, applyLanguage, getSavedLanguage } from '../../../lib/i18n';
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState('system');
@@ -20,10 +21,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setTheme(localStorage.getItem('theme') || 'system');
-    try {
-      const u = JSON.parse(localStorage.getItem('current_user') || '{}');
-      if (u.language) setLang(u.language);
-    } catch {}
+    const saved = getSavedLanguage();
+    setLang(saved);
   }, []);
 
   function changeTheme(t) {
@@ -44,15 +43,11 @@ export default function SettingsPage() {
     toast.success(`Theme updated to ${t}`);
   }
 
-  function changeLanguage(l) {
-    setLang(l);
-    document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
-    try {
-      const u = JSON.parse(localStorage.getItem('current_user') || '{}');
-      u.language = l;
-      localStorage.setItem('current_user', JSON.stringify(u));
-    } catch {}
-    toast.success(`Language set to ${l === 'ar' ? 'العربية' : 'English'}`);
+  function changeLanguage(item) {
+    setLang(item.id);
+    applyLanguage(item.id);
+    api.updateProfile({ language: item.id }).catch(() => {});
+    toast.success(`Language set to ${item.flag} ${item.native}`);
   }
 
   return (
@@ -116,23 +111,26 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { id: 'en', label: '🇬🇧 English (Global)', dir: 'ltr' },
-            { id: 'ar', label: '🇸🇦 العربية (Arabic)', dir: 'rtl' },
-          ].map((item) => {
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {SUPPORTED_LANGUAGES.map((item) => {
             const active = lang === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => changeLanguage(item.id)}
-                className={`py-3.5 px-4 rounded-xl border text-xs font-semibold transition-all text-center ${
+                onClick={() => changeLanguage(item)}
+                className={`py-3 px-3 rounded-xl border text-xs font-semibold transition-all flex items-center justify-between gap-2 ${
                   active
-                    ? 'border-indigo-600 dark:border-cyan-500 bg-indigo-50/50 dark:bg-cyber-850 text-indigo-700 dark:text-cyan-400 shadow-sm'
-                    : 'border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-cyber-700'
+                    ? 'border-indigo-600 dark:border-cyan-500 bg-indigo-50/50 dark:bg-cyber-850 text-indigo-700 dark:text-cyan-400 shadow-sm ring-1 ring-cyan-500/20'
+                    : 'border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-cyber-700 hover:bg-slate-50/50 dark:hover:bg-cyber-800/40'
                 }`}
               >
-                {item.label}
+                <span className="flex items-center gap-1.5 truncate">
+                  <span className="text-base">{item.flag}</span>
+                  <span className="font-bold">{item.native}</span>
+                </span>
+                {active && (
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
+                )}
               </button>
             );
           })}
