@@ -1,0 +1,10 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{requireAuth}=require('../middleware/auth');
+const{getUserSessions,revokeSession,revokeAllSessions}=require('../auth/sessions');
+router.use(requireAuth);
+router.get('/',(req,res)=>res.json(getUserSessions(req.tgId).map(s=>({...s,isCurrent:s.id===req.user.id}))));
+router.delete('/:id',(req,res)=>{if(!revokeSession(req.params.id,req.tgId))return res.status(404).json({error:'Session not found'});res.json({status:'revoked'});});
+router.delete('/',(req,res)=>res.json({revoked:revokeAllSessions(req.tgId,req.user.id)}));
+module.exports=router;

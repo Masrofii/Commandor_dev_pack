@@ -1,0 +1,28 @@
+'use strict';
+process.env.NODE_ENV='test';
+process.env.DATABASE_PATH=':memory:';
+process.env.SESSION_SECRET='test-session-key-32-bytes-minimum';
+process.env.JWT_SECRET='test-jwt';
+process.env.DOMAINS='test.com';
+process.env.SPAM_THRESHOLD_SCORE='5';
+process.env.SPAM_BLOCK_SCORE='8';
+process.env.MAX_EMAIL_SIZE='10485760';
+process.env.BURNER_TTL_MINUTES='60';
+process.env.EMAIL_TTL_DAYS='7';
+process.env.ALIAS_TTL_DAYS='30';
+process.env.MAX_ALIASES='5';
+process.env.MAX_STORAGE_BYTES='104857600';
+process.env.BACKUP_DIR='/tmp/test-backups';
+process.env.LOG_DIR='/tmp/test-logs';
+const{initDatabase,runMigrations,closeDatabase,getDb}=require('../../database/database');
+const{createWebSession,verifyWebSession,revokeSession,getUserSessions}=require('../../src/auth/sessions');
+beforeAll(()=>{initDatabase();runMigrations();getDb().prepare("INSERT INTO users(tg_id,username)VALUES(5000,'sessiontest')").run();});
+afterAll(()=>closeDatabase());
+afterEach(()=>getDb().prepare('DELETE FROM web_sessions WHERE tg_id=5000').run());
+describe('Session Management',()=>{
+  test('creates and verifies session',()=>{const{rawToken}=createWebSession(5000,{userAgent:'TestBrowser',ipAddress:'127.0.0.1'});expect(rawToken).toBeDefined();expect(rawToken.length).toBeGreaterThan(32);const s=verifyWebSession(rawToken);expect(s).toBeDefined();expect(s.tg_id).toBe(5000);});
+  test('returns null for invalid token',()=>{expect(verifyWebSession('invalid-token-xyz')).toBeNull();});
+  test('revokes session',()=>{const{rawToken,sessionId}=createWebSession(5000);revokeSession(sessionId,5000);expect(verifyWebSession(rawToken)).toBeNull();});
+  test('does not expose raw token in session list',()=>{createWebSession(5000);const sessions=getUserSessions(5000);sessions.forEach(s=>expect(s.token_hash).toBeUndefined());});
+  test('expired sessions return null',()=>{const db=getDb();const{rawToken}=createWebSession(5000);db.prepare("UPDATE web_sessions SET expires_at=datetime('now','-1 hour')WHERE tg_id=5000").run();expect(verifyWebSession(rawToken)).toBeNull();});
+});

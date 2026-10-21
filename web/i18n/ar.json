@@ -1,0 +1,20 @@
+{
+  "nav.inbox": "صندوق الوارد",
+  "nav.aliases": "العناوين",
+  "nav.webhooks": "الويب هوك",
+  "nav.api_keys": "مفاتيح API",
+  "nav.sessions": "الجلسات",
+  "nav.settings": "الإعدادات",
+  "nav.admin": "الإدارة",
+  "inbox.title": "صندوق الوارد",
+  "inbox.empty": "لا توجد رسائل",
+  "inbox.search_placeholder": "بحث في الرسائل…",
+  "aliases.title": "العناوين",
+  "aliases.new": "عنوان جديد",
+  "aliases.burner": "عنوان مؤقت",
+  "settings.appearance": "المظهر",
+  "settings.language": "اللغة",
+  "settings.theme_light": "فاتح",
+  "settings.theme_dark": "داكن",
+  "settings.theme_system": "النظام"
+}

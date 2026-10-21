@@ -1,0 +1,47 @@
+version: '3.9'
+services:
+  api:
+    build: { context: ., target: runner }
+    container_name: tempmail-api
+    restart: unless-stopped
+    env_file: .env
+    ports: ["127.0.0.1:3000:3000"]
+    volumes:
+      - tempmail-data:/app/data
+      - tempmail-uploads:/app/uploads
+      - tempmail-backups:/app/backups
+      - tempmail-logs:/app/logs
+      - tempmail-exports:/app/exports
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/app.db
+      - UPLOAD_DIR=/app/uploads
+      - BACKUP_DIR=/app/backups
+      - LOG_DIR=/app/logs
+    healthcheck:
+      test: ["CMD","node","-e","require('http').get('http://localhost:3000/health',r=>r.statusCode===200?process.exit(0):process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [tempmail-net]
+  web:
+    build: { context: ./web }
+    container_name: tempmail-web
+    restart: unless-stopped
+    ports: ["127.0.0.1:3001:3001"]
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://api.mail.example.com
+      - PORT=3001
+    networks: [tempmail-net]
+    depends_on:
+      api: { condition: service_healthy }
+volumes:
+  tempmail-data:
+  tempmail-uploads:
+  tempmail-backups:
+  tempmail-logs:
+  tempmail-exports:
+networks:
+  tempmail-net: { driver: bridge }

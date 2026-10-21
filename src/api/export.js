@@ -1,0 +1,11 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{requireAuth}=require('../middleware/auth');
+const{startExportJob,getExportJob}=require('../services/exportService');
+const fs=require('fs'),path=require('path');
+router.use(requireAuth);
+router.post('/',async(req,res)=>{const{format='zip',filters}=req.body;if(!['zip','mbox'].includes(format))return res.status(400).json({error:'Invalid format'});const jobId=await startExportJob(req.tgId,format,filters);res.status(202).json({jobId,status:'pending'});});
+router.get('/:jobId',(req,res)=>{const j=getExportJob(req.params.jobId,req.tgId);if(!j)return res.status(404).json({error:'Job not found'});res.json(j);});
+router.get('/:jobId/download',(req,res)=>{const j=getExportJob(req.params.jobId,req.tgId);if(!j)return res.status(404).json({error:'Job not found'});if(j.status!=='complete')return res.status(400).json({error:'Export not ready'});if(!fs.existsSync(j.file_path))return res.status(404).json({error:'File not found'});res.setHeader('Content-Disposition',`attachment; filename="${path.basename(j.file_path)}"`);res.setHeader('Content-Type','application/octet-stream');fs.createReadStream(j.file_path).pipe(res);});
+module.exports=router;

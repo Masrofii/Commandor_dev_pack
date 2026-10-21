@@ -1,0 +1,16 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{requireAuthOrApiKey}=require('../middleware/auth');
+const{getEmails,getEmailById,getUnreadCount,markRead,markStarred,softDeleteEmail}=require('../services/emailService');
+const{getDb}=require('../../database/database');
+const{parseSearchQuery}=require('../utils/validation');
+const{notifyWebSocket}=require('../services/notificationService');
+router.use(requireAuthOrApiKey(['emails:read']));
+router.get('/',(req,res)=>{try{const{page,limit,alias,unread,starred,q}=req.query;const parsed=q?parseSearchQuery(q):{};res.json(getEmails(req.tgId,{page:parseInt(page)||1,limit:Math.min(parseInt(limit)||20,100),alias,unread:unread==='true'?true:undefined,starred:starred==='true'?true:undefined,search:parsed.ftsQuery||undefined}));}catch(err){res.status(500).json({error:err.message});}});
+router.get('/unread-count',(req,res)=>{try{res.json({unread:getUnreadCount(req.tgId)});}catch(err){res.status(500).json({error:err.message});}});
+router.get('/:id',(req,res)=>{const e=getEmailById(parseInt(req.params.id),req.tgId);if(!e)return res.status(404).json({error:'Email not found'});markRead(e.id,req.tgId);notifyWebSocket(req.tgId,'email.read',{id:e.id});const atts=getDb().prepare('SELECT id,filename,safe_filename,mime_type,size,sha256,scan_status FROM attachments WHERE email_id=?').all(e.id);res.json({...e,attachments:atts});});
+router.patch('/:id/read',(req,res)=>{if(!markRead(parseInt(req.params.id),req.tgId))return res.status(404).json({error:'Email not found'});notifyWebSocket(req.tgId,'email.read',{id:parseInt(req.params.id)});res.json({status:'ok'});});
+router.patch('/:id/star',(req,res)=>{if(!markStarred(parseInt(req.params.id),req.tgId,req.body.starred!==false))return res.status(404).json({error:'Email not found'});res.json({status:'ok'});});
+router.delete('/:id',(req,res)=>{if(!softDeleteEmail(parseInt(req.params.id),req.tgId))return res.status(404).json({error:'Email not found'});notifyWebSocket(req.tgId,'email.deleted',{id:parseInt(req.params.id)});res.json({status:'deleted'});});
+module.exports=router;

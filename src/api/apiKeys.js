@@ -1,0 +1,11 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{requireAuth}=require('../middleware/auth');
+const{createApiKey,getUserApiKeys,revokeApiKey,VALID_SCOPES}=require('../services/apiKeyService');
+const{body,validationResult}=require('express-validator');
+router.use(requireAuth);
+router.get('/',(req,res)=>res.json({keys:getUserApiKeys(req.tgId),validScopes:VALID_SCOPES}));
+router.post('/',[body('name').isString().isLength({min:1,max:100}),body('scopes').isArray()],(req,res)=>{const err=validationResult(req);if(!err.isEmpty())return res.status(400).json({errors:err.array()});try{res.status(201).json(createApiKey({tgId:req.tgId,name:req.body.name,scopes:req.body.scopes}));}catch(e){res.status(400).json({error:e.message});}});
+router.delete('/:id',(req,res)=>{if(!revokeApiKey(parseInt(req.params.id),req.tgId))return res.status(404).json({error:'Key not found'});res.json({status:'revoked'});});
+module.exports=router;

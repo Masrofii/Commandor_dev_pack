@@ -1,0 +1,13 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{requireAuth}=require('../middleware/auth');
+const{getDb}=require('../../database/database');
+const cron=require('node-cron');
+const{body,validationResult}=require('express-validator');
+router.use(requireAuth);
+router.get('/',(req,res)=>res.json(getDb().prepare('SELECT * FROM scheduled_alias_jobs WHERE tg_id=? ORDER BY created_at DESC').all(req.tgId)));
+router.post('/',[body('cronExpression').isString(),body('domain').isString()],async(req,res)=>{const err=validationResult(req);if(!err.isEmpty())return res.status(400).json({errors:err.array()});const{cronExpression,domain,aliasType='throwaway'}=req.body;if(!cron.validate(cronExpression))return res.status(400).json({error:'Invalid cron expression'});const db=getDb();const r=db.prepare('INSERT INTO scheduled_alias_jobs(tg_id,cron_expression,domain,alias_type)VALUES(?,?,?,?)').run(req.tgId,cronExpression,domain,aliasType);res.status(201).json(db.prepare('SELECT * FROM scheduled_alias_jobs WHERE id=?').get(r.lastInsertRowid));});
+router.patch('/:id',(req,res)=>{const db=getDb();const j=db.prepare('SELECT * FROM scheduled_alias_jobs WHERE id=? AND tg_id=?').get(req.params.id,req.tgId);if(!j)return res.status(404).json({error:'Not found'});if(req.body.enabled!==undefined)db.prepare('UPDATE scheduled_alias_jobs SET enabled=? WHERE id=?').run(req.body.enabled?1:0,req.params.id);res.json(db.prepare('SELECT * FROM scheduled_alias_jobs WHERE id=?').get(req.params.id));});
+router.delete('/:id',(req,res)=>{if(!getDb().prepare('DELETE FROM scheduled_alias_jobs WHERE id=? AND tg_id=?').run(req.params.id,req.tgId).changes)return res.status(404).json({error:'Not found'});res.json({status:'deleted'});});
+module.exports=router;

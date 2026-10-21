@@ -1,0 +1,11 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{requireAuth}=require('../middleware/auth');
+const{getDb}=require('../../database/database');
+const{isValidEmail}=require('../utils/validation');
+router.use(requireAuth);
+router.post('/aliases/:address/forward',async(req,res)=>{const{destination}=req.body;if(!destination||!isValidEmail(destination))return res.status(400).json({error:'Valid destination email required'});const db=getDb();const alias=db.prepare('SELECT * FROM aliases WHERE address=? AND tg_id=?').get(req.params.address,req.tgId);if(!alias)return res.status(404).json({error:'Alias not found'});if(destination.toLowerCase()===req.params.address.toLowerCase())return res.status(400).json({error:'Cannot forward to self'});db.prepare('UPDATE aliases SET forward_to=?,forward_verified=1 WHERE address=?').run(destination,req.params.address);res.json({status:'set',destination});});
+router.delete('/aliases/:address/forward',(req,res)=>{const r=getDb().prepare('UPDATE aliases SET forward_to=NULL,forward_verified=0 WHERE address=? AND tg_id=?').run(req.params.address,req.tgId);if(!r.changes)return res.status(404).json({error:'Alias not found'});res.json({status:'cleared'});});
+router.get('/log',(req,res)=>res.json(getDb().prepare('SELECT fl.* FROM forwarding_log fl JOIN emails e ON fl.email_id=e.id JOIN aliases a ON e.alias_address=a.address WHERE a.tg_id=? ORDER BY fl.created_at DESC LIMIT 50').all(req.tgId)));
+module.exports=router;

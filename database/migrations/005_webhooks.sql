@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS webhooks(id INTEGER PRIMARY KEY AUTOINCREMENT,tg_id INTEGER NOT NULL,name TEXT NOT NULL,url TEXT NOT NULL,secret TEXT,enabled INTEGER NOT NULL DEFAULT 1,event_types TEXT NOT NULL DEFAULT '["email.received"]',created_at DATETIME NOT NULL DEFAULT(datetime('now')),FOREIGN KEY(tg_id)REFERENCES users(tg_id)ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS webhook_deliveries(id INTEGER PRIMARY KEY AUTOINCREMENT,webhook_id INTEGER NOT NULL,email_id INTEGER,event_type TEXT NOT NULL,payload_hash TEXT,attempt_number INTEGER NOT NULL DEFAULT 1,status TEXT NOT NULL DEFAULT 'pending',http_status INTEGER,response_time_ms INTEGER,error TEXT,next_retry_at DATETIME,created_at DATETIME NOT NULL DEFAULT(datetime('now')),completed_at DATETIME,FOREIGN KEY(webhook_id)REFERENCES webhooks(id)ON DELETE CASCADE);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status,next_retry_at);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_email ON webhook_deliveries(email_id);

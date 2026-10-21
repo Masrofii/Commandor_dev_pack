@@ -1,0 +1,20 @@
+{
+  "nav.inbox": "Inbox",
+  "nav.aliases": "Aliases",
+  "nav.webhooks": "Webhooks",
+  "nav.api_keys": "API Keys",
+  "nav.sessions": "Sessions",
+  "nav.settings": "Settings",
+  "nav.admin": "Admin",
+  "inbox.title": "Inbox",
+  "inbox.empty": "No emails yet",
+  "inbox.search_placeholder": "Search emails…",
+  "aliases.title": "Aliases",
+  "aliases.new": "New Alias",
+  "aliases.burner": "Burner",
+  "settings.appearance": "Appearance",
+  "settings.language": "Language",
+  "settings.theme_light": "Light",
+  "settings.theme_dark": "Dark",
+  "settings.theme_system": "System"
+}

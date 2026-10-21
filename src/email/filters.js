@@ -1,0 +1,8 @@
+'use strict';
+const{getDb}=require('../../database/database');
+const{safeRegexTest}=require('../utils/validation');
+const logger=require('../monitoring/logger');
+function getUserFilters(tgId,aliasAddress){return getDb().prepare('SELECT * FROM filters WHERE tg_id=? AND enabled=1 AND(alias_address IS NULL OR alias_address=?)ORDER BY priority DESC').all(tgId,aliasAddress);}
+function matchFilter(filter,email){const{match_field,match_type,match_value}=filter;let fv='';switch(match_field){case'sender':fv=email.sender||'';break;case'subject':fv=email.subject||'';break;case'body':fv=email.textBody||'';break;case'alias':fv=email.aliasAddress||'';break;default:return false;}switch(match_type){case'contains':return fv.toLowerCase().includes(match_value.toLowerCase());case'equals':return fv.toLowerCase()===match_value.toLowerCase();case'starts_with':return fv.toLowerCase().startsWith(match_value.toLowerCase());case'ends_with':return fv.toLowerCase().endsWith(match_value.toLowerCase());case'regex':return safeRegexTest(match_value,fv);case'not_contains':return!fv.toLowerCase().includes(match_value.toLowerCase());default:return false;}}
+function applyFilters(tgId,email){const filters=getUserFilters(tgId,email.aliasAddress);const actions=[];for(const f of filters){if(matchFilter(f,email)){try{const params=JSON.parse(f.action_params||'{}');actions.push({action:f.action,params,filterId:f.id});if(f.action==='DROP'||f.action==='BLOCK')return actions;}catch(e){logger.error({filterId:f.id,err:e.message},'Filter action parse error');}}}return actions;}
+module.exports={applyFilters,matchFilter,getUserFilters};

@@ -1,0 +1,11 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{getDb}=require('../../database/database');
+const{getDatabaseStats,getProcessStats,getCounters}=require('../monitoring/metrics');
+const fs=require('fs');
+const config=require('../../config/config');
+router.get('/health',(req,res)=>res.json({status:'ok',timestamp:new Date().toISOString()}));
+router.get('/ready',(req,res)=>{const c={};try{getDb().prepare('SELECT 1').get();c.database='ok';}catch{c.database='error';}try{fs.accessSync(config.storage.uploadDir,fs.constants.W_OK);c.storage='ok';}catch{c.storage='error';}c.config=config.domains.list.length>0?'ok':'warning';const ok=Object.values(c).every(v=>v==='ok');res.status(ok?200:503).json({status:ok?'ready':'degraded',checks:c});});
+router.get('/metrics',async(req,res)=>{try{const[db,proc,ctrs]=await Promise.all([getDatabaseStats(),Promise.resolve(getProcessStats()),Promise.resolve(getCounters())]);res.json({database:db,process:proc,counters:ctrs,timestamp:Date.now()});}catch(err){res.status(500).json({error:err.message});}});
+module.exports=router;

@@ -1,0 +1,10 @@
+name = "tempmail-email-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[triggers]
+email_routing = true
+
+# Set secrets via:
+#   wrangler secret put BACKEND_URL
+#   wrangler secret put INCOMING_SECRET

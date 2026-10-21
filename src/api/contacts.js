@@ -1,0 +1,12 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const{requireAuth}=require('../middleware/auth');
+const{getContacts,createContact,deleteContact}=require('../services/contactService');
+const{getDb}=require('../../database/database');
+const{body,validationResult}=require('express-validator');
+router.use(requireAuth);
+router.get('/',(req,res)=>res.json(getContacts(req.tgId,req.query.search)));
+router.post('/',[body('name').isString().isLength({min:1,max:200}),body('email').isEmail()],(req,res)=>{const err=validationResult(req);if(!err.isEmpty())return res.status(400).json({errors:err.array()});try{res.status(201).json(createContact({tgId:req.tgId,name:req.body.name,email:req.body.email,notes:req.body.notes,trusted:req.body.trusted}));}catch(e){if(e.message.includes('UNIQUE'))return res.status(409).json({error:'Contact already exists'});res.status(400).json({error:e.message});}});
+router.delete('/:id',(req,res)=>{if(!deleteContact(req.params.id,req.tgId))return res.status(404).json({error:'Not found'});res.json({status:'deleted'});});
+module.exports=router;
