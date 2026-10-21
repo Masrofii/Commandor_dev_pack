@@ -2,8 +2,8 @@ import './globals.css';
 import ToastProvider from '../components/ToastProvider';
 
 export const metadata = {
-  title: 'TempMail Manager',
-  description: 'Self-hosted temporary email management platform',
+  title: 'Commandor Mail — Email Infrastructure & Alias Platform',
+  description: 'Enterprise-grade email alias management, domain routing, and cloud hosting infrastructure platform.',
   manifest: '/manifest.json'
 };
 
@@ -17,7 +17,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
+      <body className="bg-slate-50 dark:bg-cyber-950 text-slate-900 dark:text-slate-100 min-h-screen antialiased selection:bg-indigo-500/20 selection:text-indigo-400">
         <ToastProvider />
         {children}
       </body>

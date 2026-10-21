@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
 import {
@@ -15,12 +16,13 @@ import {
   PauseIcon,
   PlayIcon,
   XMarkIcon,
-  ArrowTopRightOnSquareIcon,
-  FunnelIcon
+  InboxIcon,
+  MagnifyingGlassIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 
 export default function AliasesPage() {
-  const { data, isLoading, mutate } = useSWR('aliases-list', () => api.getAliases({ limit: 100 }));
+  const { data, isLoading, mutate } = useSWR('aliases-list', () => api.getAliases({ limit: 150 }));
   const { data: domainsData } = useSWR('domains-list', () => api.getDomains());
 
   const [showCreate, setShowCreate] = useState(false);
@@ -30,18 +32,16 @@ export default function AliasesPage() {
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [search, setSearch] = useState('');
-  const [filterActive, setFilterActive] = useState('all'); // all, active, burner
+  const [filterActive, setFilterActive] = useState('all'); // all, active, paused, burner, custom
   const [qrModalAlias, setQrModalAlias] = useState(null);
+  const [deleteConfirmAlias, setDeleteConfirmAlias] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const aliases = data?.aliases || [];
   const domains = domainsData?.domains || [];
 
   const handleCreateAlias = async (isBurner = false) => {
-    const domain = selDomain || domains[0];
-    if (!domain) {
-      toast.error('No domains available');
-      return;
-    }
+    const domain = selDomain || domains[0] || 'commandor.my.id';
     setCreating(true);
     try {
       if (isBurner) {
@@ -50,7 +50,7 @@ export default function AliasesPage() {
       } else {
         const a = await api.createAlias({
           domain,
-          label: customLabel || undefined,
+          label: customLabel.trim() || undefined,
           customName: customName.trim() || undefined
         });
         toast.success(`Alias created:\n${a.address}`, { duration: 4000 });
@@ -66,14 +66,18 @@ export default function AliasesPage() {
     }
   };
 
-  const handleDeleteAlias = async (address) => {
-    if (!confirm(`Are you sure you want to delete ${address}?`)) return;
+  const confirmDelete = async () => {
+    if (!deleteConfirmAlias) return;
+    setDeleting(true);
     try {
-      await api.deleteAlias(address);
-      toast.success('Alias deleted');
+      await api.deleteAlias(deleteConfirmAlias);
+      toast.success('Alias deleted successfully');
+      setDeleteConfirmAlias(null);
       mutate();
     } catch (err) {
       toast.error(err.message || 'Failed to delete alias');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -111,16 +115,21 @@ export default function AliasesPage() {
 
   // Filtered Aliases
   const filteredAliases = aliases.filter((a) => {
-    if (search && !a.address.toLowerCase().includes(search.toLowerCase()) && !(a.label && a.label.toLowerCase().includes(search.toLowerCase()))) {
-      return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchAddress = a.address.toLowerCase().includes(q);
+      const matchLabel = a.label && a.label.toLowerCase().includes(q);
+      if (!matchAddress && !matchLabel) return false;
     }
     if (filterActive === 'active' && !a.active) return false;
+    if (filterActive === 'paused' && a.active) return false;
     if (filterActive === 'burner' && !a.burner) return false;
+    if (filterActive === 'custom' && !(a.alias_type === 'custom' || a.address.includes('-ca@'))) return false;
     return true;
   });
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 pb-20">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 pb-20">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
@@ -128,7 +137,7 @@ export default function AliasesPage() {
             Email Aliases
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Create, manage, and monitor your private temporary email addresses
+            Create, manage, and monitor your private temporary and custom email addresses
           </p>
         </div>
 
@@ -136,7 +145,7 @@ export default function AliasesPage() {
           <button
             onClick={() => handleCreateAlias(true)}
             disabled={creating}
-            className="btn bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs py-2 px-3.5 shadow-sm"
+            className="btn bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs py-2 px-3.5 shadow-sm font-semibold"
           >
             <FireIcon className="w-4 h-4 text-rose-500" />
             <span>1-Hour Burner</span>
@@ -144,7 +153,7 @@ export default function AliasesPage() {
 
           <button
             onClick={() => setShowCreate((v) => !v)}
-            className="btn-primary py-2 px-3.5 text-xs shadow-sm"
+            className="btn-primary py-2 px-3.5 text-xs shadow-sm font-semibold"
           >
             <PlusIcon className="w-4 h-4" />
             <span>New Alias</span>
@@ -154,10 +163,11 @@ export default function AliasesPage() {
 
       {/* Create Alias Modal/Card */}
       {showCreate && (
-        <div className="card p-5 border-indigo-200 dark:border-indigo-900/80 shadow-md animate-fade-in space-y-4">
+        <div className="card p-5 sm:p-6 border-indigo-200 dark:border-cyber-800 shadow-md animate-fade-in space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-              Create New Email Alias
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <SparklesIcon className="w-4 h-4 text-indigo-500" />
+              <span>Generate New Email Alias</span>
             </h3>
             <button
               onClick={() => setShowCreate(false)}
@@ -169,13 +179,13 @@ export default function AliasesPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-semibold text-slate-500 mb-1">
                 Domain
               </label>
               <select
                 value={selDomain}
                 onChange={(e) => setSelDomain(e.target.value)}
-                className="input"
+                className="input text-xs"
               >
                 {domains.map((d) => (
                   <option key={d} value={d}>
@@ -186,33 +196,48 @@ export default function AliasesPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Custom Name (e.g. example ➔ example-ca)
+              <label className="block text-xs font-semibold text-slate-500 mb-1">
+                Custom Name (e.g. <code>github</code> ➔ <code>github-ca</code>)
               </label>
               <input
                 type="text"
-                placeholder="Optional (auto-adds -ca)"
+                placeholder="Leave blank for random uuid"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                className="input"
+                className="input text-xs font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Label / Purpose (Optional)
+              <label className="block text-xs font-semibold text-slate-500 mb-1">
+                Label / Tag (Personal, Work, Trial)
               </label>
               <input
                 type="text"
-                placeholder="e.g. Netflix, Discord, Trial"
+                placeholder="e.g. Personal, Work, Trial"
                 value={customLabel}
                 onChange={(e) => setCustomLabel(e.target.value)}
-                className="input"
+                className="input text-xs"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          {/* Quick preset tags */}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[11px] text-slate-400">Quick Tags:</span>
+            {['Personal', 'Work', 'Newsletter', 'Trial', 'Shopping'].map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setCustomLabel(tag)}
+                className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-cyber-850 hover:bg-slate-200 dark:hover:bg-cyber-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
+              >
+                +{tag}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-cyber-800">
             <button
               onClick={() => setShowCreate(false)}
               className="btn-secondary py-1.5 px-3.5 text-xs"
@@ -222,7 +247,7 @@ export default function AliasesPage() {
             <button
               onClick={() => handleCreateAlias(false)}
               disabled={creating}
-              className="btn-primary py-1.5 px-4 text-xs"
+              className="btn-primary py-1.5 px-4 text-xs font-semibold"
             >
               {creating ? 'Generating...' : 'Create Alias'}
             </button>
@@ -230,115 +255,133 @@ export default function AliasesPage() {
         </div>
       )}
 
-      {/* Filters & Bulk Actions Bar */}
+      {/* Filters & Search Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
-            { id: 'all', label: 'All' },
+            { id: 'all', label: `All (${aliases.length})` },
             { id: 'active', label: 'Active' },
-            { id: 'burner', label: 'Burners 🔥' }
+            { id: 'paused', label: 'Paused' },
+            { id: 'burner', label: 'Burners 🔥' },
+            { id: 'custom', label: 'Custom (-ca)' }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterActive(tab.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 filterActive === tab.id
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-indigo-600 dark:bg-cyan-600 text-white shadow-sm'
+                  : 'bg-white dark:bg-cyber-900 border border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-cyber-850'
               }`}
             >
               {tab.label}
             </button>
           ))}
-          <span className="text-xs text-slate-400 font-medium ml-2">
-            ({filteredAliases.length})
-          </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-xl text-xs">
-              <span className="font-semibold text-indigo-900 dark:text-indigo-200 mr-1">
-                {selected.size} selected
-              </span>
-              <button
-                onClick={() => handleBulkAction('activate')}
-                className="hover:underline text-indigo-700 dark:text-indigo-300 text-[11px]"
-              >
-                Activate
-              </button>
-              <span>•</span>
-              <button
-                onClick={() => handleBulkAction('deactivate')}
-                className="hover:underline text-amber-700 dark:text-amber-300 text-[11px]"
-              >
-                Pause
-              </button>
-              <span>•</span>
-              <button
-                onClick={() => handleBulkAction('delete')}
-                className="hover:underline text-rose-600 dark:text-rose-400 text-[11px]"
-              >
-                Delete
-              </button>
-            </div>
-          )}
-
+        {/* Search Input */}
+        <div className="relative w-full sm:w-64">
+          <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Filter aliases..."
+            placeholder="Search address or tag..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input py-1.5 px-3 text-xs w-48 sm:w-56"
+            className="input pl-9 text-xs py-2 bg-white dark:bg-cyber-900"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Aliases List Card */}
-      <div className="card overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-        {isLoading ? (
-          <div className="p-8 text-center text-slate-400 space-y-2">
-            <ArrowPathIcon className="w-6 h-6 animate-spin mx-auto text-indigo-500" />
-            <p className="text-xs">Loading aliases...</p>
+      {/* Bulk Action Bar */}
+      {selected.size > 0 && (
+        <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-cyber-850 border border-indigo-100 dark:border-cyber-700 flex items-center justify-between text-xs animate-fade-in shadow-sm">
+          <span className="font-semibold text-indigo-900 dark:text-cyan-300">
+            {selected.size} alias(es) selected
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleBulkAction('activate')}
+              className="btn bg-white dark:bg-cyber-900 text-slate-700 dark:text-slate-200 py-1 px-3 text-xs border border-slate-200 dark:border-cyber-700 font-semibold"
+            >
+              Activate
+            </button>
+            <button
+              onClick={() => handleBulkAction('deactivate')}
+              className="btn bg-white dark:bg-cyber-900 text-slate-700 dark:text-slate-200 py-1 px-3 text-xs border border-slate-200 dark:border-cyber-700 font-semibold"
+            >
+              Pause
+            </button>
+            <button
+              onClick={() => handleBulkAction('delete')}
+              className="btn bg-rose-600 text-white py-1 px-3 text-xs font-semibold"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="text-slate-400 hover:text-slate-600 p-1"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
           </div>
-        ) : filteredAliases.length === 0 ? (
-          <div className="p-10 text-center">
-            <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
-              📧
+        </div>
+      )}
+
+      {/* Aliases Table / List */}
+      <div className="card overflow-hidden divide-y divide-slate-100 dark:divide-cyber-800">
+        {isLoading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="p-4 flex items-center justify-between gap-4 animate-pulse">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-4 h-4 bg-slate-200 dark:bg-cyber-800 rounded" />
+                <div className="w-2.5 h-2.5 bg-slate-200 dark:bg-cyber-800 rounded-full" />
+                <div className="h-4 bg-slate-200 dark:bg-cyber-800 rounded w-1/3" />
+              </div>
+              <div className="w-20 h-4 bg-slate-200 dark:bg-cyber-800 rounded" />
             </div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+          ))
+        ) : filteredAliases.length === 0 ? (
+          <div className="p-10 text-center space-y-3">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
+              ✉️
+            </div>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
               No aliases found
             </h3>
-            <p className="text-xs text-slate-500 mt-1 mb-4">
-              {search
-                ? 'No aliases matched your filter criteria.'
-                : 'Get started by creating your first temporary email address.'}
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {search ? `No aliases matched "${search}"` : 'Create your first email alias or 1-hour burner address to get started.'}
             </p>
-            <button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary py-2 px-4 text-xs"
-            >
-              + Create Alias
+            <button onClick={() => setShowCreate(true)} className="btn-primary py-2 px-4 text-xs font-semibold">
+              Generate New Alias
             </button>
           </div>
         ) : (
           filteredAliases.map((a) => {
             const isSelected = selected.has(a.address);
+            const isActive = Boolean(a.active);
             const isBurner = Boolean(a.burner);
-            const isExpired = a.expires_at && new Date(a.expires_at) < new Date();
-            const isActive = a.active && !isExpired;
+            const isCustom = a.alias_type === 'custom' || a.address.includes('-ca@');
 
             return (
               <div
                 key={a.address}
-                className={`group flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 transition-all ${
+                className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
                   isSelected
-                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40'
-                    : 'hover:bg-slate-50/80 dark:hover:bg-slate-750/50'
+                    ? 'bg-indigo-50/70 dark:bg-cyber-850'
+                    : 'hover:bg-slate-50/70 dark:hover:bg-cyber-850/50'
                 }`}
               >
-                {/* Left check & status */}
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                  {/* Select Checkbox */}
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -350,49 +393,51 @@ export default function AliasesPage() {
                         return next;
                       });
                     }}
-                    className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    className="rounded border-slate-300 dark:border-cyber-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1 sm:mt-0"
                   />
 
-                  {/* Active Indicator Dot */}
+                  {/* Status Indicator */}
                   <span
-                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                      isActive
-                        ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
-                        : 'bg-slate-300 dark:bg-slate-600'
+                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 sm:mt-0 ${
+                      isActive ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'
                     }`}
-                    title={isActive ? 'Active' : 'Inactive'}
+                    title={isActive ? 'Active' : 'Paused'}
                   />
 
-                  {/* Address & Meta */}
-                  <div className="min-w-0">
+                  {/* Address and Meta */}
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => handleCopy(a.address)}
-                        className="font-mono text-sm font-semibold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 truncate text-left transition-colors flex items-center gap-1.5"
+                        className="font-mono text-sm font-semibold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-cyan-400 truncate text-left transition-colors flex items-center gap-1.5"
                         title="Click to copy address"
                       >
                         <span>{a.address}</span>
-                        <ClipboardDocumentIcon className="w-3.5 h-3.5 text-slate-400 hover:text-indigo-600 flex-shrink-0 opacity-0 group-hover:opacity-100" />
+                        <ClipboardDocumentIcon className="w-3.5 h-3.5 text-slate-400 hover:text-cyan-500 flex-shrink-0" />
                       </button>
 
                       {isBurner && (
-                        <span className="badge-red text-[10px] py-0 px-2">🔥 1h Burner</span>
+                        <span className="badge-red text-[10px] py-0 px-2 font-semibold">🔥 1h Burner</span>
+                      )}
+
+                      {isCustom && (
+                        <span className="badge-cyan text-[10px] py-0 px-2 font-semibold">Protected -ca</span>
                       )}
 
                       {a.label && (
-                        <span className="badge-gray text-[10px] py-0 px-2 truncate max-w-[120px]">
+                        <span className="badge-indigo text-[10px] py-0 px-2 truncate max-w-[120px]">
                           {a.label}
                         </span>
                       )}
                     </div>
 
-                    <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                    <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
                       <span>Created {formatTimeAgo(a.created_at)}</span>
                       {a.burner_expires_at && (
                         <>
                           <span>•</span>
                           <span className="text-rose-500 font-medium">
-                            Expires at {new Date(a.burner_expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            Self-destructs at {new Date(a.burner_expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </>
                       )}
@@ -400,21 +445,31 @@ export default function AliasesPage() {
                   </div>
                 </div>
 
-                {/* Right Action Buttons */}
-                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                  {/* QR Code Button */}
+                {/* Right Action Icons */}
+                <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0 pt-2 sm:pt-0">
+                  {/* View Inbox Link */}
+                  <Link
+                    href={`/inbox?alias=${encodeURIComponent(a.address)}`}
+                    className="btn-secondary py-1 px-2.5 text-xs font-semibold"
+                    title="View emails for this alias"
+                  >
+                    <InboxIcon className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="hidden md:inline">Inbox</span>
+                  </Link>
+
+                  {/* QR Code */}
                   <button
                     onClick={() => setQrModalAlias(a.address)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                    title="View QR Code"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
+                    title="QR Code"
                   >
                     <QrCodeIcon className="w-4 h-4" />
                   </button>
 
-                  {/* Toggle Active / Pause */}
+                  {/* Pause / Resume */}
                   <button
                     onClick={() => handleToggleActive(a.address, Boolean(a.active))}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                     title={a.active ? 'Pause incoming mail' : 'Resume incoming mail'}
                   >
                     {a.active ? (
@@ -424,10 +479,10 @@ export default function AliasesPage() {
                     )}
                   </button>
 
-                  {/* Delete Button */}
+                  {/* Delete */}
                   <button
-                    onClick={() => handleDeleteAlias(a.address)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    onClick={() => setDeleteConfirmAlias(a.address)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                     title="Delete alias"
                   >
                     <TrashIcon className="w-4 h-4" />
@@ -442,27 +497,23 @@ export default function AliasesPage() {
       {/* QR Code Modal */}
       {qrModalAlias && (
         <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setQrModalAlias(null)}
         >
           <div
-            className="card p-6 max-w-sm w-full text-center space-y-4 animate-scale-up"
+            className="card p-6 max-w-sm w-full text-center space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                Alias QR Code
+                Scan or Share Alias QR Code
               </h3>
-              <button
-                onClick={() => setQrModalAlias(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
+              <button onClick={() => setQrModalAlias(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="bg-white p-4 rounded-xl shadow-inner inline-block mx-auto border border-slate-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+            <div className="p-4 bg-white rounded-xl inline-block shadow-sm">
               <img
                 src={api.getAliasQr(qrModalAlias)}
                 alt={`QR code for ${qrModalAlias}`}
@@ -470,24 +521,53 @@ export default function AliasesPage() {
               />
             </div>
 
-            <p className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 break-all bg-slate-100 dark:bg-slate-800 p-2 rounded-lg">
+            <p className="font-mono text-xs text-slate-700 dark:text-slate-300 break-all select-all">
               {qrModalAlias}
             </p>
 
-            <div className="flex gap-2">
+            <button
+              onClick={() => {
+                handleCopy(qrModalAlias);
+                setQrModalAlias(null);
+              }}
+              className="btn-primary w-full py-2 text-xs font-semibold"
+            >
+              Copy Address
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmAlias && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setDeleteConfirmAlias(null)}
+        >
+          <div
+            className="card p-6 max-w-md w-full space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">
+              Delete Email Alias?
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Are you sure you want to permanently delete <code className="text-rose-600 dark:text-rose-400 font-mono font-bold">{deleteConfirmAlias}</code>? Any incoming emails sent to this address in the future will be rejected.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-cyber-800">
               <button
-                onClick={() => handleCopy(qrModalAlias)}
-                className="btn-secondary py-2 flex-1 text-xs"
+                onClick={() => setDeleteConfirmAlias(null)}
+                className="btn-secondary py-1.5 px-3.5 text-xs font-semibold"
               >
-                Copy Address
+                Cancel
               </button>
-              <a
-                href={api.getAliasQr(qrModalAlias)}
-                download={`${qrModalAlias}.png`}
-                className="btn-primary py-2 flex-1 text-xs"
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="btn bg-rose-600 hover:bg-rose-500 text-white py-1.5 px-4 text-xs font-semibold shadow-sm shadow-rose-500/20"
               >
-                Download PNG
-              </a>
+                {deleting ? 'Deleting...' : 'Delete Alias'}
+              </button>
             </div>
           </div>
         </div>

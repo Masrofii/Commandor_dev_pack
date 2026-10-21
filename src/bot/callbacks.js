@@ -39,8 +39,20 @@ const {
   handleConfirmedBroadcast,
   showHostingPlans,
   send,
-  replyHtml
+  replyHtml,
+  isTosAccepted,
+  showTosPrompt,
+  showDetailedTos,
+  showTosDeclined,
+  handleTosAccept,
+  showMainDashboard,
+  showEmailSuiteHub,
+  showSubdomainHub,
+  showApiHub,
+  showChangeLog,
+  showAdminAuditLogs
 } = require('./commands');
+const { logChange } = require('../services/auditLogger');
 const {
   mainMenuKeyboard,
   startInlineKeyboard,
@@ -77,10 +89,30 @@ function setupCallbacks(bot) {
     const admin = isOwnerOrAdmin(ctx.from.id);
 
     try {
+      // Allow ToS callbacks without prior acceptance
+      if (action !== 'tos' && ctx.from && !isTosAccepted(ctx.from.id)) {
+        await ctx.answerCbQuery('⚠️ Terms of Service acceptance required').catch(() => {});
+        return showTosPrompt(ctx);
+      }
+
       switch (action) {
         case 'noop':
           await ctx.answerCbQuery().catch(() => {});
           break;
+
+        case 'tos': {
+          await ctx.answerCbQuery().catch(() => {});
+          if (param === 'accept') {
+            await handleTosAccept(ctx);
+          } else if (param === 'full') {
+            await showDetailedTos(ctx);
+          } else if (param === 'prompt') {
+            await showTosPrompt(ctx);
+          } else if (param === 'decline') {
+            await showTosDeclined(ctx);
+          }
+          break;
+        }
 
         case 'inbox': {
           await ctx.answerCbQuery().catch(() => {});
@@ -113,9 +145,11 @@ function setupCallbacks(bot) {
         case 'menu': {
           await ctx.answerCbQuery().catch(() => {});
           if (param === 'home') {
-            await send(ctx, t('start.welcome', lang), {
-              reply_markup: startInlineKeyboard(config.server.webUrl, admin).reply_markup
-            });
+            await showMainDashboard(ctx);
+          } else if (param === 'email_suite') {
+            await showEmailSuiteHub(ctx);
+          } else if (param === 'changelog') {
+            await showChangeLog(ctx);
           } else if (param === 'new') {
             try {
               await createThrowaway(ctx, lang);
@@ -137,7 +171,7 @@ function setupCallbacks(bot) {
             setSearch(ctx.from.id, {});
             await replyHtml(ctx, t('search.prompt', lang));
           } else if (param === 'subdomains') {
-            await showSubdomains(ctx, 1);
+            await showSubdomainHub(ctx);
           } else if (param === 'web') {
             const token = createLoginToken(ctx.from.id);
             const url = `${config.server.webUrl}/login?token=${token}`;
@@ -157,7 +191,9 @@ function setupCallbacks(bot) {
           const subAction = parts[0];
           const subParam = parts[1];
 
-          if (subAction === 'list') {
+          if (subAction === 'hub') {
+            await showSubdomainHub(ctx);
+          } else if (subAction === 'list') {
             await showSubdomains(ctx, parseInt(subParam, 10) || 1);
           } else if (subAction === 'view') {
             await showSubdomainDetails(ctx, parseInt(subParam, 10));
@@ -311,7 +347,9 @@ function setupCallbacks(bot) {
 
         case 'api_key': {
           await ctx.answerCbQuery().catch(() => {});
-          if (param === 'list') {
+          if (param === 'hub') {
+            await showApiHub(ctx);
+          } else if (param === 'list') {
             await showApiKeys(ctx);
           } else if (param === 'docs') {
             await showApiDocs(ctx);
@@ -365,6 +403,10 @@ function setupCallbacks(bot) {
           const subParam = parts[1];
           if (sub === 'dashboard') {
             await showAdminDashboard(ctx);
+          } else if (sub === 'logs') {
+            const page = parseInt(parts[1], 10) || 1;
+            const category = parts[2] || 'all';
+            await showAdminAuditLogs(ctx, page, category);
           } else if (sub === 'emails') {
             await showAdminEmailFeed(ctx, parseInt(subParam, 10) || 1);
           } else if (sub === 'users') {
@@ -399,6 +441,13 @@ function setupCallbacks(bot) {
           if (u) {
             const nextBanned = u.is_banned ? 0 : 1;
             getDb().prepare('UPDATE users SET is_banned=? WHERE tg_id=?').run(nextBanned, targetTgId);
+            logChange({
+              tgId: ctx.from.id,
+              category: 'admin',
+              action: nextBanned ? 'user_banned' : 'user_unbanned',
+              details: `Admin ${ctx.from.id} ${nextBanned ? 'banned' : 'unbanned'} user ${targetTgId}`,
+              metadata: { targetTgId, nextBanned }
+            }).catch(() => {});
             await ctx.answerCbQuery(nextBanned ? '🚫 User banned' : '🟢 User unbanned').catch(() => {});
             showUserInfo(ctx, targetTgId);
           }

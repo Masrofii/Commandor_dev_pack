@@ -8,10 +8,13 @@ import { isAuthenticated, getUser, clearToken } from '../../lib/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { api } from '../../lib/api';
 import {
+  Squares2X2Icon,
   InboxIcon,
   AtSymbolIcon,
-  LinkIcon,
+  GlobeAltIcon,
+  ServerStackIcon,
   KeyIcon,
+  LinkIcon,
   ComputerDesktopIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
@@ -21,20 +24,18 @@ import {
   MoonIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
-  FireIcon,
-  ArrowPathIcon,
-  GlobeAltIcon,
-  ServerStackIcon
+  FireIcon
 } from '@heroicons/react/24/outline';
 
 const NAV = [
+  { href: '/', label: 'Overview', icon: Squares2X2Icon, exact: true },
   { href: '/inbox', label: 'Inbox', icon: InboxIcon },
-  { href: '/aliases', label: 'Aliases', icon: AtSymbolIcon },
-  { href: '/subdomains', label: 'Subdomains', icon: GlobeAltIcon },
-  { href: '/hosting', label: 'Hosting & Nodes', icon: ServerStackIcon },
-  { href: '/webhooks', label: 'Webhooks', icon: LinkIcon },
+  { href: '/aliases', label: 'Email Aliases', icon: AtSymbolIcon },
+  { href: '/subdomains', label: 'Domains & Subdomains', icon: GlobeAltIcon },
+  { href: '/hosting', label: 'Cloud Hosting', icon: ServerStackIcon },
   { href: '/api-keys', label: 'API Keys', icon: KeyIcon },
-  { href: '/sessions', label: 'Sessions', icon: ComputerDesktopIcon },
+  { href: '/webhooks', label: 'Webhooks', icon: LinkIcon },
+  { href: '/sessions', label: 'Sessions & Auth', icon: ComputerDesktopIcon },
   { href: '/settings', label: 'Settings', icon: Cog6ToothIcon },
 ];
 
@@ -100,7 +101,7 @@ export default function DashboardLayout({ children }) {
         <div
           className={`${
             t.visible ? 'animate-enter' : 'animate-leave'
-          } max-w-md w-full bg-white dark:bg-slate-800 shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-black/5 dark:ring-white/10 p-4 border border-indigo-100 dark:border-indigo-900/50`}
+          } max-w-md w-full bg-white dark:bg-cyber-900 shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-black/5 dark:ring-cyber-800 p-4 border border-indigo-100 dark:border-cyber-700`}
         >
           <div className="flex-1 w-0">
             <div className="flex items-start">
@@ -113,14 +114,14 @@ export default function DashboardLayout({ children }) {
                   From: {em?.sender_name || em?.sender || 'Unknown'} → {em?.alias_address}
                 </p>
                 {em?.verification_code && (
-                  <p className="mt-1.5 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/80 px-2 py-0.5 rounded-md inline-block">
-                    Code: {em.verification_code}
+                  <p className="mt-1.5 text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/80 px-2 py-0.5 rounded-md inline-block border border-cyan-200 dark:border-cyan-800">
+                    OTP: {em.verification_code}
                   </p>
                 )}
               </div>
             </div>
           </div>
-          <div className="ml-4 flex flex-col justify-center gap-1 border-l border-slate-100 dark:border-slate-700 pl-3">
+          <div className="ml-4 flex flex-col justify-center gap-1 border-l border-slate-100 dark:border-cyber-800 pl-3">
             <button
               onClick={() => {
                 toast.dismiss(t.id);
@@ -153,7 +154,7 @@ export default function DashboardLayout({ children }) {
       const dom = dd?.domains?.[0];
       if (!dom) throw new Error('No domains available');
       const b = await api.createBurner(dom);
-      toast.success(`Burner alias created:\n${b.address}`, { duration: 4000 });
+      toast.success(`1-Hour Burner created:\n${b.address}`, { duration: 4000 });
       router.push('/aliases');
     } catch (err) {
       toast.error(err.message || 'Failed to create burner');
@@ -173,29 +174,29 @@ export default function DashboardLayout({ children }) {
   if (!user) return null;
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden font-sans">
+    <div className="flex h-screen bg-slate-50 dark:bg-cyber-950 overflow-hidden font-sans">
       {/* Mobile Drawer Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-xs lg:hidden transition-opacity"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800/95 border-r border-slate-200/80 dark:border-slate-700/70 backdrop-blur-md transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static flex flex-col ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-cyber-900 border-r border-slate-200/90 dark:border-cyber-800 backdrop-blur-md transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static flex flex-col ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700/60">
-          <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-indigo-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-500/20">
-            TM
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-cyber-800">
+          <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-500/20">
+            CM
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">TempMail</span>
-            <span className="block text-[11px] text-slate-400 font-medium">Disposable Email Suite</span>
+            <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">Commandor Mail</span>
+            <span className="block text-[11px] text-cyan-600 dark:text-cyan-400 font-medium">Email Infrastructure</span>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -209,7 +210,7 @@ export default function DashboardLayout({ children }) {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV.map((i) => {
             const Icon = i.icon;
-            const active = pathname.startsWith(i.href);
+            const active = i.exact ? pathname === i.href : pathname.startsWith(i.href);
             const isInbox = i.href === '/inbox';
             const unreadCount = unreadData || 0;
 
@@ -219,17 +220,17 @@ export default function DashboardLayout({ children }) {
                 href={i.href}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   active
-                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-900/50'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-700/40 hover:text-slate-900 dark:hover:text-slate-100'
+                    ? 'bg-indigo-50 dark:bg-cyber-850 text-indigo-700 dark:text-cyan-400 shadow-sm border border-indigo-100 dark:border-cyber-700'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-cyber-850/60 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
                 onClick={() => setOpen(false)}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-5 h-5 ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-5 h-5 ${active ? 'text-indigo-600 dark:text-cyan-400' : 'text-slate-400'}`} />
                   <span>{i.label}</span>
                 </div>
                 {isInbox && unreadCount > 0 && (
-                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-600 text-white">
+                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-600 dark:bg-cyan-600 text-white shadow-sm">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -240,28 +241,32 @@ export default function DashboardLayout({ children }) {
           {user?.role === 'admin' && (
             <Link
               href="/admin"
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all mt-4 border border-rose-200/50 dark:border-rose-900/40"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all mt-4 border ${
+                pathname.startsWith('/admin')
+                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 shadow-sm'
+                  : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-950/30 border-rose-200/50 dark:border-rose-900/30'
+              }`}
               onClick={() => setOpen(false)}
             >
               <ShieldCheckIcon className="w-5 h-5 text-rose-500" />
-              <span>Admin Panel</span>
+              <span>Admin Center</span>
             </Link>
           )}
         </nav>
 
         {/* Sidebar Bot Quick Help Card */}
-        <div className="px-3 py-3 border-t border-slate-100 dark:border-slate-700/60">
-          <div className="p-3 bg-gradient-to-br from-indigo-50/60 to-slate-100/60 dark:from-indigo-950/20 dark:to-slate-800/60 rounded-xl border border-indigo-100/70 dark:border-indigo-900/30 text-xs">
+        <div className="px-3 py-3 border-t border-slate-100 dark:border-cyber-800">
+          <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800 text-xs">
             <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-200 mb-1">
               <span>🤖 Telegram Bot</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
             </div>
             <p className="text-slate-500 dark:text-slate-400 mb-2">Sync emails directly with your Telegram client.</p>
             <a
               href="https://t.me/commandor_mail_bot"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+              className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
             >
               Open Bot ↗
             </a>
@@ -269,9 +274,9 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* User Card in Footer */}
-        <div className="px-4 py-3.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center gap-3">
-          <div className="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-700 dark:text-indigo-300 text-xs font-bold ring-1 ring-indigo-200 dark:ring-indigo-800">
-            {user?.tgId ? String(user.tgId).slice(-2) : 'U'}
+        <div className="px-4 py-3.5 border-t border-slate-100 dark:border-cyber-800 flex items-center gap-3">
+          <div className="w-9 h-9 bg-indigo-100 dark:bg-cyber-800 rounded-xl flex items-center justify-center text-indigo-700 dark:text-cyan-300 text-xs font-bold ring-1 ring-indigo-200 dark:ring-cyber-700">
+            {user?.tgId ? String(user.tgId).slice(-2) : 'CM'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
@@ -287,7 +292,7 @@ export default function DashboardLayout({ children }) {
           </div>
           <button
             onClick={logout}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
             title="Sign out"
           >
             <ArrowRightOnRectangleIcon className="w-4 h-4" />
@@ -298,20 +303,20 @@ export default function DashboardLayout({ children }) {
       {/* Main Content Shell */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-6 bg-white dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-700/70 backdrop-blur-md flex-shrink-0 z-30">
+        <header className="h-16 flex items-center justify-between px-4 sm:px-6 bg-white dark:bg-cyber-900 border-b border-slate-200/80 dark:border-cyber-800 backdrop-blur-md flex-shrink-0 z-30">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+              className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-cyber-850 transition-colors"
               aria-label="Open sidebar"
             >
               <Bars3Icon className="w-5 h-5" />
             </button>
             <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-400">TempMail</span>
+              <span className="text-xs font-medium text-slate-400">Commandor Mail</span>
               <span className="text-slate-300 dark:text-slate-600">/</span>
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 capitalize">
-                {pathname.replace('/', '') || 'Dashboard'}
+                {pathname === '/' ? 'Overview' : pathname.replace('/', '')}
               </span>
             </div>
           </div>
@@ -330,7 +335,7 @@ export default function DashboardLayout({ children }) {
                   connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
                 }`}
               />
-              <span>{connected ? 'Live Sync' : 'Reconnecting'}</span>
+              <span>{connected ? 'Realtime Connected' : 'Connecting...'}</span>
             </div>
 
             {/* Quick 1-Hour Burner Button */}
@@ -341,7 +346,7 @@ export default function DashboardLayout({ children }) {
               title="Instant 1-Hour Burner"
             >
               <FireIcon className="w-4 h-4 text-rose-500" />
-              <span className="hidden sm:inline">{quickCreating ? 'Creating...' : 'Quick Burner'}</span>
+              <span className="hidden sm:inline">{quickCreating ? 'Generating...' : '1-Hour Burner'}</span>
             </button>
 
             {/* Quick Create Alias Button */}
@@ -356,7 +361,7 @@ export default function DashboardLayout({ children }) {
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors border border-slate-200 dark:border-slate-700"
+              className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-cyber-850 transition-colors border border-slate-200 dark:border-cyber-800"
               title={isDark ? 'Switch to Light mode' : 'Switch to Dark mode'}
             >
               {isDark ? (

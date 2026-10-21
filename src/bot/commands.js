@@ -799,7 +799,8 @@ async function showAdminDashboard(ctx) {
   const rssMb = (procStats.memoryRss / 1024 / 1024).toFixed(1);
   const uptimeStr = formatUptime(procStats.uptime);
 
-  const text = `👑 <b>Platform Owner & Admin Control Center</b>\n─────────────────────────────\n📊 <b>System Overview:</b>\n• 👥 <b>Total Users:</b> <b>${dbStats.users}</b> (Joined today: <b>+${usersToday}</b>)\n• 📧 <b>Active Aliases:</b> <b>${dbStats.aliases}</b> (Custom: <b>${customCount}</b>)\n• 📬 <b>Emails Received:</b> <b>${dbStats.emails}</b> (Today: <b>${dbStats.emailsToday}</b>)\n• 🔵 <b>Unread Emails:</b> <b>${dbStats.unreadEmails}</b>\n• 🛡 <b>Spam Blocked:</b> <b>${dbStats.spamToday}</b> today\n• 🔑 <b>Active API Keys:</b> <b>${activeKeysCount}</b>\n\n🖥 <b>Server & Node Health:</b>\n• ⏱ <b>Uptime:</b> ${uptimeStr}\n• 🧠 <b>RAM (Heap / RSS):</b> ${heapMb} MB / ${rssMb} MB\n• 💾 <b>DB Size:</b> ${formatBytes(dbSizeBytes)}\n• ⚙️ <b>Node.js:</b> ${procStats.nodeVersion} (PID: ${procStats.pid})\n\n🔍 <b>Recent Live Incoming Emails (Last 5):</b>\n${emailSnippets}\n\n👥 <b>Recent Users Registered (Last 5):</b>\n${userSnippets}\n─────────────────────────────\n💡 <i>Live statistics refreshed instantly.</i>`;
+  const auditStats = getAuditStats();
+  const text = `👑 <b>Platform Owner & Admin Control Center</b>\n─────────────────────────────\n📊 <b>System Overview:</b>\n• 👥 <b>Total Users:</b> <b>${dbStats.users}</b> (Joined today: <b>+${usersToday}</b>)\n• 📧 <b>Active Aliases:</b> <b>${dbStats.aliases}</b> (Custom: <b>${customCount}</b>)\n• 📬 <b>Emails Received:</b> <b>${dbStats.emails}</b> (Today: <b>${dbStats.emailsToday}</b>)\n• 🔵 <b>Unread Emails:</b> <b>${dbStats.unreadEmails}</b>\n• 🛡 <b>Spam Blocked:</b> <b>${dbStats.spamToday}</b> today\n• 🔑 <b>Active API Keys:</b> <b>${activeKeysCount}</b>\n• 📜 <b>Changes Logged:</b> <b>${auditStats.total}</b> (Today: <b>+${auditStats.today}</b>)\n\n🖥 <b>Server & Node Health:</b>\n• ⏱ <b>Uptime:</b> ${uptimeStr}\n• 🧠 <b>RAM (Heap / RSS):</b> ${heapMb} MB / ${rssMb} MB\n• 💾 <b>DB Size:</b> ${formatBytes(dbSizeBytes)}\n• ⚙️ <b>Node.js:</b> ${procStats.nodeVersion} (PID: ${procStats.pid})\n\n🔍 <b>Recent Live Incoming Emails (Last 5):</b>\n${emailSnippets}\n\n👥 <b>Recent Users Registered (Last 5):</b>\n${userSnippets}\n─────────────────────────────\n💡 <i>Live statistics refreshed instantly.</i>`;
 
   return send(ctx, text, adminDashboardKeyboard(config.server.webUrl || 'https://commandor.my.id'));
 }
@@ -1276,6 +1277,8 @@ function setupCommands(bot) {
   }));
 
   // Persistent keyboard buttons
+  bot.hears(['📬 Email Suite', 'Email Suite'], wrap(ctx => showEmailSuiteHub(ctx)));
+  bot.hears(['📝 Change Log', 'Change Log', '📝 Changelog', 'Changelog'], wrap(ctx => showChangeLog(ctx)));
   bot.hears(['📥 Inbox', '📨 Inbox', 'Inbox', '📨 View Inbox'], wrap(ctx => showInbox(ctx, 1)));
   bot.hears(['✉️ My Aliases', '📧 My Aliases', 'My Aliases'], wrap(ctx => showAliases(ctx, 1)));
   bot.hears(['➕ Create Alias', '➕ New Alias', 'New Alias', 'Create Alias'], wrap(async ctx => {
@@ -1293,8 +1296,8 @@ function setupCommands(bot) {
       return replyHtml(ctx, err.message);
     }
   }));
-  bot.hears(['🔑 API Keys', 'API Keys'], wrap(ctx => showApiKeys(ctx)));
-  bot.hears(['🌐 Domains & Subdomains', '🌐 Subdomains', 'Subdomains', 'Domains'], wrap(ctx => showSubdomains(ctx, 1)));
+  bot.hears(['🔑 API Keys', 'API Keys', '🔑 API & Devs'], wrap(ctx => showApiHub(ctx)));
+  bot.hears(['🌐 Domains & Subdomains', '🌐 Subdomains', 'Subdomains', 'Domains'], wrap(ctx => showSubdomainHub(ctx)));
   bot.hears(['☁️ Cloud Hosting', '🖥️ Cloud Hosting', 'Cloud Hosting', 'Hosting'], wrap(async ctx => showHostingMenu(ctx)));
   bot.hears(['🔎 Search', 'Search', '🔎 Search Messages'], wrap(async ctx => {
     setSearch(ctx.from.id, {});
@@ -1918,5 +1921,16 @@ module.exports = {
   handleAddNodeConnection,
   handleDeploySiteName,
   handleDeploySiteContent,
-  handleDeploySiteZip
+  handleDeploySiteZip,
+  isTosAccepted,
+  showTosPrompt,
+  showDetailedTos,
+  showTosDeclined,
+  handleTosAccept,
+  showMainDashboard,
+  showEmailSuiteHub,
+  showSubdomainHub,
+  showApiHub,
+  showChangeLog,
+  showAdminAuditLogs
 };

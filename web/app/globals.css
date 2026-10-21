@@ -4,54 +4,63 @@
 
 @layer base {
   :root {
-    --color-bg: 255 255 255;
-    --color-surface: 249 250 251;
-    --color-border: 229 231 235;
-    --color-text: 17 24 39;
-    --color-brand: 99 102 241;
+    --color-bg: 248 250 252;
+    --color-surface: 255 255 255;
+    --color-border: 226 232 240;
+    --color-text: 15 23 42;
+    --color-brand: 79 70 229;
   }
   .dark {
-    --color-bg: 15 23 42;
-    --color-surface: 30 41 59;
-    --color-border: 51 65 85;
+    --color-bg: 7 11 20;
+    --color-surface: 13 19 34;
+    --color-border: 27 39 66;
     --color-text: 241 245 249;
-    --color-brand: 129 140 248;
+    --color-brand: 99 102 241;
   }
   html {
     @apply antialiased scroll-smooth;
   }
   body {
-    @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans;
+    @apply bg-slate-50 dark:bg-cyber-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500/20 selection:text-indigo-400;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none;
+    @apply inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl font-medium text-xs sm:text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none;
   }
   .btn-primary {
-    @apply btn bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-500/20 active:scale-[0.98] focus:ring-indigo-500 dark:bg-indigo-600 dark:hover:bg-indigo-500;
+    @apply btn bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm shadow-indigo-500/25 active:scale-[0.98] focus:ring-indigo-500 border border-indigo-500/30;
+  }
+  .btn-accent {
+    @apply btn bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm shadow-cyan-500/25 active:scale-[0.98] focus:ring-cyan-500 border border-cyan-400/30;
   }
   .btn-secondary {
-    @apply btn bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-sm active:scale-[0.98] focus:ring-indigo-500;
+    @apply btn bg-white dark:bg-cyber-900 border border-slate-200 dark:border-cyber-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-cyber-850 dark:hover:border-cyber-700 shadow-sm active:scale-[0.98] focus:ring-indigo-500;
   }
   .btn-danger {
-    @apply btn bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-500/20 active:scale-[0.98] focus:ring-red-500;
+    @apply btn bg-rose-600 hover:bg-rose-500 text-white shadow-sm shadow-rose-500/20 active:scale-[0.98] focus:ring-rose-500;
   }
   .card {
-    @apply bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/70 shadow-sm backdrop-blur-sm transition-all duration-150;
+    @apply bg-white dark:bg-cyber-900 rounded-2xl border border-slate-200/90 dark:border-cyber-800 shadow-sm transition-all duration-150;
   }
   .card-hover {
-    @apply card hover:border-indigo-300 dark:hover:border-indigo-700/80 hover:shadow-md;
+    @apply card hover:border-indigo-400/50 dark:hover:border-cyber-700 hover:shadow-md;
+  }
+  .card-cyber {
+    @apply bg-gradient-to-b from-white to-slate-50 dark:from-cyber-900 dark:to-cyber-950 rounded-2xl border border-slate-200 dark:border-cyber-800 shadow-sm;
   }
   .input {
-    @apply w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-150;
+    @apply w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 dark:border-cyber-800 bg-white dark:bg-cyber-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500 dark:focus:border-cyan-500/50 transition-all duration-150;
   }
   .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium tracking-wide;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium tracking-wide;
   }
   .badge-indigo {
     @apply badge bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60;
+  }
+  .badge-cyan {
+    @apply badge bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border border-cyan-200/60 dark:border-cyan-800/60;
   }
   .badge-green {
     @apply badge bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60;
@@ -63,13 +72,10 @@
     @apply badge bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60;
   }
   .badge-gray {
-    @apply badge bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700;
-  }
-  .badge-blue {
-    @apply badge bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60;
+    @apply badge bg-slate-100 text-slate-700 dark:bg-cyber-850 dark:text-slate-300 border border-slate-200 dark:border-cyber-800;
   }
   .skeleton {
-    @apply animate-pulse bg-slate-200 dark:bg-slate-700/60 rounded-xl;
+    @apply animate-pulse bg-slate-200 dark:bg-cyber-800/70 rounded-xl;
   }
 }
 
@@ -82,9 +88,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.7);
+  background: rgba(148, 163, 184, 0.5);
 }

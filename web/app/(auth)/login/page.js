@@ -77,10 +77,16 @@ function LoginForm() {
   }
 
   return (
-    <div className="card p-8 text-center">
-      <div className="text-5xl mb-4">📧</div>
-      <h1 className="text-2xl font-bold dark:text-white mb-2">TempMail Manager</h1>
-      <p className="text-slate-500 mb-6">Sign in to your temporary email inbox</p>
+    <div className="card-cyber p-8 sm:p-10 text-center max-w-md w-full border-slate-200 dark:border-cyber-800 shadow-xl">
+      <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/25">
+        CM
+      </div>
+      <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
+        Commandor Mail
+      </h1>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+        Sign in to your email infrastructure control panel
+      </p>
 
       {error && (
         <div className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">

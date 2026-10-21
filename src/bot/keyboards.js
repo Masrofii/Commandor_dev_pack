@@ -2,14 +2,13 @@
 
 function mainMenuKeyboard(isAdmin = false) {
   const keyboard = [
-    ['📥 Inbox', '✉️ My Aliases'],
-    ['➕ Create Alias', '🎨 Custom Alias'],
-    ['🌐 Domains & Subdomains', '☁️ Cloud Hosting'],
-    ['⏳ Temporary Burner', '🔑 API Keys'],
-    ['🔎 Search', '🌍 Web Dashboard']
+    ['📬 Email Suite', '📨 Inbox'],
+    ['🌐 Subdomains', '🖥️ Cloud Hosting'],
+    ['🔑 API Keys', '📝 Change Log'],
+    ['⚙️ Settings', '🌐 Web Dashboard']
   ];
   if (isAdmin) {
-    keyboard.push(['👑 Commandor Admin Panel']);
+    keyboard.push(['👑 Owner Admin Panel']);
   }
   return {
     reply_markup: {
@@ -20,42 +19,170 @@ function mainMenuKeyboard(isAdmin = false) {
   };
 }
 
-function startInlineKeyboard(webUrl = null, isAdmin = false) {
+function startInlineKeyboard(webUrl = null, isAdmin = false, unreadCount = 0) {
+  const unreadBadge = unreadCount > 0 ? ` (${unreadCount})` : '';
   const rows = [
     [
-      { text: '📥 Inbox', callback_data: 'inbox:1' },
-      { text: '✉️ My Aliases', callback_data: 'aliases:1' }
+      { text: '📬 Email Suite', callback_data: 'menu:email_suite' },
+      { text: '🌐 Subdomains', callback_data: 'subdomain:hub' }
     ],
     [
-      { text: '➕ Create Alias', callback_data: 'menu:new' },
-      { text: '🎨 Custom Alias', callback_data: 'menu:custom_alias' }
+      { text: '🖥️ Cloud Hosting', callback_data: 'hosting:menu' },
+      { text: '🔑 API & Devs', callback_data: 'api:hub' }
     ],
     [
-      { text: '🌐 Domains & Subdomains', callback_data: 'subdomain:list:1' },
-      { text: '☁️ Cloud Hosting', callback_data: 'hosting:menu' }
+      { text: `📨 View Inbox${unreadBadge}`, callback_data: 'inbox:1' },
+      { text: '📊 Statistics', callback_data: 'stats:1' }
     ],
     [
-      { text: '🔑 API Keys', callback_data: 'api_key:list' },
-      { text: '⏳ Temporary Burner', callback_data: 'menu:burner' }
-    ],
-    [
-      { text: '🔎 Search Messages', callback_data: 'menu:search' },
-      { text: '📊 Usage & Stats', callback_data: 'stats:1' }
-    ],
-    [
-      { text: '⚙️ Settings', callback_data: 'menu:settings' }
+      { text: '📝 Change Log', callback_data: 'menu:changelog' },
+      { text: '⚙️ Settings & ToS', callback_data: 'menu:settings' }
     ]
   ];
-
-  if (webUrl) {
-    rows[5].push({ text: '🌍 Web Dashboard', url: webUrl });
-  } else {
-    rows[5].push({ text: '🌍 Web Dashboard', callback_data: 'menu:web' });
-  }
-
   if (isAdmin) {
-    rows.push([{ text: '👑 Commandor Admin Panel', callback_data: 'admin:dashboard' }]);
+    rows.push([{ text: '👑 Owner Admin Panel', callback_data: 'admin:dashboard' }]);
   }
+  if (webUrl) {
+    rows.push([{ text: '🌐 Open Web Dashboard', url: webUrl }]);
+  }
+  return { reply_markup: { inline_keyboard: rows } };
+}
+
+function tosPromptKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '✅ I Accept Terms of Service', callback_data: 'tos:accept' }],
+        [
+          { text: '📜 Read Detailed Terms', callback_data: 'tos:full' },
+          { text: '❌ Decline', callback_data: 'tos:decline' }
+        ]
+      ]
+    }
+  };
+}
+
+function tosFullKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '✅ I Accept Terms of Service', callback_data: 'tos:accept' }],
+        [{ text: '⬅️ Back to Summary', callback_data: 'tos:prompt' }]
+      ]
+    }
+  };
+}
+
+function tosDeclinedKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '✅ Accept Terms of Service', callback_data: 'tos:accept' }]
+      ]
+    }
+  };
+}
+
+function emailSuiteKeyboard(aliasCount = 0, unreadCount = 0) {
+  const unreadBadge = unreadCount > 0 ? ` (${unreadCount})` : '';
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '➕ Quick Disposable', callback_data: 'menu:new' },
+          { text: '✏️ Custom Alias (-ca)', callback_data: 'menu:custom_alias' }
+        ],
+        [
+          { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' },
+          { text: `📧 My Aliases (${aliasCount})`, callback_data: 'aliases:1' }
+        ],
+        [
+          { text: `📨 Open Inbox${unreadBadge}`, callback_data: 'inbox:1' },
+          { text: '🔎 Search Messages', callback_data: 'menu:search' }
+        ],
+        [
+          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+        ]
+      ]
+    }
+  };
+}
+
+function subdomainHubKeyboard(subCount = 0) {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: `🌐 My Subdomains (${subCount})`, callback_data: 'subdomain:list:1' },
+          { text: '➕ Claim Subdomain', callback_data: 'subdomain:claim_prompt' }
+        ],
+        [
+          { text: '📡 Webhook / Web Requests', callback_data: 'subdomain:requests:1' },
+          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+        ]
+      ]
+    }
+  };
+}
+
+function apiHubKeyboard(keyCount = 0) {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: `🔑 My API Keys (${keyCount})`, callback_data: 'api_key:list' },
+          { text: '➕ Generate New Token', callback_data: 'api_key:new' }
+        ],
+        [
+          { text: '📖 API Documentation', callback_data: 'api_key:docs' },
+          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+        ]
+      ]
+    }
+  };
+}
+
+function changeLogKeyboard(isAdmin = false) {
+  const rows = [
+    [
+      { text: '🔄 Refresh Updates', callback_data: 'menu:changelog' },
+      { text: '📜 Terms of Service', callback_data: 'tos:full' }
+    ]
+  ];
+  if (isAdmin) {
+    rows.push([{ text: '📋 View System Audit Logs', callback_data: 'admin:logs:1:all' }]);
+  }
+  rows.push([{ text: '🏠 Back to Main Menu', callback_data: 'menu:home' }]);
+  return { reply_markup: { inline_keyboard: rows } };
+}
+
+function adminAuditLogsKeyboard(page = 1, totalPages = 1, currentCategory = 'all') {
+  const rows = [];
+  
+  // Category filters
+  rows.push([
+    { text: currentCategory === 'all' ? '• All •' : 'All', callback_data: 'admin:logs:1:all' },
+    { text: currentCategory === 'email' ? '• Email •' : 'Email', callback_data: 'admin:logs:1:email' },
+    { text: currentCategory === 'hosting' ? '• Hosting •' : 'Hosting', callback_data: 'admin:logs:1:hosting' },
+    { text: currentCategory === 'subdomain' ? '• Subdomains •' : 'Subdomains', callback_data: 'admin:logs:1:subdomain' }
+  ]);
+
+  // Pagination
+  const nav = [];
+  if (page > 1) {
+    nav.push({ text: '⬅️ Prev', callback_data: `admin:logs:${page - 1}:${currentCategory}` });
+  }
+  nav.push({ text: `Page ${page}/${totalPages}`, callback_data: `admin:logs:${page}:${currentCategory}` });
+  if (page < totalPages) {
+    nav.push({ text: 'Next ➡️', callback_data: `admin:logs:${page + 1}:${currentCategory}` });
+  }
+  rows.push(nav);
+
+  rows.push([
+    { text: '🔄 Refresh', callback_data: `admin:logs:${page}:${currentCategory}` },
+    { text: '👑 Admin Dashboard', callback_data: 'admin:dashboard' }
+  ]);
+
   return { reply_markup: { inline_keyboard: rows } };
 }
 
@@ -74,11 +201,14 @@ function adminDashboardKeyboard(webUrl = null) {
       { text: '🖥️ Server Nodes', callback_data: 'hosting:nodes' }
     ],
     [
-      { text: '🛡️ Threat Interceptions', callback_data: 'admin:threats:1' },
-      { text: '📢 Global Broadcast', callback_data: 'admin:broadcast' }
+      { text: '📜 Audit & Change Logs', callback_data: 'admin:logs:1:all' },
+      { text: '🛡️ Threat Interceptions', callback_data: 'admin:threats:1' }
     ],
     [
-      { text: '🧹 Optimize Database', callback_data: 'admin:vacuum' },
+      { text: '📢 Global Broadcast', callback_data: 'admin:broadcast' },
+      { text: '🧹 Optimize Database', callback_data: 'admin:vacuum' }
+    ],
+    [
       { text: '🏠 Main Menu', callback_data: 'menu:home' }
     ]
   ];
@@ -92,7 +222,7 @@ function apiKeysKeyboard(keys = []) {
   const rows = [
     [
       { text: '➕ Generate API Key', callback_data: 'api_key:new' },
-      { text: '📖 API Guide & Docs', callback_data: 'api_key:docs' }
+      { text: 'ℹ️ API Guide & Docs', callback_data: 'api_key:docs' }
     ]
   ];
   const activeKeys = keys.filter(k => !k.revoked);
@@ -124,7 +254,7 @@ function emailActionsKeyboard(emailId, isStarred = false, hasAttachments = false
     { text: '⬅️ Back to Inbox', callback_data: 'inbox:1' }
   ];
   if (webUrl) {
-    nav.push({ text: '🌍 View on Web', url: `${webUrl}/inbox/${emailId}` });
+    nav.push({ text: '🌐 View on Web', url: `${webUrl}/inbox/${emailId}` });
   }
   rows.push(nav);
   return { reply_markup: { inline_keyboard: rows } };
@@ -135,16 +265,15 @@ function aliasActionsKeyboard(address, isActive = true) {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '📥 View Inbox', callback_data: `alias_inbox:${address}:1` },
+          { text: '📨 View Inbox', callback_data: `alias_inbox:${address}:1` },
           { text: '📱 QR Code', callback_data: `qr_alias:${address}` }
         ],
         [
-          { text: isActive ? '⏸ Pause Alias' : '▶️ Activate Alias', callback_data: `toggle_alias:${address}` },
-          { text: '🗑 Delete Alias', callback_data: `delete_alias:${address}` }
+          { text: isActive ? '⏸ Deactivate' : '▶️ Activate', callback_data: `toggle_alias:${address}` },
+          { text: '🗑 Delete', callback_data: `delete_alias:${address}` }
         ],
         [
-          { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' },
-          { text: '🏠 Main Menu', callback_data: 'menu:home' }
+          { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' }
         ]
       ]
     }
@@ -188,7 +317,7 @@ function subdomainActionsKeyboard(sub) {
         ],
         [
           { text: `⚙️ Mode: ${modeBadge}`, callback_data: `subdomain:change_mode:${sub.id}` },
-          { text: '🎯 Target URL', callback_data: `subdomain:set_target:${sub.id}` }
+          { text: '🎯 Set Target URL', callback_data: `subdomain:set_target:${sub.id}` }
         ],
         [
           { text: '📝 Static HTML/Body', callback_data: `subdomain:set_body:${sub.id}` },
@@ -199,8 +328,7 @@ function subdomainActionsKeyboard(sub) {
           { text: '🗑 Delete Subdomain', callback_data: `subdomain:delete:${sub.id}` }
         ],
         [
-          { text: '⬅️ Back to Subdomains', callback_data: 'subdomain:list:1' },
-          { text: '🏠 Main Menu', callback_data: 'menu:home' }
+          { text: '⬅️ Back to Subdomains', callback_data: 'subdomain:list:1' }
         ]
       ]
     }
@@ -211,7 +339,7 @@ function hostingMainMenuKeyboard(isAdmin = false) {
   const rows = [
     [
       { text: '➕ Deploy Simple Site', callback_data: 'hosting:deploy_prompt' },
-      { text: '📋 My Hosted Sites', callback_data: 'hosting:sites' }
+      { text: '📋 My Sites', callback_data: 'hosting:sites' }
     ],
     [
       { text: '📦 Plans & Limits', callback_data: 'hosting:plans' },
@@ -221,7 +349,7 @@ function hostingMainMenuKeyboard(isAdmin = false) {
   if (isAdmin) {
     rows.push([
       { text: '🖥️ Manage Server Nodes', callback_data: 'hosting:nodes' },
-      { text: '➕ Add Server Node', callback_data: 'hosting:add_node_prompt' }
+      { text: '➕ Add Node (host:user:pass)', callback_data: 'hosting:add_node_prompt' }
     ]);
   }
   rows.push([{ text: '🏠 Main Menu', callback_data: 'menu:home' }]);
@@ -235,13 +363,10 @@ function hostingSitesListKeyboard(sites = []) {
   for (const s of sites) {
     const statusIcon = s.status === 'active' ? '🟢' : '🔴';
     rows.push([
-      { text: `${statusIcon} ${s.name} (${s.visits_count || 0} hits)`, callback_data: `hosting:site:${s.id}` }
+      { text: `${statusIcon} ${s.name} (${s.visits_count} hits)`, callback_data: `hosting:site:${s.id}` }
     ]);
   }
-  rows.push([
-    { text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' },
-    { text: '🏠 Main Menu', callback_data: 'menu:home' }
-  ]);
+  rows.push([{ text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' }]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
@@ -250,15 +375,12 @@ function hostingSiteActionsKeyboard(site) {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '🌍 Visit Live Site', url: siteUrl }],
+        [{ text: '🌐 Visit Live Site', url: siteUrl }],
         [
-          { text: '🔄 Update Content', callback_data: `hosting:update_html:${site.id}` },
+          { text: '🔄 Update HTML', callback_data: `hosting:update_html:${site.id}` },
           { text: '🗑 Delete Site', callback_data: `hosting:delete_site:${site.id}` }
         ],
-        [
-          { text: '⬅️ Back to Sites', callback_data: 'hosting:sites' },
-          { text: '🏠 Main Menu', callback_data: 'menu:home' }
-        ]
+        [{ text: '⬅️ Back to Sites', callback_data: 'hosting:sites' }]
       ]
     }
   };
@@ -274,7 +396,7 @@ function hostingNodesKeyboard(nodes = []) {
   for (const n of nodes) {
     const icon = n.status === 'online' ? '🟢' : '🔴';
     rows.push([
-      { text: `${icon} ${n.name} [${n.current_sites || 0}/${n.max_sites || 100}]`, callback_data: `hosting:node_info:${n.id}` }
+      { text: `${icon} ${n.name} [${n.current_sites}/${n.max_sites} sites]`, callback_data: `hosting:node_info:${n.id}` }
     ]);
   }
   rows.push([
@@ -314,6 +436,14 @@ function broadcastConfirmKeyboard() {
 module.exports = {
   mainMenuKeyboard,
   startInlineKeyboard,
+  tosPromptKeyboard,
+  tosFullKeyboard,
+  tosDeclinedKeyboard,
+  emailSuiteKeyboard,
+  subdomainHubKeyboard,
+  apiHubKeyboard,
+  changeLogKeyboard,
+  adminAuditLogsKeyboard,
   adminDashboardKeyboard,
   apiKeysKeyboard,
   emailActionsKeyboard,
