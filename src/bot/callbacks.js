@@ -33,6 +33,10 @@ const {
   showHostingSites,
   showHostingSiteDetails,
   showHostingNodes,
+  showHostingNodeDetails,
+  handleNodePing,
+  promptBroadcastPreview,
+  handleConfirmedBroadcast,
   showHostingPlans,
   send,
   replyHtml
@@ -43,7 +47,8 @@ const {
   emailActionsKeyboard,
   aliasActionsKeyboard
 } = require('./keyboards');
-const { setReply, setBroadcast, setSubdomainTarget, setSubdomainBody, setSiteHtml } = require('./state');
+const { setReply, setBroadcast, takeBroadcastConfirm, setSubdomainTarget, setSubdomainBody, setSiteHtml } = require('./state');
+const { deleteNode: deleteHostingNode } = require('../services/nodeManagerService');
 const { getSubdomainById, updateSubdomain, deleteSubdomain } = require('../services/subdomainService');
 const { deleteSite, getSiteById } = require('../services/hostingService');
 const { generateQRBuffer } = require('../utils/qr');
@@ -127,6 +132,10 @@ function setupCallbacks(bot) {
             }
           } else if (param === 'settings') {
             await showSettings(ctx);
+          } else if (param === 'search') {
+            const { setSearch } = require('./state');
+            setSearch(ctx.from.id, {});
+            await replyHtml(ctx, t('search.prompt', lang));
           } else if (param === 'subdomains') {
             await showSubdomains(ctx, 1);
           } else if (param === 'web') {
@@ -229,7 +238,7 @@ function setupCallbacks(bot) {
           const hostAction = parts[0];
           const hostParam = parts[1];
 
-          if (hostAction === 'add_node_prompt' || hostAction === 'nodes' || hostAction === 'node_info') {
+          if (hostAction === 'add_node_prompt' || hostAction === 'nodes' || hostAction === 'node_info' || hostAction === 'node_ping' || hostAction === 'node_delete' || hostAction === 'confirm_delete_node') {
             if (!isOwnerOrAdmin(ctx.from.id)) {
               return ctx.answerCbQuery('Access denied: Owner only.').catch(() => {});
             }
@@ -248,6 +257,28 @@ function setupCallbacks(bot) {
           } else if (hostAction === 'site') {
             await showHostingSiteDetails(ctx, parseInt(hostParam, 10));
           } else if (hostAction === 'nodes') {
+            await showHostingNodes(ctx);
+          } else if (hostAction === 'node_info') {
+            await showHostingNodeDetails(ctx, parseInt(hostParam, 10));
+          } else if (hostAction === 'node_ping') {
+            await handleNodePing(ctx, parseInt(hostParam, 10));
+          } else if (hostAction === 'node_delete') {
+            const id = parseInt(hostParam, 10);
+            const { getNodeById } = require('../services/nodeManagerService');
+            const node = getNodeById(id);
+            if (!node) return;
+            await replyHtml(ctx, `⚠️ <b>Remove Server Node ${escapeHtml(node.name)}?</b>\n\nHost: <code>${escapeHtml(node.host)}:${node.port}</code>\n\n<i>This will disconnect the node from the cluster.</i>`, {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '🗑 Yes, Remove Node', callback_data: `hosting:confirm_delete_node:${id}` }],
+                  [{ text: '❌ Cancel', callback_data: `hosting:node_info:${id}` }]
+                ]
+              }
+            });
+          } else if (hostAction === 'confirm_delete_node') {
+            const id = parseInt(hostParam, 10);
+            deleteHostingNode(id);
+            await ctx.answerCbQuery('🗑 Node removed successfully').catch(() => {});
             await showHostingNodes(ctx);
           } else if (hostAction === 'plans') {
             await showHostingPlans(ctx);
@@ -348,9 +379,15 @@ function setupCallbacks(bot) {
             await handleAdminVacuum(ctx);
           } else if (sub === 'broadcast') {
             setBroadcast(ctx.from.id, true);
-            await ctx.reply('📢 <b>Broadcast Announcement:</b>\nPlease reply to this chat with your announcement message. All registered users will receive it in Telegram.\n\n<i>Send /cancel to abort.</i>', {
+            await ctx.reply('📢 <b>Commandor Mail — Broadcast Announcement</b>\n──────────────────────────────\nPlease reply to this chat with your announcement message. A preview will be generated for confirmation before any message is sent.\n\n<i>Send your message below (or /cancel to abort):</i>', {
               parse_mode: 'HTML'
             });
+          } else if (sub === 'broadcast_confirm') {
+            await handleConfirmedBroadcast(ctx);
+          } else if (sub === 'broadcast_cancel') {
+            takeBroadcastConfirm(ctx.from.id);
+            await ctx.answerCbQuery('❌ Broadcast cancelled.').catch(() => {});
+            await showAdminDashboard(ctx);
           }
           break;
         }

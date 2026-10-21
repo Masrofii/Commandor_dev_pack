@@ -2,6 +2,7 @@
 const { getDb } = require('../../database/database');
 const config = require('../../config/config');
 const logger = require('../monitoring/logger');
+const { logChange } = require('./auditLogger');
 
 const RESERVED_SUBDOMAINS = new Set([
   'admin', 'administrator', 'api', 'mail', 'email', 'web', 'www', 'root', 'bot',
@@ -121,6 +122,13 @@ function claimSubdomain({
   );
 
   logger.info({ tgId, fullDomain, subdomainId: info.lastInsertRowid }, 'Subdomain claimed successfully');
+  logChange({
+    tgId,
+    category: 'subdomain',
+    action: 'subdomain_created',
+    details: `Claimed subdomain ${fullDomain} (${webMode} mode)`,
+    metadata: { subdomain: cleanSub, fullDomain, webMode }
+  }).catch(() => {});
   return getSubdomainById(info.lastInsertRowid);
 }
 
@@ -223,6 +231,13 @@ function updateSubdomain(id, tgId, updates = {}) {
   values.push(id);
   db.prepare(`UPDATE subdomains SET ${setClauses.join(', ')} WHERE id=?`).run(...values);
   logger.info({ id, tgId, updates }, 'Subdomain configuration updated');
+  logChange({
+    tgId,
+    category: 'subdomain',
+    action: 'subdomain_updated',
+    details: `Updated subdomain #${id} (${sub.full_domain}): ${Object.keys(updates).join(', ')}`,
+    metadata: { id, updates }
+  }).catch(() => {});
   return getSubdomainById(id, tgId);
 }
 
@@ -240,6 +255,13 @@ function deleteSubdomain(id, tgId) {
 
   tx();
   logger.info({ id, tgId, fullDomain: sub.full_domain }, 'Subdomain deleted');
+  logChange({
+    tgId,
+    category: 'subdomain',
+    action: 'subdomain_deleted',
+    details: `Deleted subdomain ${sub.full_domain}`,
+    metadata: { id, fullDomain: sub.full_domain }
+  }).catch(() => {});
   return true;
 }
 

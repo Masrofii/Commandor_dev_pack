@@ -2,14 +2,14 @@
 
 function mainMenuKeyboard(isAdmin = false) {
   const keyboard = [
-    ['📧 My Aliases', '📨 Inbox'],
-    ['➕ New Alias', '✏️ Custom Alias'],
-    ['🌐 Subdomains', '🖥️ Cloud Hosting'],
-    ['🔥 1-Hour Burner', '🔑 API Keys'],
-    ['🔎 Search', '🌐 Web Dashboard']
+    ['📥 Inbox', '✉️ My Aliases'],
+    ['➕ Create Alias', '🎨 Custom Alias'],
+    ['🌐 Domains & Subdomains', '☁️ Cloud Hosting'],
+    ['⏳ Temporary Burner', '🔑 API Keys'],
+    ['🔎 Search', '🌍 Web Dashboard']
   ];
   if (isAdmin) {
-    keyboard.push(['👑 Owner Admin Panel']);
+    keyboard.push(['👑 Commandor Admin Panel']);
   }
   return {
     reply_markup: {
@@ -23,31 +23,38 @@ function mainMenuKeyboard(isAdmin = false) {
 function startInlineKeyboard(webUrl = null, isAdmin = false) {
   const rows = [
     [
-      { text: '➕ New Alias', callback_data: 'menu:new' },
-      { text: '✏️ Custom Alias', callback_data: 'menu:custom_alias' }
+      { text: '📥 Inbox', callback_data: 'inbox:1' },
+      { text: '✉️ My Aliases', callback_data: 'aliases:1' }
     ],
     [
-      { text: '🌐 Subdomains', callback_data: 'subdomain:list:1' },
-      { text: '🖥️ Cloud Hosting', callback_data: 'hosting:menu' }
+      { text: '➕ Create Alias', callback_data: 'menu:new' },
+      { text: '🎨 Custom Alias', callback_data: 'menu:custom_alias' }
     ],
     [
-      { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' },
-      { text: '🔑 API Keys', callback_data: 'api_key:list' }
+      { text: '🌐 Domains & Subdomains', callback_data: 'subdomain:list:1' },
+      { text: '☁️ Cloud Hosting', callback_data: 'hosting:menu' }
     ],
     [
-      { text: '📨 View Inbox', callback_data: 'inbox:1' },
-      { text: '📧 My Aliases', callback_data: 'aliases:1' }
+      { text: '🔑 API Keys', callback_data: 'api_key:list' },
+      { text: '⏳ Temporary Burner', callback_data: 'menu:burner' }
     ],
     [
-      { text: '📊 Statistics', callback_data: 'stats:1' },
+      { text: '🔎 Search Messages', callback_data: 'menu:search' },
+      { text: '📊 Usage & Stats', callback_data: 'stats:1' }
+    ],
+    [
       { text: '⚙️ Settings', callback_data: 'menu:settings' }
     ]
   ];
-  if (isAdmin) {
-    rows.push([{ text: '👑 Owner Admin Panel', callback_data: 'admin:dashboard' }]);
-  }
+
   if (webUrl) {
-    rows.push([{ text: '🌐 Open Web Dashboard', url: webUrl }]);
+    rows[5].push({ text: '🌍 Web Dashboard', url: webUrl });
+  } else {
+    rows[5].push({ text: '🌍 Web Dashboard', callback_data: 'menu:web' });
+  }
+
+  if (isAdmin) {
+    rows.push([{ text: '👑 Commandor Admin Panel', callback_data: 'admin:dashboard' }]);
   }
   return { reply_markup: { inline_keyboard: rows } };
 }
@@ -55,7 +62,7 @@ function startInlineKeyboard(webUrl = null, isAdmin = false) {
 function adminDashboardKeyboard(webUrl = null) {
   const rows = [
     [
-      { text: '🔄 Refresh Stats', callback_data: 'admin:dashboard' },
+      { text: '🔄 Refresh Status', callback_data: 'admin:dashboard' },
       { text: '📬 Live Email Feed', callback_data: 'admin:emails:1' }
     ],
     [
@@ -85,7 +92,7 @@ function apiKeysKeyboard(keys = []) {
   const rows = [
     [
       { text: '➕ Generate API Key', callback_data: 'api_key:new' },
-      { text: 'ℹ️ API Guide & Docs', callback_data: 'api_key:docs' }
+      { text: '📖 API Guide & Docs', callback_data: 'api_key:docs' }
     ]
   ];
   const activeKeys = keys.filter(k => !k.revoked);
@@ -117,7 +124,7 @@ function emailActionsKeyboard(emailId, isStarred = false, hasAttachments = false
     { text: '⬅️ Back to Inbox', callback_data: 'inbox:1' }
   ];
   if (webUrl) {
-    nav.push({ text: '🌐 View on Web', url: `${webUrl}/inbox/${emailId}` });
+    nav.push({ text: '🌍 View on Web', url: `${webUrl}/inbox/${emailId}` });
   }
   rows.push(nav);
   return { reply_markup: { inline_keyboard: rows } };
@@ -128,15 +135,16 @@ function aliasActionsKeyboard(address, isActive = true) {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '📨 View Inbox', callback_data: `alias_inbox:${address}:1` },
+          { text: '📥 View Inbox', callback_data: `alias_inbox:${address}:1` },
           { text: '📱 QR Code', callback_data: `qr_alias:${address}` }
         ],
         [
-          { text: isActive ? '⏸ Deactivate' : '▶️ Activate', callback_data: `toggle_alias:${address}` },
-          { text: '🗑 Delete', callback_data: `delete_alias:${address}` }
+          { text: isActive ? '⏸ Pause Alias' : '▶️ Activate Alias', callback_data: `toggle_alias:${address}` },
+          { text: '🗑 Delete Alias', callback_data: `delete_alias:${address}` }
         ],
         [
-          { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' }
+          { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' },
+          { text: '🏠 Main Menu', callback_data: 'menu:home' }
         ]
       ]
     }
@@ -180,7 +188,7 @@ function subdomainActionsKeyboard(sub) {
         ],
         [
           { text: `⚙️ Mode: ${modeBadge}`, callback_data: `subdomain:change_mode:${sub.id}` },
-          { text: '🎯 Set Target URL', callback_data: `subdomain:set_target:${sub.id}` }
+          { text: '🎯 Target URL', callback_data: `subdomain:set_target:${sub.id}` }
         ],
         [
           { text: '📝 Static HTML/Body', callback_data: `subdomain:set_body:${sub.id}` },
@@ -191,7 +199,8 @@ function subdomainActionsKeyboard(sub) {
           { text: '🗑 Delete Subdomain', callback_data: `subdomain:delete:${sub.id}` }
         ],
         [
-          { text: '⬅️ Back to Subdomains', callback_data: 'subdomain:list:1' }
+          { text: '⬅️ Back to Subdomains', callback_data: 'subdomain:list:1' },
+          { text: '🏠 Main Menu', callback_data: 'menu:home' }
         ]
       ]
     }
@@ -202,7 +211,7 @@ function hostingMainMenuKeyboard(isAdmin = false) {
   const rows = [
     [
       { text: '➕ Deploy Simple Site', callback_data: 'hosting:deploy_prompt' },
-      { text: '📋 My Sites', callback_data: 'hosting:sites' }
+      { text: '📋 My Hosted Sites', callback_data: 'hosting:sites' }
     ],
     [
       { text: '📦 Plans & Limits', callback_data: 'hosting:plans' },
@@ -212,7 +221,7 @@ function hostingMainMenuKeyboard(isAdmin = false) {
   if (isAdmin) {
     rows.push([
       { text: '🖥️ Manage Server Nodes', callback_data: 'hosting:nodes' },
-      { text: '➕ Add Node (host:user:pass)', callback_data: 'hosting:add_node_prompt' }
+      { text: '➕ Add Server Node', callback_data: 'hosting:add_node_prompt' }
     ]);
   }
   rows.push([{ text: '🏠 Main Menu', callback_data: 'menu:home' }]);
@@ -226,10 +235,13 @@ function hostingSitesListKeyboard(sites = []) {
   for (const s of sites) {
     const statusIcon = s.status === 'active' ? '🟢' : '🔴';
     rows.push([
-      { text: `${statusIcon} ${s.name} (${s.visits_count} hits)`, callback_data: `hosting:site:${s.id}` }
+      { text: `${statusIcon} ${s.name} (${s.visits_count || 0} hits)`, callback_data: `hosting:site:${s.id}` }
     ]);
   }
-  rows.push([{ text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' }]);
+  rows.push([
+    { text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' },
+    { text: '🏠 Main Menu', callback_data: 'menu:home' }
+  ]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
@@ -238,12 +250,15 @@ function hostingSiteActionsKeyboard(site) {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '🌐 Visit Live Site', url: siteUrl }],
+        [{ text: '🌍 Visit Live Site', url: siteUrl }],
         [
-          { text: '🔄 Update HTML', callback_data: `hosting:update_html:${site.id}` },
+          { text: '🔄 Update Content', callback_data: `hosting:update_html:${site.id}` },
           { text: '🗑 Delete Site', callback_data: `hosting:delete_site:${site.id}` }
         ],
-        [{ text: '⬅️ Back to Sites', callback_data: 'hosting:sites' }]
+        [
+          { text: '⬅️ Back to Sites', callback_data: 'hosting:sites' },
+          { text: '🏠 Main Menu', callback_data: 'menu:home' }
+        ]
       ]
     }
   };
@@ -259,11 +274,41 @@ function hostingNodesKeyboard(nodes = []) {
   for (const n of nodes) {
     const icon = n.status === 'online' ? '🟢' : '🔴';
     rows.push([
-      { text: `${icon} ${n.name} [${n.current_sites}/${n.max_sites} sites]`, callback_data: `hosting:node_info:${n.id}` }
+      { text: `${icon} ${n.name} [${n.current_sites || 0}/${n.max_sites || 100}]`, callback_data: `hosting:node_info:${n.id}` }
     ]);
   }
-  rows.push([{ text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' }]);
+  rows.push([
+    { text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' },
+    { text: '🏠 Main Menu', callback_data: 'menu:home' }
+  ]);
   return { reply_markup: { inline_keyboard: rows } };
+}
+
+function hostingNodeActionsKeyboard(node) {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '⚡ Ping & Connection Test', callback_data: `hosting:node_ping:${node.id}` },
+          { text: '🗑 Remove Node', callback_data: `hosting:node_delete:${node.id}` }
+        ],
+        [
+          { text: '⬅️ Back to Server Nodes', callback_data: 'hosting:nodes' }
+        ]
+      ]
+    }
+  };
+}
+
+function broadcastConfirmKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '🚀 Confirm & Send Announcement', callback_data: 'admin:broadcast_confirm' }],
+        [{ text: '❌ Cancel Announcement', callback_data: 'admin:broadcast_cancel' }]
+      ]
+    }
+  };
 }
 
 module.exports = {
@@ -278,5 +323,7 @@ module.exports = {
   hostingMainMenuKeyboard,
   hostingSitesListKeyboard,
   hostingSiteActionsKeyboard,
-  hostingNodesKeyboard
+  hostingNodesKeyboard,
+  hostingNodeActionsKeyboard,
+  broadcastConfirmKeyboard
 };
