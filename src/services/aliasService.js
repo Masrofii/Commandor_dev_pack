@@ -3,6 +3,7 @@ const{getDb}=require('../../database/database');
 const{generateAliasLocalPart,formatCustomAliasLocalPart}=require('../utils/helpers');
 const config=require('../../config/config');
 const logger=require('../monitoring/logger');
+const { logChange } = require('./auditLogger');
 function getUserAliases(tgId,opts={}){
   const db=getDb();const{page=1,limit=20,active=null,search=null}=opts;const offset=(page-1)*limit;
   let q='SELECT * FROM aliases WHERE tg_id=?';const p=[tgId];
@@ -47,9 +48,28 @@ function createAlias({tgId,domain,type='throwaway',label=null,expiresAt=null,bur
   const aliasExpiresAt=expiresAt||(config.quotas.aliasTtlDays>0?new Date(Date.now()+config.quotas.aliasTtlDays*86400000).toISOString():null);
   db.prepare('INSERT INTO aliases(address,tg_id,domain,alias_type,label,created_at,expires_at,burner,burner_expires_at)VALUES(?,?,?,?,?,?,?,?,?)').run(address,tgId,domain,type,label,now,aliasExpiresAt,burner?1:0,burnerExpiresAt);
   logger.info({address,tgId,type,burner,custom:Boolean(customName)},'Alias created');
+  logChange({
+    tgId,
+    category: 'email',
+    action: 'alias_created',
+    details: `Created ${type} alias ${address}`,
+    metadata: { address, domain, type, burner: Boolean(burner), custom: Boolean(customName) }
+  }).catch(() => {});
   return db.prepare('SELECT * FROM aliases WHERE address=?').get(address);
 }
-function deleteAlias(address,tgId){const db=getDb();if(!db.prepare('SELECT 1 FROM aliases WHERE address=? AND tg_id=?').get(address,tgId))return false;db.prepare('DELETE FROM aliases WHERE address=?').run(address);return true;}
+function deleteAlias(address,tgId){
+  const db=getDb();
+  if(!db.prepare('SELECT 1 FROM aliases WHERE address=? AND tg_id=?').get(address,tgId))return false;
+  db.prepare('DELETE FROM aliases WHERE address=?').run(address);
+  logChange({
+    tgId,
+    category: 'email',
+    action: 'alias_deleted',
+    details: `Deleted alias ${address}`,
+    metadata: { address }
+  }).catch(() => {});
+  return true;
+}
 function deactivateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=0 WHERE address=? AND tg_id=?').run(address,tgId).changes>0;}
 function activateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=1 WHERE address=? AND tg_id=?').run(address,tgId).changes>0;}
 module.exports={getUserAliases,getAliasByAddress,createAlias,deleteAlias,deactivateAlias,activateAlias,getAllowedDomains};

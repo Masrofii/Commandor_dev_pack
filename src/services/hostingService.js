@@ -6,6 +6,7 @@ const { getAvailableNode, getNodeById, deployFilesToNode, removeSiteFromNode } =
 const { claimSubdomain, updateSubdomain, deleteSubdomain, getSubdomainByFullDomain } = require('./subdomainService');
 const config = require('../../config/config');
 const logger = require('../monitoring/logger');
+const { logChange } = require('./auditLogger');
 
 const HOSTING_TOS = `
 Commandor Cloud Hosting - Terms of Service & Acceptable Use Policy:
@@ -290,6 +291,13 @@ async function deploySite({
   }
 
   logger.info({ siteId, cleanName, fullDomain, nodeId: node.id }, 'Site successfully deployed and routing configured');
+  logChange({
+    tgId,
+    category: 'hosting',
+    action: 'site_deployed',
+    details: `Deployed site "${cleanName}" (${fullDomain}) on node #${node.id}`,
+    metadata: { siteId, name: cleanName, fullDomain, nodeId: node.id }
+  }).catch(() => {});
   return getSiteById(siteId);
 }
 
@@ -314,6 +322,13 @@ async function deleteSite(id, tgId = null, isAdmin = false) {
 
   db.prepare('DELETE FROM hosting_sites WHERE id=?').run(id);
   logger.info({ id, siteName: site.name, tgId: site.tg_id }, 'Site deleted');
+  logChange({
+    tgId: site.tg_id,
+    category: 'hosting',
+    action: 'site_deleted',
+    details: `Deleted site "${site.name}" (${site.full_domain})`,
+    metadata: { id, name: site.name, fullDomain: site.full_domain }
+  }).catch(() => {});
   return true;
 }
 

@@ -14,6 +14,7 @@ const requestId=require('./src/middleware/requestId');
 const errorHandler=require('./src/middleware/errorHandler');
 const wsManager=require('./src/realtime/websocket');
 const{setBotInstance,setWsServer}=require('./src/services/notificationService');
+const{setAuditBotInstance}=require('./src/services/auditLogger');
 const{createBot,startBot}=require('./src/bot/bot');
 const{runCleanup}=require('./src/jobs/cleanup');
 const{runBackup}=require('./src/jobs/backups');
@@ -60,7 +61,7 @@ async function startServer(){
   wsManager.attach(server);
   setWsServer(wsManager);
   const bot=createBot();
-  if(bot){setBotInstance(bot);startBot(bot);}
+  if(bot){setBotInstance(bot);setAuditBotInstance(bot);startBot(bot);}
   cron.schedule('0 2 * * *',()=>runCleanup().catch(err=>logger.error({err:err.message},'Cleanup failed')));
   cron.schedule('0 3 * * *',()=>runBackup().catch(err=>logger.error({err:err.message},'Backup failed')));
   cron.schedule('*/5 * * * *',()=>runHealthChecks().catch(()=>{}));

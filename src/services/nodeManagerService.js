@@ -2,6 +2,7 @@
 const { Client } = require('ssh2');
 const { getDb } = require('../../database/database');
 const logger = require('../monitoring/logger');
+const { logChange } = require('./auditLogger');
 
 const REMOTE_SITES_ROOT = '/var/www/nodesites';
 
@@ -217,6 +218,12 @@ async function testAndProvisionNode({
     }
 
     logger.info({ nodeId, host, nodeName }, 'Hosting node successfully provisioned');
+    logChange({
+      category: 'hosting',
+      action: 'node_provisioned',
+      details: `Provisioned hosting server node "${nodeName}" (${host}:${nodeConfig.port})`,
+      metadata: { nodeId, host, nodeName }
+    }).catch(() => {});
     return getNodeById(nodeId);
   } finally {
     try { conn.end(); } catch {}
