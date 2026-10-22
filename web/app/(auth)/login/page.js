@@ -15,7 +15,7 @@ function LoginForm() {
   const [totp, setTotp] = useState('');
   const [pending, setPending] = useState(null);
 
-  const [botUsername, setBotUsername] = useState(process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot');
+  const [botUsername, setBotUsername] = useState(process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot');
 
   useEffect(() => {
     api.getAuthConfig().then(res => {

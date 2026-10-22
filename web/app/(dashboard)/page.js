@@ -454,7 +454,7 @@ export default function OverviewDashboardPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-indigo-500 font-bold">•</span>
-                <span><b>Telegram Bot:</b> Connect via <code>@{process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot'}</code> to receive instant push alerts and 1-tap OTP copy buttons.</span>
+                <span><b>Telegram Bot:</b> Connect via <code>@{process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot'}</code> to receive instant push alerts and 1-tap OTP copy buttons.</span>
               </li>
             </ul>
           </div>

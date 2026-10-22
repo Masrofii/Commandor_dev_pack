@@ -2,6 +2,7 @@
   "name": "commandor-dev-pack",
   "version": "1.0.0",
   "description": "Commandor Dev Pack — Modern Self-Hosted Infrastructure, Domain & Developer Management Platform",
+  "author": "xpT_T (@xpT_T)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -99,11 +99,15 @@ function getLang(ctx) {
   }
 }
 
-function isOwnerOrAdmin(tgId) {
+function isOwnerOrAdmin(tgId, username = null) {
   if (config.telegram.adminId && (String(tgId) === String(config.telegram.adminId))) return true;
+  const ownerUser = (config.telegram.ownerUsername || 'xpT_T').toLowerCase().replace(/^@/, '');
+  if (username && username.toLowerCase().replace(/^@/, '') === ownerUser) return true;
   try {
-    const u = getDb().prepare('SELECT role FROM users WHERE tg_id=?').get(tgId);
-    return u?.role === 'admin';
+    const u = getDb().prepare('SELECT role, username FROM users WHERE tg_id=?').get(tgId);
+    if (u?.role === 'admin') return true;
+    if (u?.username && u.username.toLowerCase().replace(/^@/, '') === ownerUser) return true;
+    return false;
   } catch {
     return false;
   }
@@ -112,7 +116,8 @@ function isOwnerOrAdmin(tgId) {
 async function registerUser(ctx) {
   const db = getDb();
   const tgId = ctx.from.id;
-  const isAdmin = isOwnerOrAdmin(tgId);
+  const username = ctx.from.username;
+  const isAdmin = isOwnerOrAdmin(tgId, username);
   const initialRole = isAdmin ? 'admin' : 'user';
   const e = db.prepare('SELECT tg_id,role FROM users WHERE tg_id=?').get(tgId);
   if (!e) {
@@ -121,9 +126,9 @@ async function registerUser(ctx) {
       .run(tgId, ctx.from.username || null, ctx.from.first_name || null, ctx.from.last_name || null, initialRole, detectedLang);
   } else {
     if (isAdmin && e.role !== 'admin') {
-      db.prepare("UPDATE users SET role='admin',last_seen_at=datetime('now') WHERE tg_id=?").run(tgId);
+      db.prepare("UPDATE users SET role='admin',username=?,last_seen_at=datetime('now') WHERE tg_id=?").run(ctx.from.username || null, tgId);
     } else {
-      db.prepare("UPDATE users SET last_seen_at=datetime('now') WHERE tg_id=?").run(tgId);
+      db.prepare("UPDATE users SET username=?,last_seen_at=datetime('now') WHERE tg_id=?").run(ctx.from.username || null, tgId);
     }
   }
 }
@@ -1692,9 +1697,11 @@ function setupCommands(bot) {
   bot.command(['export', 'download'], wrap(async ctx => showExportMenu(ctx)));
   bot.command(['privacy', 'gdpr'], wrap(async ctx => showPrivacyInfo(ctx), { allowWithoutTos: true }));
   bot.command(['support', 'contact', 'helpdesk'], wrap(async ctx => showSupportInfo(ctx), { allowWithoutTos: true }));
+  bot.command(['credits', 'credit', 'about'], wrap(async ctx => showCreditsInfo(ctx), { allowWithoutTos: true }));
   bot.command(['notifications', 'notify', 'alerts'], wrap(async ctx => showNotificationPreferences(ctx)));
 
   // Persistent keyboard buttons
+  bot.hears(['✨ Credits', 'Credits', '👑 Owner', 'About'], wrap(async ctx => showCreditsInfo(ctx), { allowWithoutTos: true }));
   bot.hears(['📬 Email Suite', 'Email Suite'], wrap(ctx => showEmailSuiteHub(ctx)));
   bot.hears(['📝 Change Log', 'Change Log', '📝 Changelog', 'Changelog'], wrap(ctx => showChangeLog(ctx)));
   bot.hears(['📥 Inbox', '📨 Inbox', 'Inbox', '📨 View Inbox'], wrap(ctx => showInbox(ctx, 1)));
@@ -2424,11 +2431,14 @@ async function showPrivacyInfo(ctx) {
 
 async function showSupportInfo(ctx) {
   const tgId = ctx.from.id;
+  const botUser = ctx.botInfo?.username || config.telegram?.botUsername || 'CommandorDevBot';
+  const ownerUser = config.telegram?.ownerUsername || 'xpT_T';
   let text = `🎧 <b>Commandor Dev Pack — Support & Helpdesk</b>\n\n`;
   text += `Need assistance, want to report a bug, or request a feature?\n\n`;
   text += `👤 <b>Your Diagnostic ID:</b> <code>User #${tgId}</code>\n`;
-  text += `🤖 <b>Bot Service:</b> @${ctx.botInfo?.username || config.telegram?.botUsername || 'commandor_mail_bot'}\n`;
-  text += `💬 <b>Direct Support:</b> <a href="https://t.me/Masrofii">@Masrofii</a>\n\n`;
+  text += `🤖 <b>Bot Service:</b> @${botUser}\n`;
+  text += `👑 <b>Owner:</b> <a href="https://t.me/${ownerUser}">@${ownerUser}</a>\n`;
+  text += `💬 <b>Direct Support:</b> <a href="https://t.me/${ownerUser}">@${ownerUser}</a>\n\n`;
   text += `💡 <b>Quick Tips:</b>\n`;
   text += `• Generate aliases instantly: <code>/new [label]</code>\n`;
   text += `• Search messages: <code>/search [query]</code>\n`;
@@ -2437,8 +2447,34 @@ async function showSupportInfo(ctx) {
 
   const kb = [
     [
-      { text: '💬 Contact Developer', url: 'https://t.me/Masrofii' },
+      { text: `💬 Contact Owner (@${ownerUser})`, url: `https://t.me/${ownerUser}` },
       { text: '📖 Commands Guide', callback_data: 'menu:help' }
+    ],
+    [
+      { text: '✨ Credits & Attribution', callback_data: 'menu:credits' },
+      { text: '🏠 Main Menu', callback_data: 'menu:home' }
+    ]
+  ];
+
+  return replyHtml(ctx, text, { reply_markup: { inline_keyboard: kb } });
+}
+
+async function showCreditsInfo(ctx) {
+  const botUser = ctx.botInfo?.username || config.telegram?.botUsername || 'CommandorDevBot';
+  const ownerUser = config.telegram?.ownerUsername || 'xpT_T';
+  let text = `👑 <b>Commandor Dev Pack — Credits & Attribution</b>\n`;
+  text += `──────────────────────────────\n\n`;
+  text += `🌟 <b>Owner & Lead Developer:</b> <a href="https://t.me/${ownerUser}">@${ownerUser}</a>\n`;
+  text += `🤖 <b>Official Telegram Bot:</b> <a href="https://t.me/${botUser}">@${botUser}</a>\n`;
+  text += `🐙 <b>GitHub Repository:</b> <a href="https://github.com/Masrofii/Commandor_dev_pack">Masrofii/Commandor_dev_pack</a>\n\n`;
+  text += `🛡️ <b>Platform:</b> Commandor Dev Pack\n`;
+  text += `⚙️ <b>Architecture:</b> Node.js · Telegraf · SQLite · Next.js · Nginx · Cloudflare\n\n`;
+  text += `<i>Commandor Dev Pack transforms multi-cloud, VPS, and edge servers into a cohesive, secure, and developer-friendly control plane.</i>`;
+
+  const kb = [
+    [
+      { text: `👑 Contact Owner (@${ownerUser})`, url: `https://t.me/${ownerUser}` },
+      { text: '🐙 View on GitHub', url: 'https://github.com/Masrofii/Commandor_dev_pack' }
     ],
     [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
   ];
@@ -2549,5 +2585,7 @@ module.exports = {
   showChangeLog,
   showAdminAuditLogs,
   showLanguageSelection,
+  showCreditsInfo,
+  showSupportInfo,
   handleCancel
 };

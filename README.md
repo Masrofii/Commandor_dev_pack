@@ -194,5 +194,16 @@ pm2 start ecosystem.config.js
 
 ---
 
+## 👑 Credits & Attribution
+
+- **Project Owner & Creator**: [@xpT_T](https://t.me/xpT_T)
+- **Official Telegram Bot**: [@CommandorDevBot](https://t.me/CommandorDevBot)
+- **Platform**: **Commandor Dev Pack** — Modern Self-Hosted Infrastructure, Domain & Developer Management Platform
+- **GitHub Repository**: [Masrofii/Commandor_dev_pack](https://github.com/Masrofii/Commandor_dev_pack)
+
+Special thanks to **@xpT_T** for stewardship, product design, and architectural vision of the Commandor platform.
+
+---
+
 ## 📄 License
-MIT © Commandor Dev Pack Contributors.
+MIT © Commandor Dev Pack Contributors. Licensed under MIT.

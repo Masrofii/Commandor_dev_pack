@@ -279,7 +279,7 @@ export default function DashboardLayout({ children }) {
             </div>
             <p className="text-slate-500 dark:text-slate-400 mb-2">Sync emails directly with your Telegram client.</p>
             <a
-              href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot'}`}
+              href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot'}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"

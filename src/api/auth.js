@@ -24,7 +24,7 @@ router.get('/config', (req, res) => {
   const { getBot } = require('../bot/bot');
   const config = require('../../config/config');
   const bot = getBot();
-  const botUsername = bot?.botInfo?.username || config.telegram?.botUsername || process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot';
+  const botUsername = bot?.botInfo?.username || config.telegram?.botUsername || process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot';
   res.json({
     botUsername,
     appName: 'Commandor Dev Pack'

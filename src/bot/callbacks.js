@@ -53,7 +53,9 @@ const {
   showApiHub,
   showChangeLog,
   showAdminAuditLogs,
-  showLanguageSelection
+  showLanguageSelection,
+  showCreditsInfo,
+  showSupportInfo
 } = require('./commands');
 const { logChange } = require('../services/auditLogger');
 const {
@@ -191,7 +193,17 @@ function setupCallbacks(bot) {
                 inline_keyboard: [[{ text: '🌐 Launch Web App', url }]]
               }
             });
+          } else if (param === 'credits') {
+            await showCreditsInfo(ctx);
+          } else if (param === 'support') {
+            await showSupportInfo(ctx);
           }
+          break;
+        }
+
+        case 'credits': {
+          await ctx.answerCbQuery().catch(() => {});
+          await showCreditsInfo(ctx);
           break;
         }
 
