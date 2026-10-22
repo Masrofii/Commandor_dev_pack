@@ -85,6 +85,23 @@ export default function InboxPage() {
     handleNewEmail
   } = useInbox(inboxParams);
 
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    refresh();
+  };
+
+  const clearSearch = () => {
+    setSearch('');
+  };
+
+  const applyFilter = (f) => {
+    setFilter(f);
+  };
+
+  const applyAliasFilter = (val) => {
+    setSelectedAlias(val);
+  };
+
   // Detail email fetching
   const { data: activeEmailData, isLoading: loadingActiveEmail, mutate: mutateActiveEmail } = useSWR(
     activeEmailId ? `email-detail-${activeEmailId}` : null,

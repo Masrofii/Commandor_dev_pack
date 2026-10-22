@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { isAuthenticated, getUser, clearToken } from '../../lib/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { api } from '../../lib/api';
-import { useTranslation } from '../../lib/i18n';
+import { useTranslation, getSavedLanguage, applyLanguage } from '../../lib/i18n';
 import {
   Squares2X2Icon,
   InboxIcon,
