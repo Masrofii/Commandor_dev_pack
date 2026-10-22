@@ -7,6 +7,7 @@ const { claimSubdomain, updateSubdomain, deleteSubdomain, getSubdomainByFullDoma
 const config = require('../../config/config');
 const logger = require('../monitoring/logger');
 const { logChange } = require('./auditLogger');
+const { checkHostingStorageQuota } = require('./quotaService');
 
 const HOSTING_TOS = `
 Commandor Cloud Hosting - Terms of Service & Acceptable Use Policy:
@@ -208,6 +209,9 @@ async function deploySite({
     throw new Error(`Storage limit exceeded! Allowed: ${maxMb}MB, uploaded: ${usedMb}MB.`);
   }
 
+  // Enforce cumulative user hosting storage quota server-side
+  checkHostingStorageQuota(tgId, totalBytes, existingSite ? existingSite.id : null);
+
   // 4. Select Node
   let node = null;
   if (existingSite) {
@@ -290,6 +294,14 @@ async function deploySite({
     db.prepare('UPDATE hosting_nodes SET current_sites = current_sites + 1 WHERE id=?').run(node.id);
   }
 
+  // Recalculate user hosting storage
+  db.prepare(`
+    UPDATE users 
+    SET hosting_storage_used = (SELECT COALESCE(SUM(storage_used_bytes), 0) FROM hosting_sites WHERE tg_id = ?),
+        storage_used = email_storage_used + (SELECT COALESCE(SUM(storage_used_bytes), 0) FROM hosting_sites WHERE tg_id = ?)
+    WHERE tg_id = ?
+  `).run(tgId, tgId, tgId);
+
   logger.info({ siteId, cleanName, fullDomain, nodeId: node.id }, 'Site successfully deployed and routing configured');
   logChange({
     tgId,
@@ -321,6 +333,17 @@ async function deleteSite(id, tgId = null, isAdmin = false) {
   }
 
   db.prepare('DELETE FROM hosting_sites WHERE id=?').run(id);
+
+  // Recalculate user hosting storage
+  if (site.tg_id) {
+    db.prepare(`
+      UPDATE users 
+      SET hosting_storage_used = (SELECT COALESCE(SUM(storage_used_bytes), 0) FROM hosting_sites WHERE tg_id = ?),
+          storage_used = email_storage_used + (SELECT COALESCE(SUM(storage_used_bytes), 0) FROM hosting_sites WHERE tg_id = ?)
+      WHERE tg_id = ?
+    `).run(site.tg_id, site.tg_id, site.tg_id);
+  }
+
   logger.info({ id, siteName: site.name, tgId: site.tg_id }, 'Site deleted');
   logChange({
     tgId: site.tg_id,

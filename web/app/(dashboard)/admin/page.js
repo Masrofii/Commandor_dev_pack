@@ -54,7 +54,12 @@ export default function AdminPage() {
 
   // Modals & Action states
   const [editingUser, setEditingUser] = useState(null);
-  const [userForm, setUserForm] = useState({ role: 'user', alias_limit: 999999, storage_limit: 107374182400 });
+  const [userForm, setUserForm] = useState({
+    role: 'user',
+    alias_limit: 10,
+    email_storage_mb: 1024,
+    hosting_storage_mb: 5120
+  });
   const [banningUser, setBanningUser] = useState(null);
   const [banReason, setBanReason] = useState('Administrative policy violation');
   const [banning, setBanning] = useState(false);
@@ -271,18 +276,33 @@ export default function AdminPage() {
     }));
   }
 
+  function formatBytesUI(bytes) {
+    if (!bytes || bytes <= 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
   async function handleSaveUser(e) {
     e.preventDefault();
     if (!editingUser) return;
     try {
-      await api.updateUser(editingUser.tg_id, {
+      const emailLimitBytes = Math.round(parseFloat(userForm.email_storage_mb || 1024) * 1024 * 1024);
+      const hostingLimitBytes = Math.round(parseFloat(userForm.hosting_storage_mb || 5120) * 1024 * 1024);
+      const res = await api.updateUser(editingUser.tg_id, {
         role: userForm.role,
         alias_limit: parseInt(userForm.alias_limit, 10),
-        storage_limit: parseInt(userForm.storage_limit, 10)
+        email_storage_limit: emailLimitBytes,
+        hosting_storage_limit: hostingLimitBytes
       });
-      toast.success('User updated successfully');
+      if (res?.warnings && res.warnings.length) {
+        toast(res.warnings[0], { duration: 6000, icon: '⚠️' });
+      }
+      toast.success('User quotas updated successfully');
       setEditingUser(null);
       mutateUsers();
+      mutateStats();
     } catch (err) {
       toast.error(err.message || 'Update failed');
     }
@@ -640,6 +660,105 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+
+          {/* Global Storage & Quota Monitor (Physical Filesystem & Multi-Tenant Consumption) */}
+          {statsData?.globalStorage && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <CircleStackIcon className="h-5 w-5 text-indigo-500" />
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white">Global Storage &amp; Infrastructure Capacity</h3>
+                </div>
+                {statsData.globalStorage.warnings && statsData.globalStorage.warnings.length > 0 ? (
+                  <span className={`px-2.5 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 ${
+                    statsData.globalStorage.warnings.some(w => w.level === 'critical')
+                      ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 animate-pulse'
+                      : statsData.globalStorage.warnings.some(w => w.level === 'high')
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300'
+                  }`}>
+                    <ExclamationCircleIcon className="h-3.5 w-3.5" />
+                    <span>{statsData.globalStorage.warnings[0].message}</span>
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 flex items-center gap-1">
+                    <CheckCircleIcon className="h-3.5 w-3.5" />
+                    <span>Backend Storage Healthy (&lt;80% Threshold)</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Storage Capacity Gauges */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                {/* Physical Host Disk */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/60 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Host Root Filesystem</span>
+                    <span className={`font-mono font-bold ${
+                      statsData.globalStorage.disk.usagePercent >= 90 ? 'text-red-600' :
+                      statsData.globalStorage.disk.usagePercent >= 80 ? 'text-amber-600' : 'text-emerald-600'
+                    }`}>
+                      {statsData.globalStorage.disk.usagePercent}% Used
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all ${
+                        statsData.globalStorage.disk.usagePercent >= 90 ? 'bg-red-500' :
+                        statsData.globalStorage.disk.usagePercent >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(100, statsData.globalStorage.disk.usagePercent)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-gray-500">
+                    <span>Used: <b>{statsData.globalStorage.disk.usedFormatted}</b></span>
+                    <span>Free: <b>{statsData.globalStorage.disk.freeFormatted}</b></span>
+                    <span>Total: {statsData.globalStorage.disk.totalFormatted}</span>
+                  </div>
+                </div>
+
+                {/* Email Storage Pool */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/60 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Email &amp; Attachments</span>
+                    <span className="font-mono font-bold text-indigo-600">
+                      {statsData.globalStorage.platform.email.usedFormatted}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-indigo-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, statsData.globalStorage.platform.email.usagePercent)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-gray-500">
+                    <span>Allocated Quota: <b>{statsData.globalStorage.platform.email.limitFormatted}</b></span>
+                    <span>{statsData.globalStorage.platform.email.usagePercent}% utilized</span>
+                  </div>
+                </div>
+
+                {/* Website & App Hosting Storage Pool */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/60 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Website &amp; App Hosting</span>
+                    <span className="font-mono font-bold text-purple-600">
+                      {statsData.globalStorage.platform.hosting.usedFormatted}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-purple-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, statsData.globalStorage.platform.hosting.usagePercent)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-gray-500">
+                    <span>Allocated Quota: <b>{statsData.globalStorage.platform.hosting.limitFormatted}</b></span>
+                    <span>{statsData.globalStorage.platform.hosting.usagePercent}% utilized</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -696,14 +815,16 @@ export default function AdminPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold">
                   <tr>
-                    <th className="px-4 py-3">Telegram ID</th>
-                    <th className="px-4 py-3">User</th>
-                    <th className="px-4 py-3">Role</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Subscription</th>
-                    <th className="px-4 py-3">Quotas (Aliases/Domains/Apps)</th>
-                    <th className="px-4 py-3">Joined Date</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-3 py-3">Telegram ID</th>
+                    <th className="px-3 py-3">User</th>
+                    <th className="px-3 py-3">Role</th>
+                    <th className="px-3 py-3">Status</th>
+                    <th className="px-3 py-3">Subscription</th>
+                    <th className="px-3 py-3">Email Storage (Used / Quota)</th>
+                    <th className="px-3 py-3">Hosting Storage (Used / Quota)</th>
+                    <th className="px-3 py-3">Aliases Quota</th>
+                    <th className="px-3 py-3">Domains &amp; Apps</th>
+                    <th className="px-3 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
@@ -763,15 +884,78 @@ export default function AdminPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-[11px]">
-                        <div>Aliases: <b>{u.alias_limit > 90000 ? '∞' : u.alias_limit}</b></div>
-                        <div>Domains: <b>{u.custom_domain_limit > 90000 ? '∞' : u.custom_domain_limit || 1}</b></div>
-                        <div>Apps: <b>{u.application_limit > 90000 ? '∞' : u.application_limit || 3}</b></div>
+                      {/* Email Storage */}
+                      <td className="px-3 py-3 font-sans">
+                        <div className="flex items-center justify-between gap-1 text-[11px]">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {formatBytesUI(u.email_storage_used || 0)}
+                          </span>
+                          <span className="text-gray-400 font-mono text-[10px]">
+                            / {formatBytesUI(u.email_storage_limit || 1073741824)}
+                          </span>
+                        </div>
+                        <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1 overflow-hidden">
+                          <div
+                            className={`h-1.5 rounded-full ${
+                              (u.email_storage_used || 0) > (u.email_storage_limit || 1073741824)
+                                ? 'bg-red-500'
+                                : 'bg-indigo-500'
+                            }`}
+                            style={{
+                              width: `${Math.min(100, Math.round(((u.email_storage_used || 0) / (u.email_storage_limit || 1073741824)) * 100))}%`
+                            }}
+                          />
+                        </div>
+                        {(u.email_storage_used || 0) > (u.email_storage_limit || 1073741824) && (
+                          <span className="inline-block px-1.5 py-0.2 text-[9px] font-bold rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 mt-0.5">
+                            OVER QUOTA
+                          </span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-[11px] text-gray-500">
-                        {new Date(u.created_at).toLocaleDateString()}
+
+                      {/* Hosting Storage */}
+                      <td className="px-3 py-3 font-sans">
+                        <div className="flex items-center justify-between gap-1 text-[11px]">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {formatBytesUI(u.hosting_storage_used || 0)}
+                          </span>
+                          <span className="text-gray-400 font-mono text-[10px]">
+                            / {formatBytesUI(u.hosting_storage_limit || 5368709120)}
+                          </span>
+                        </div>
+                        <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1 overflow-hidden">
+                          <div
+                            className={`h-1.5 rounded-full ${
+                              (u.hosting_storage_used || 0) > (u.hosting_storage_limit || 5368709120)
+                                ? 'bg-red-500'
+                                : 'bg-purple-500'
+                            }`}
+                            style={{
+                              width: `${Math.min(100, Math.round(((u.hosting_storage_used || 0) / (u.hosting_storage_limit || 5368709120)) * 100))}%`
+                            }}
+                          />
+                        </div>
+                        {(u.hosting_storage_used || 0) > (u.hosting_storage_limit || 5368709120) && (
+                          <span className="inline-block px-1.5 py-0.2 text-[9px] font-bold rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 mt-0.5">
+                            OVER QUOTA
+                          </span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-right space-x-1 font-sans whitespace-nowrap">
+
+                      {/* Aliases Quota (Count-based) */}
+                      <td className="px-3 py-3 font-sans">
+                        <div className="text-[11px]">
+                          <b>{u.aliases_count || 0}</b> <span className="text-gray-400">/ {u.alias_limit > 900000 ? '∞' : u.alias_limit}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400">Aliases Active</span>
+                      </td>
+
+                      {/* Domains & Apps */}
+                      <td className="px-3 py-3 text-[11px] font-sans">
+                        <div>Domains: <b>{u.domains_count || 0}/{u.custom_domain_limit > 90000 ? '∞' : (u.custom_domain_limit || 1)}</b></div>
+                        <div>Apps: <b>{u.applications_count || 0}/{u.application_limit > 90000 ? '∞' : (u.application_limit || 3)}</b></div>
+                      </td>
+                      <td className="px-3 py-3 text-right space-x-1 font-sans whitespace-nowrap">
                         <button
                           onClick={() => {
                             setSubscribingUser(u);
@@ -792,12 +976,14 @@ export default function AdminPage() {
                             setUserForm({
                               role: u.role,
                               alias_limit: u.alias_limit,
-                              storage_limit: u.storage_limit
+                              email_storage_mb: Math.round((u.email_storage_limit || 1073741824) / (1024 * 1024)),
+                              hosting_storage_mb: Math.round((u.hosting_storage_limit || 5368709120) / (1024 * 1024))
                             });
                           }}
-                          className="px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded text-xs hover:bg-gray-200"
+                          className="px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded text-xs hover:bg-gray-200 font-medium"
+                          title="Configure Storage Quotas"
                         >
-                          Edit
+                          Quotas
                         </button>
                         {u.is_banned ? (
                           <button
@@ -1491,29 +1677,70 @@ export default function AdminPage() {
 
               <div>
                 <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Alias Limit
+                  Email &amp; Attachments Storage Quota (MB)
                 </label>
-                <input
-                  type="number"
-                  value={userForm.alias_limit}
-                  onChange={e => setUserForm({ ...userForm, alias_limit: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="100"
+                    max="1048576"
+                    required
+                    value={userForm.email_storage_mb}
+                    onChange={e => setUserForm({ ...userForm, email_storage_mb: e.target.value })}
+                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                  />
+                  <span className="font-semibold text-gray-500 font-mono shrink-0">
+                    = {(userForm.email_storage_mb / 1024).toFixed(1)} GB
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Current actual email usage: <b>{formatBytesUI(editingUser.email_storage_used || 0)}</b> (Default: 1024 MB / 1 GB)
+                </p>
               </div>
 
               <div>
                 <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Storage Limit (Bytes)
+                  Website &amp; App Hosting Storage Quota (MB)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="100"
+                    max="1048576"
+                    required
+                    value={userForm.hosting_storage_mb}
+                    onChange={e => setUserForm({ ...userForm, hosting_storage_mb: e.target.value })}
+                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                  />
+                  <span className="font-semibold text-gray-500 font-mono shrink-0">
+                    = {(userForm.hosting_storage_mb / 1024).toFixed(1)} GB
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Current actual hosting usage: <b>{formatBytesUI(editingUser.hosting_storage_used || 0)}</b> (Default: 5120 MB / 5 GB)
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Active Alias Quota (Count)
                 </label>
                 <input
                   type="number"
-                  value={userForm.storage_limit}
-                  onChange={e => setUserForm({ ...userForm, storage_limit: e.target.value })}
+                  min="1"
+                  required
+                  value={userForm.alias_limit}
+                  onChange={e => setUserForm({ ...userForm, alias_limit: e.target.value })}
                   className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
                 />
                 <p className="mt-1 text-[11px] text-gray-400">
-                  Current: {(userForm.storage_limit / 1024 / 1024 / 1024).toFixed(1)} GB
+                  Currently active aliases: <b>{editingUser.aliases_count || 0}</b>
                 </p>
+              </div>
+
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-[11px] text-amber-800 dark:text-amber-300 space-y-1 border border-amber-200 dark:border-amber-800">
+                <p className="font-semibold">🛡️ Quota Adjustment Policy:</p>
+                <p>Reducing a user's quota below current usage preserves existing user data and will not delete files or emails. It safely blocks new uploads and incoming mail until usage drops below the limit.</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">

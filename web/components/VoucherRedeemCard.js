@@ -12,6 +12,7 @@ import {
   CommandLineIcon,
   EnvelopeIcon,
   CircleStackIcon,
+  ServerStackIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
@@ -119,13 +120,13 @@ export default function VoucherRedeemCard() {
         </div>
 
         {/* Resource Quota Progress Counters */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-indigo-500/20">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-6 border-t border-indigo-500/20">
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <GlobeAltIcon className="h-4 w-4 text-cyan-400" />
               <span>Custom Domains</span>
             </div>
-            <div className="mt-1 text-lg font-mono font-bold text-white">
+            <div className="mt-1 text-base font-mono font-bold text-white">
               {subData?.usage?.domains || 0} <span className="text-xs text-indigo-300 font-normal">/ {subData?.custom_domain_limit > 90000 ? '∞' : subData?.custom_domain_limit || 1}</span>
             </div>
           </div>
@@ -133,9 +134,9 @@ export default function VoucherRedeemCard() {
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <CommandLineIcon className="h-4 w-4 text-purple-400" />
-              <span>Git Apps</span>
+              <span>Git Apps &amp; Sites</span>
             </div>
-            <div className="mt-1 text-lg font-mono font-bold text-white">
+            <div className="mt-1 text-base font-mono font-bold text-white">
               {subData?.usage?.applications || 0} <span className="text-xs text-indigo-300 font-normal">/ {subData?.application_limit > 90000 ? '∞' : subData?.application_limit || 3}</span>
             </div>
           </div>
@@ -143,20 +144,36 @@ export default function VoucherRedeemCard() {
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <EnvelopeIcon className="h-4 w-4 text-amber-400" />
-              <span>Email Aliases</span>
+              <span>Active Aliases</span>
             </div>
-            <div className="mt-1 text-lg font-mono font-bold text-white">
-              {subData?.usage?.aliases || 0} <span className="text-xs text-indigo-300 font-normal">/ {subData?.alias_limit > 90000 ? '∞' : subData?.alias_limit || 5}</span>
+            <div className="mt-1 text-base font-mono font-bold text-white">
+              {subData?.usage?.aliases || 0} <span className="text-xs text-indigo-300 font-normal">/ {subData?.alias_limit > 90000 ? '∞' : subData?.alias_limit || 10}</span>
             </div>
           </div>
 
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <CircleStackIcon className="h-4 w-4 text-emerald-400" />
-              <span>Storage Quota</span>
+              <span>Email Storage</span>
             </div>
-            <div className="mt-1 text-lg font-mono font-bold text-white">
-              {((subData?.storage_used || 0) / 1024 / 1024).toFixed(0)} MB <span className="text-xs text-indigo-300 font-normal">/ {((subData?.storage_limit || 104857600) / 1024 / 1024 / 1024).toFixed(1)} GB</span>
+            <div className="mt-1 text-sm font-mono font-bold text-white">
+              {subData?.storageBreakdown?.email?.usedFormatted || `${((subData?.email_storage_used || 0) / 1024 / 1024).toFixed(1)} MB`}
+              <span className="text-xs text-indigo-300 font-normal block">
+                quota: {subData?.storageBreakdown?.email?.limitFormatted || `${((subData?.email_storage_limit || 1073741824) / 1024 / 1024 / 1024).toFixed(1)} GB`}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5 text-xs text-indigo-200">
+              <ServerStackIcon className="h-4 w-4 text-pink-400" />
+              <span>Hosting Storage</span>
+            </div>
+            <div className="mt-1 text-sm font-mono font-bold text-white">
+              {subData?.storageBreakdown?.hosting?.usedFormatted || `${((subData?.hosting_storage_used || 0) / 1024 / 1024).toFixed(1)} MB`}
+              <span className="text-xs text-indigo-300 font-normal block">
+                quota: {subData?.storageBreakdown?.hosting?.limitFormatted || `${((subData?.hosting_storage_limit || 5368709120) / 1024 / 1024 / 1024).toFixed(1)} GB`}
+              </span>
             </div>
           </div>
         </div>

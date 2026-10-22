@@ -60,7 +60,19 @@ router.post('/',incomingEmailLimiter,validateSecret,async(req,res)=>{
     const filterActions=applyFilters(alias.tg_id,{sender:parsedEmail.sender,subject:parsedEmail.subject,textBody:parsedEmail.textBody,aliasAddress:dest});
     if(filterActions.some(a=>a.action==='DROP'||a.action==='BLOCK')){logger.info({dest,sender:parsedEmail.sender},'Email blocked by filter');increment('emailsRejected');db.prepare('INSERT OR IGNORE INTO idempotency(key)VALUES(?)').run(idKey);return res.status(200).json({status:'filtered'});}
     db.prepare('INSERT OR IGNORE INTO idempotency(key)VALUES(?)').run(idKey);
-    const{emailRecord,spamResult}=await storeEmail({parsedEmail,rawEml,aliasRecord:alias,workerMeta});
+    let emailRecord, spamResult;
+    try {
+      const stored = await storeEmail({parsedEmail,rawEml,aliasRecord:alias,workerMeta});
+      emailRecord = stored.emailRecord;
+      spamResult = stored.spamResult;
+    } catch (storeErr) {
+      if (storeErr.message && (storeErr.message.includes('quota exceeded') || storeErr.message.includes('Storage backend disk'))) {
+        logger.warn({ dest, tgId: alias.tg_id, err: storeErr.message }, 'Incoming email rejected due to storage quota');
+        increment('emailsRejected');
+        return res.status(507).json({ error: storeErr.message });
+      }
+      throw storeErr;
+    }
     increment('emailsReceived');if(spamResult.classification==='spam')increment('spamBlocked');
     res.status(200).json({status:'accepted',emailId:emailRecord.id});
     setImmediate(async()=>{try{

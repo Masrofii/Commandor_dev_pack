@@ -9,6 +9,7 @@ const{hashSha256}=require('../utils/crypto');
 const{sanitizeFilename}=require('../utils/validation');
 const logger=require('../monitoring/logger');
 const path=require('path');
+const { checkEmailStorageQuota } = require('./quotaService');
 
 async function storeEmail({parsedEmail,rawEml,aliasRecord,workerMeta={}}){
   const db=getDb();const storage=getDriver();
@@ -18,18 +19,34 @@ async function storeEmail({parsedEmail,rawEml,aliasRecord,workerMeta={}}){
   const receivedAt=parsedEmail.date?parsedEmail.date.toISOString():now;
   const threadId=findOrCreateThread(aliasRecord.address,parsedEmail.messageId,parsedEmail.inReplyTo,parsedEmail.references,parsedEmail.subject);
   const cleanHtml=sanitizeEmailHtml(parsedEmail.htmlBody,{removeTrackers:true});
+
+  const sizeBytes=rawEml?rawEml.length:0;
+  const attachmentBytes=(parsedEmail.attachments||[]).reduce((acc,a)=>acc+(a.size||(a.content?a.content.length:0)),0);
+  const totalIncomingBytes=sizeBytes+attachmentBytes;
+
+  // Enforce email quota server-side before persisting
+  checkEmailStorageQuota(aliasRecord.tg_id, totalIncomingBytes);
+
   let rawEmlPath=null;
   if(rawEml){const n=`${hashSha256(rawEml).slice(0,16)}.eml`;const rp=path.join('eml',aliasRecord.tg_id.toString(),n);await storage.save(rp,rawEml);rawEmlPath=rp;}
-  const sizeBytes=rawEml?rawEml.length:0;
+
   const storeTx=transaction(()=>{
+    // Re-verify inside atomic transaction to prevent concurrent race bypass
+    checkEmailStorageQuota(aliasRecord.tg_id, totalIncomingBytes);
+
     const result=db.prepare('INSERT INTO emails(alias_address,message_id,thread_id,sender,sender_name,recipient,reply_to,subject,text_body,html_body,clean_html,has_attachments,spam_score,spam_classification,spf_result,dkim_result,dmarc_result,origin_ip,raw_eml_path,size_bytes,received_at)VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(aliasRecord.address,parsedEmail.messageId,threadId,parsedEmail.sender,parsedEmail.senderName,parsedEmail.recipient,parsedEmail.replyTo,parsedEmail.subject,parsedEmail.textBody,parsedEmail.htmlBody,cleanHtml,parsedEmail.attachments.length>0?1:0,spamResult.score,spamResult.classification,workerMeta.spf||authResults.spf,workerMeta.dkim||authResults.dkim,workerMeta.dmarc||authResults.dmarc,workerMeta.originIp||null,rawEmlPath,sizeBytes,receivedAt);
     const emailId=result.lastInsertRowid;
     updateThread(db,threadId,aliasRecord.address,parsedEmail.subject,receivedAt);
-    db.prepare('UPDATE users SET storage_used=storage_used+? WHERE tg_id=?').run(sizeBytes,aliasRecord.tg_id);
+    db.prepare(`
+      UPDATE users 
+      SET email_storage_used = email_storage_used + ?,
+          storage_used = storage_used + ?
+      WHERE tg_id = ?
+    `).run(totalIncomingBytes, totalIncomingBytes, aliasRecord.tg_id);
     return emailId;
   });
   const emailId=storeTx();
-  for(const att of parsedEmail.attachments){try{await storeAttachment(att,emailId,aliasRecord.tg_id);}catch(err){logger.error({err:err.message,emailId},'Attachment storage failed');}}
+  for(const att of (parsedEmail.attachments||[])){try{await storeAttachment(att,emailId,aliasRecord.tg_id);}catch(err){logger.error({err:err.message,emailId},'Attachment storage failed');}}
   const emailRecord=db.prepare('SELECT * FROM emails WHERE id=?').get(emailId);
   return{emailRecord,spamResult,authResults};
 }
@@ -76,5 +93,28 @@ function getEmailById(id,tgId){return getDb().prepare('SELECT e.* FROM emails e 
 function getUnreadCount(tgId){return getDb().prepare('SELECT COUNT(*)as c FROM emails e JOIN aliases a ON e.alias_address=a.address COLLATE NOCASE WHERE a.tg_id=? AND e.is_deleted=0 AND e.is_read=0').get(tgId).c;}
 function markRead(id,tgId){return getDb().prepare('UPDATE emails SET is_read=1 WHERE id=? AND alias_address IN(SELECT address FROM aliases WHERE tg_id=?)').run(id,tgId).changes>0;}
 function markStarred(id,tgId,starred){return getDb().prepare('UPDATE emails SET is_starred=? WHERE id=? AND alias_address IN(SELECT address FROM aliases WHERE tg_id=?)').run(starred?1:0,id,tgId).changes>0;}
-function softDeleteEmail(id,tgId){return getDb().prepare('UPDATE emails SET is_deleted=1 WHERE id=? AND alias_address IN(SELECT address FROM aliases WHERE tg_id=?)').run(id,tgId).changes>0;}
+function softDeleteEmail(id,tgId){
+  const db = getDb();
+  const email = db.prepare(`
+    SELECT e.id, e.size_bytes 
+    FROM emails e 
+    JOIN aliases a ON e.alias_address = a.address COLLATE NOCASE 
+    WHERE e.id = ? AND a.tg_id = ? AND e.is_deleted = 0
+  `).get(id, tgId);
+  if (!email) return false;
+
+  const attSize = db.prepare('SELECT COALESCE(SUM(size), 0) as s FROM attachments WHERE email_id = ?').get(id)?.s || 0;
+  const totalFreed = (email.size_bytes || 0) + attSize;
+
+  const res = db.prepare('UPDATE emails SET is_deleted=1 WHERE id=?').run(id);
+  if (res.changes > 0 && totalFreed > 0) {
+    db.prepare(`
+      UPDATE users 
+      SET email_storage_used = MAX(0, email_storage_used - ?),
+          storage_used = MAX(0, storage_used - ?)
+      WHERE tg_id = ?
+    `).run(totalFreed, totalFreed, tgId);
+  }
+  return res.changes > 0;
+}
 module.exports={storeEmail,storeAttachment,getEmails,getEmailById,getUnreadCount,markRead,markStarred,softDeleteEmail};

@@ -117,7 +117,7 @@ async function registerUser(ctx) {
   const e = db.prepare('SELECT tg_id,role FROM users WHERE tg_id=?').get(tgId);
   if (!e) {
     const detectedLang = detectLanguage(ctx);
-    db.prepare('INSERT INTO users(tg_id,username,first_name,last_name,role,alias_limit,storage_limit,language) VALUES(?,?,?,?,?,999999,107374182400,?)')
+    db.prepare('INSERT INTO users(tg_id,username,first_name,last_name,role,alias_limit,storage_limit,email_storage_limit,hosting_storage_limit,language) VALUES(?,?,?,?,?,10,6442450944,1073741824,5368709120,?)')
       .run(tgId, ctx.from.username || null, ctx.from.first_name || null, ctx.from.last_name || null, initialRole, detectedLang);
   } else {
     if (isAdmin && e.role !== 'admin') {
@@ -1560,7 +1560,8 @@ function setupCommands(bot) {
     text += `• Custom Domains: <b>${u.usage.domains}</b> / ${u.custom_domain_limit > 90000 ? 'Unlimited' : u.custom_domain_limit}\n`;
     text += `• Git Applications: <b>${u.usage.applications}</b> / ${u.application_limit > 90000 ? 'Unlimited' : u.application_limit}\n`;
     text += `• Email Aliases: <b>${u.usage.aliases}</b> / ${u.alias_limit > 90000 ? 'Unlimited' : u.alias_limit}\n`;
-    text += `• Storage: <b>${(u.storage_used / 1024 / 1024).toFixed(1)} MB</b> / ${(u.storage_limit / 1024 / 1024 / 1024).toFixed(1)} GB\n`;
+    text += `• Email Storage: <b>${((u.email_storage_used || 0) / 1024 / 1024).toFixed(1)} MB</b> / ${((u.email_storage_limit || 1073741824) / 1024 / 1024 / 1024).toFixed(1)} GB\n`;
+    text += `• Hosting Storage: <b>${((u.hosting_storage_used || 0) / 1024 / 1024).toFixed(1)} MB</b> / ${((u.hosting_storage_limit || 5368709120) / 1024 / 1024 / 1024).toFixed(1)} GB\n`;
     text += `──────────────────────────────\n`;
     text += `<i>Have a voucher code? Type: <code>/redeem YOUR-CODE</code></i>`;
 

@@ -3,6 +3,7 @@ const { getDb } = require('../../database/database');
 const { logChange } = require('./auditLogger');
 const { getWebSocketServer } = require('../realtime/websocket');
 const logger = require('../monitoring/logger');
+const { getUserComprehensiveStorageStats } = require('./quotaService');
 
 function listUsers({ page = 1, limit = 50, search = null, role = null, status = null, plan = null } = {}) {
   const db = getDb();
@@ -40,6 +41,7 @@ function listUsers({ page = 1, limit = 50, search = null, role = null, status = 
       u.ban_reason, u.banned_at, u.banned_by,
       u.subscription_plan, u.subscription_status, u.subscription_expires_at, u.subscription_started_at,
       u.storage_used, u.storage_limit, u.alias_limit, u.custom_domain_limit, u.application_limit, u.node_limit,
+      u.email_storage_used, u.email_storage_limit, u.hosting_storage_used, u.hosting_storage_limit,
       u.created_at, u.last_seen_at,
       (SELECT COUNT(*) FROM aliases WHERE tg_id = u.tg_id) AS aliases_count,
       (SELECT COUNT(*) FROM custom_domains WHERE tg_id = u.tg_id) AS domains_count,
@@ -91,17 +93,22 @@ function getUserDetails(tgId) {
   const appsCount = db.prepare('SELECT COUNT(*) as c FROM subdomains WHERE tg_id = ? AND application_id IS NOT NULL').get(tgId)?.c || 0;
   const webhooksCount = db.prepare('SELECT COUNT(*) as c FROM webhooks WHERE tg_id = ?').get(tgId)?.c || 0;
 
+  const storageBreakdown = getUserComprehensiveStorageStats(tgId);
+
   return {
     ...user,
     plan_features: user.plan_features ? JSON.parse(user.plan_features) : [],
     daysRemaining,
     isExpired,
+    storageBreakdown,
     usage: {
       aliases: aliasesCount,
       domains: domainsCount,
       applications: appsCount,
       webhooks: webhooksCount,
-      storageBytes: user.storage_used
+      storageBytes: user.storage_used,
+      emailStorageBytes: user.email_storage_used,
+      hostingStorageBytes: user.hosting_storage_used
     }
   };
 }
@@ -229,6 +236,10 @@ function setSubscription(targetTgId, { planId = 'free', durationDays = 30, isLif
     newExpiresAt = baseDate.toISOString().replace('T', ' ').substring(0, 19);
   }
 
+  const emailLimit = plan.email_storage_limit || 1073741824;
+  const hostingLimit = plan.hosting_storage_limit || 5368709120;
+  const totalLimit = emailLimit + hostingLimit;
+
   db.prepare(`
     UPDATE users 
     SET subscription_plan = ?,
@@ -237,6 +248,8 @@ function setSubscription(targetTgId, { planId = 'free', durationDays = 30, isLif
         subscription_started_at = datetime('now'),
         alias_limit = ?,
         storage_limit = ?,
+        email_storage_limit = ?,
+        hosting_storage_limit = ?,
         custom_domain_limit = ?,
         application_limit = ?,
         node_limit = ?
@@ -246,7 +259,9 @@ function setSubscription(targetTgId, { planId = 'free', durationDays = 30, isLif
     status,
     newExpiresAt,
     plan.alias_limit,
-    plan.storage_limit,
+    totalLimit,
+    emailLimit,
+    hostingLimit,
     plan.custom_domain_limit,
     plan.application_limit,
     plan.node_limit,

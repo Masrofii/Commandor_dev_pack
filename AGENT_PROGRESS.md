@@ -196,9 +196,49 @@
 
 ---
 
+## Phase M: Accurate, Separate Storage Quotas & Global Monitoring
+
+### 1. Storage Systems Inspection & Legacy Field Audit
+- **Legacy Field Audit**:
+  - Investigated `users.storage_limit` (originally defaulted to 100 MB in migration 001, updated to a blanket 100 GB in migration 010).
+  - Confirmed that `quotaService.checkStorageQuota` was previously uncalled. `emailService.js` incremented `storage_used` only by raw EML length without checking limits, omitting attachment sizes entirely, while `hostingService.js` checked individual site limits on `hosting_plans` instead of user quotas.
+- **Architectural Separation**:
+  - Implemented migration `017_separate_storage_quotas.sql` adding `email_storage_used`, `email_storage_limit`, `hosting_storage_used`, and `hosting_storage_limit` to `users` and `subscription_plans`.
+  - Configurable defaults established: **1 GB for email storage** and **5 GB for website/app hosting**.
+  - Populated existing usage from actual `emails`, `attachments`, and `hosting_sites` records.
+  - Maintained backward compatibility by synchronizing legacy `storage_used = email_storage_used + hosting_storage_used` and `storage_limit = email_storage_limit + hosting_storage_limit`.
+
+### 2. Server-Side Quota & Backend Capacity Enforcement
+- **Email Ingestion (`src/services/emailService.js`, `src/api/incoming.js`)**:
+  - Pre-flight quota check calculating total incoming payload (`rawEml.length` + sum of attachment sizes).
+  - Transactional quota enforcement preventing concurrent bypass.
+  - Rejects over-quota emails with HTTP 507 (`Insufficient Storage`).
+  - Soft-deleting emails decrements `email_storage_used` and restores user quota.
+- **Hosting Uploads (`src/services/hostingService.js`)**:
+  - Enforces `checkHostingStorageQuota` prior to deploying site files to nodes.
+  - Re-deploying an existing site credits the previous version's size.
+  - Recalculates and decrements `hosting_storage_used` upon site deletion.
+- **Physical Backend Capacity Protection (`checkStorageBackendCapacity`)**:
+  - Evaluates root filesystem availability via `fs.statfsSync`.
+  - Enforces a 50 MB safety margin, rejecting writes safely if the backend disk is full.
+- **Non-Destructive Safe Quota Reductions (Requirement 10)**:
+  - Reducing an administrator quota below current usage preserves 100% of existing user data without deletions.
+  - Flags accounts as over-quota and blocks subsequent writes/uploads until usage drops below the new quota.
+
+### 3. Global Monitoring & Admin Dashboard Components
+- **Global Storage & Quota Monitor** (`src/services/quotaService.js`, `web/app/(dashboard)/admin/page.js`):
+  - Host root filesystem live gauge (Total, Free, Used, %) with automated warnings at 80%, 90%, and 95% thresholds.
+  - Multi-tenant platform allocation breakdown for Email vs Hosting pools.
+- **User Directory Table**:
+  - Split into distinct columns: `Email Storage (Used / Quota)`, `Hosting Storage (Used / Quota)`, and count-based `Aliases Quota`.
+  - Over-quota pill indicators (`OVER QUOTA`) when usage exceeds allocated limits.
+  - Configurable Quotas modal allowing administrators to adjust Email Quota (MB), Hosting Quota (MB), and Alias Limit (Count) independently with real-time actual usage indicators.
+
+---
+
 ## Verification & Test Results
-- **Jest Test Suite**: 21 test suites, 185 tests passed (100% pass rate).
-  - Added `tests/services/userManagementAndRedeem.test.js` (15/15 tests passing) covering ban enforcement, unbanning, session eviction, subscription plan upgrades, lifetime grants, voucher redemption rewards, duplicate prevention, revoked code rejection, and max usage exhaustion.
+- **Jest Test Suite**: 22 test suites, 196 tests passed (100% pass rate).
+  - Added `tests/services/storageQuotas.test.js` (11/11 tests passing) covering disk backend validation, email quota rejection, attachment accounting, quota restoration upon email deletion, hosting quota rejection, safe quota reductions without data loss, count-based alias limits, and global storage monitoring at 80/90/95% thresholds.
 - **Next.js Production Build**: 19/19 static and dynamic routes compiled cleanly with 0 errors (`npm run build`).
 - **Translation Completeness**: 15 languages verified 100% complete.
 - **PM2 Production Status**:
@@ -220,3 +260,4 @@
 - [x] Phase J: Commandor Dev Pack Master Transformation (Nodes, Subdomains, Apps, Monitoring, Backups, Audit)
 - [x] Phase K: Next-Generation Improvement Sprint (Launchpad, Templates, Visibility & Reliability)
 - [x] Phase L: User Management, Subscriptions & Voucher Engine
+- [x] Phase M: Accurate, Separate Storage Quotas & Global Monitoring

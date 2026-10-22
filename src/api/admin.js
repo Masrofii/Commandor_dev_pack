@@ -9,6 +9,7 @@ const { getAllSitesAdmin, deleteSite, getSecurityLogs } = require('../services/h
 const { listNodes, enrollNode, updateNode, bulkAddNodes, validateBulkNodes, testNodeConnection, deleteNode, parseNodeConnectionString, pingNode, executeNodeCommand, getNodeWithSites } = require('../services/nodeManagerService');
 const { listUsers, getUserDetails, banUser, unbanUser, setSubscription, listSubscriptionPlans } = require('../services/userService');
 const { createRedeemCode, listRedeemCodes, revokeRedeemCode, deleteRedeemCode, listRedeemLogs } = require('../services/redeemService');
+const { getGlobalStorageMetrics, getUserComprehensiveStorageStats, formatBytes } = require('../services/quotaService');
 
 router.use(requireAdmin);
 
@@ -27,10 +28,13 @@ router.get('/stats', async (req, res) => {
     const nodesCount = database.prepare('SELECT COUNT(*) as c FROM hosting_nodes').get()?.c || 0;
     const threatsCount = database.prepare('SELECT COUNT(*) as c FROM hosting_security_logs').get()?.c || 0;
 
+    const globalStorage = getGlobalStorageMetrics();
+
     res.json({
       database: db,
       process: proc,
       counters: ctrs,
+      globalStorage,
       overview: {
         users: db.users,
         aliases: db.aliases,
@@ -120,8 +124,42 @@ router.get('/subscription-plans', (req, res) => {
 router.patch('/users/:tgId', (req, res) => {
   try {
     const db = getDb();
-    const allowed = ['is_banned', 'role', 'alias_limit', 'storage_limit', 'custom_domain_limit', 'application_limit', 'node_limit'];
+    const targetTgId = req.params.tgId;
+    const currentUser = db.prepare('SELECT tg_id, email_storage_used, email_storage_limit, hosting_storage_used, hosting_storage_limit, storage_limit FROM users WHERE tg_id=?').get(targetTgId);
+    if (!currentUser) return res.status(404).json({ error: 'User not found' });
+
+    const allowed = [
+      'is_banned', 'role', 'alias_limit', 'storage_limit',
+      'email_storage_limit', 'hosting_storage_limit',
+      'custom_domain_limit', 'application_limit', 'node_limit'
+    ];
     const updates = [], values = [];
+    const warnings = [];
+
+    // Parse integer limits safely
+    if (req.body.email_storage_limit !== undefined) {
+      const newEmailLimit = parseInt(req.body.email_storage_limit, 10);
+      req.body.email_storage_limit = newEmailLimit;
+      if (newEmailLimit > 0 && newEmailLimit < currentUser.email_storage_used) {
+        warnings.push(`Email storage limit reduced below current usage (${formatBytes(currentUser.email_storage_used)} used vs ${formatBytes(newEmailLimit)} limit). Existing data is preserved, but new incoming messages will be rejected.`);
+      }
+    }
+
+    if (req.body.hosting_storage_limit !== undefined) {
+      const newHostingLimit = parseInt(req.body.hosting_storage_limit, 10);
+      req.body.hosting_storage_limit = newHostingLimit;
+      if (newHostingLimit > 0 && newHostingLimit < currentUser.hosting_storage_used) {
+        warnings.push(`Hosting storage limit reduced below current usage (${formatBytes(currentUser.hosting_storage_used)} used vs ${formatBytes(newHostingLimit)} limit). Existing sites are preserved, but new uploads will be rejected.`);
+      }
+    }
+
+    // Sync legacy storage_limit if email or hosting limit changed
+    if (req.body.email_storage_limit !== undefined || req.body.hosting_storage_limit !== undefined) {
+      const eLim = req.body.email_storage_limit !== undefined ? req.body.email_storage_limit : (currentUser.email_storage_limit || 1073741824);
+      const hLim = req.body.hosting_storage_limit !== undefined ? req.body.hosting_storage_limit : (currentUser.hosting_storage_limit || 5368709120);
+      req.body.storage_limit = eLim + hLim;
+    }
+
     for (const k of allowed) {
       if (req.body[k] !== undefined) {
         updates.push(`${k}=?`);
@@ -129,11 +167,39 @@ router.patch('/users/:tgId', (req, res) => {
       }
     }
     if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
-    values.push(req.params.tgId);
+    values.push(targetTgId);
     db.prepare(`UPDATE users SET ${updates.join(',')} WHERE tg_id=?`).run(...values);
     db.prepare('INSERT INTO audit_logs(tg_id, action, resource, resource_id, details, ip_address) VALUES(?,?,?,?,?,?)')
-      .run(req.user.tg_id, 'admin.user.update', 'user', req.params.tgId, JSON.stringify(req.body), req.ip);
-    res.json({ status: 'updated' });
+      .run(req.user.tg_id, 'admin.user.update', 'user', targetTgId, JSON.stringify(req.body), req.ip);
+    
+    res.json({
+      status: 'updated',
+      warnings: warnings.length ? warnings : undefined,
+      user: db.prepare('SELECT tg_id, role, alias_limit, storage_limit, email_storage_limit, hosting_storage_limit FROM users WHERE tg_id=?').get(targetTgId)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/users/:tgId/storage', (req, res) => {
+  try {
+    const stats = getUserComprehensiveStorageStats(req.params.tgId);
+    if (!stats) return res.status(404).json({ error: 'User not found' });
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/storage/metrics', (req, res) => {
+  try {
+    const thresholds = {};
+    if (req.query.warning) thresholds.warning = parseInt(req.query.warning, 10);
+    if (req.query.high) thresholds.high = parseInt(req.query.high, 10);
+    if (req.query.critical) thresholds.critical = parseInt(req.query.critical, 10);
+    const metrics = getGlobalStorageMetrics(thresholds);
+    res.json(metrics);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

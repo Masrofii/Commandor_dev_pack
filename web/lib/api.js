@@ -92,6 +92,7 @@ export const api = {
   redeemVoucher: (code) => apiFetch('/api/subscription/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
   getAuditLogs: (p = {}) => apiFetch('/api/monitoring/logs' + toQueryString(p)).catch(() => apiFetch('/api/admin/logs' + toQueryString(p))),
   getAdminStats: () => apiFetch('/api/admin/stats'),
+  getGlobalStorageMetrics: (p = {}) => apiFetch('/api/admin/storage/metrics' + toQueryString(p)),
   getAdminEmails: (p = {}) => apiFetch('/api/admin/emails' + toQueryString(p)),
   deleteAdminEmail: (id) => apiFetch(`/api/admin/emails/${id}`, { method: 'DELETE' }),
   getAdminAliases: (p = {}) => apiFetch('/api/admin/aliases' + toQueryString(p)),
