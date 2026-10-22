@@ -117,26 +117,51 @@ export const api = {
   getDomainDnsRecords: (id, p = {}) => apiFetch(`/api/domains/${id}/records` + toQueryString(p)),
   createDomainDnsRecord: (id, d) => apiFetch(`/api/domains/${id}/records`, { method: 'POST', body: JSON.stringify(d) }),
 
-  // Applications Platform
+  // Applications Platform & Deployments
   getApplications: (p = {}) => apiFetch('/api/applications' + toQueryString(p)),
   getApplication: (id) => apiFetch(`/api/applications/${id}`),
   createApplication: (d) => apiFetch('/api/applications', { method: 'POST', body: JSON.stringify(d) }),
   updateApplication: (id, d) => apiFetch(`/api/applications/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
   deployApplication: (id) => apiFetch(`/api/applications/${id}/deploy`, { method: 'POST' }),
+  getApplicationDeployments: (appId) => apiFetch(`/api/applications/${appId}/deployments`),
+  getApplicationDeployment: (appId, depId) => apiFetch(`/api/applications/${appId}/deployments/${depId}`),
   rollbackApplication: (id, deploymentId) => apiFetch(`/api/applications/${id}/rollback`, { method: 'POST', body: JSON.stringify({ deployment_id: deploymentId }) }),
   controlApplication: (id, action) => apiFetch(`/api/applications/${id}/control`, { method: 'POST', body: JSON.stringify({ action }) }),
   getApplicationHealth: (id) => apiFetch(`/api/applications/${id}/health`),
   deleteApplication: (id) => apiFetch(`/api/applications/${id}`, { method: 'DELETE' }),
 
-  // Monitoring & Overview
+  // Subdomain & Service Templates
+  getTemplates: (category) => apiFetch('/api/templates' + (category ? `?category=${encodeURIComponent(category)}` : '')),
+  getTemplate: (key) => apiFetch(`/api/templates/${encodeURIComponent(key)}`),
+  previewTemplate: (d) => apiFetch('/api/templates/preview', { method: 'POST', body: JSON.stringify(d) }),
+  createTemplate: (d) => apiFetch('/api/templates', { method: 'POST', body: JSON.stringify(d) }),
+  updateTemplate: (id, d) => apiFetch(`/api/templates/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
+  deleteTemplate: (id) => apiFetch(`/api/templates/${id}`, { method: 'DELETE' }),
+
+  // Commandor Launchpad (Create Service Workflow)
+  getLaunchpadWorkflows: () => apiFetch('/api/launchpad'),
+  getLaunchpadWorkflow: (id) => apiFetch(`/api/launchpad/${id}`),
+  createLaunchpadWorkflow: (d) => apiFetch('/api/launchpad', { method: 'POST', body: JSON.stringify(d) }),
+  updateLaunchpadStep: (id, step, d) => apiFetch(`/api/launchpad/${id}/step/${step}`, { method: 'PUT', body: JSON.stringify(d) }),
+  executeLaunchpadWorkflow: (id) => apiFetch(`/api/launchpad/${id}/execute`, { method: 'POST' }),
+  resumeLaunchpadWorkflow: (id) => apiFetch(`/api/launchpad/${id}/resume`, { method: 'POST' }),
+  deleteLaunchpadWorkflow: (id) => apiFetch(`/api/launchpad/${id}`, { method: 'DELETE' }),
+
+  // Monitoring & Infrastructure Topology
   getSystemOverview: () => apiFetch('/api/monitoring/overview'),
   getHostMetrics: () => apiFetch('/api/monitoring/host'),
+  getInfrastructureTopology: () => apiFetch('/api/monitoring/topology'),
 
   // Backups
   getBackups: (p = {}) => apiFetch('/api/backups' + toQueryString(p)),
   createBackup: (d) => apiFetch('/api/backups', { method: 'POST', body: JSON.stringify(d) }),
+  verifyBackup: (id) => apiFetch(`/api/backups/${id}/verify`, { method: 'POST' }),
+  testRestoreBackup: (id) => apiFetch(`/api/backups/${id}/test-restore`, { method: 'POST' }),
   restoreBackup: (id, confirmation_accepted = true) => apiFetch(`/api/backups/${id}/restore`, { method: 'POST', body: JSON.stringify({ confirmation_accepted }) }),
   getBackupDownloadUrl: (id) => `${API_URL}/api/backups/${id}/download`,
+
+  // Webhook Delivery Retry
+  retryWebhookDelivery: (webhookId, deliveryId) => apiFetch(`/api/webhooks/${webhookId}/deliveries/${deliveryId}/retry`, { method: 'POST' }),
 
   // Hosting & Nodes
   testNodeConnection: (data) => apiFetch('/api/hosting/nodes/test', { method: 'POST', body: JSON.stringify(data) }),

@@ -2,6 +2,7 @@
 import useSWR from 'swr';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import InfrastructureTopologyMap from '../../../components/InfrastructureTopologyMap';
 import {
   SignalIcon,
   CpuChipIcon,
@@ -13,7 +14,8 @@ import {
   ClockIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
-  CircleStackIcon
+  CircleStackIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 export default function MonitoringPage() {
@@ -52,6 +54,31 @@ export default function MonitoringPage() {
           <span>Refresh Metrics</span>
         </button>
       </div>
+
+      {/* Resource-Capacity Warnings Banner */}
+      {overview?.capacityWarnings && overview.capacityWarnings.length > 0 && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-300 dark:border-amber-800 space-y-2 text-xs text-amber-800 dark:text-amber-200">
+          <div className="font-bold flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+            <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <span>Resource Capacity &amp; Operational Warnings ({overview.capacityWarnings.length})</span>
+          </div>
+          <div className="space-y-1 pl-7">
+            {overview.capacityWarnings.map((w, idx) => (
+              <div key={idx} className="flex items-center gap-2 font-mono text-[11px]">
+                <span className={`px-1.5 py-0.5 rounded uppercase font-bold text-[9px] ${
+                  w.level === 'critical' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'
+                }`}>
+                  {w.level}
+                </span>
+                <span>{w.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Visual Infrastructure Relationship Map (Phase 5) */}
+      <InfrastructureTopologyMap />
 
       {/* Host Specs Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

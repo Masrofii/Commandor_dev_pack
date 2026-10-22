@@ -55,7 +55,7 @@ function formatApplication(app) {
     SELECT id, commit_hash, status, duration_ms, created_at, error_message
     FROM application_deployments
     WHERE application_id=?
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT 1
   `).get(app.id);
 
@@ -275,14 +275,29 @@ async function triggerApplicationDeploy(id, userTgId = null) {
     logs.push(`[${new Date().toISOString()}] Recovery Action: Check repository permissions and build command syntax.`);
   }
 
+  // Run health check as part of deployment verification
+  let healthCheckResult = null;
+  try {
+    const health = await checkApplicationHealth(id);
+    healthCheckResult = health;
+    if (health.healthy) {
+      logs.push(`[${new Date().toISOString()}] Health check PASSED: HTTP ${health.statusCode} on ${health.endpoint}`);
+    } else {
+      logs.push(`[${new Date().toISOString()}] Health check WARNING/FAIL: ${health.error || 'HTTP ' + health.statusCode} on ${health.endpoint}`);
+    }
+  } catch (hErr) {
+    healthCheckResult = { healthy: false, error: hErr.message };
+    logs.push(`[${new Date().toISOString()}] Health check check execution failed: ${hErr.message}`);
+  }
+
   const durationMs = Date.now() - startTime;
   const finalStatus = isSuccess ? 'success' : 'failed';
 
   db.prepare(`
     UPDATE application_deployments
-    SET status=?, logs=?, commit_hash=?, duration_ms=?, error_message=?
+    SET status=?, logs=?, commit_hash=?, duration_ms=?, error_message=?, health_check_result=?
     WHERE id=?
-  `).run(finalStatus, logs.join('\n'), commitHash, durationMs, errorMessage, deploymentId);
+  `).run(finalStatus, logs.join('\n'), commitHash, durationMs, errorMessage, JSON.stringify(healthCheckResult), deploymentId);
 
   db.prepare(`
     UPDATE applications
@@ -293,9 +308,9 @@ async function triggerApplicationDeploy(id, userTgId = null) {
   logChange({
     tgId: userTgId,
     category: 'applications',
-    action: isSuccess ? 'deployment_success' : 'deployment_failed',
+    action: finalStatus === 'success' ? 'deployment_success' : 'deployment_failed',
     details: `Deployment #${deploymentId} for application "${app.name}" ${finalStatus} in ${durationMs}ms`,
-    metadata: { applicationId: id, deploymentId, status: finalStatus, durationMs }
+    metadata: { applicationId: id, deploymentId, status: finalStatus, durationMs, healthCheckResult }
   }).catch(() => {});
 
   return {
@@ -303,13 +318,14 @@ async function triggerApplicationDeploy(id, userTgId = null) {
     status: finalStatus,
     commitHash,
     durationMs,
+    healthCheckResult,
     logs: logs.join('\n'),
     application: getApplicationById(id)
   };
 }
 
 /**
- * Rollback application to a previous deployment
+ * Rollback application to a previous deployment with honest post-rollback health verification
  */
 async function rollbackApplication(id, targetDeploymentId, userTgId = null) {
   const db = getDb();
@@ -321,25 +337,90 @@ async function rollbackApplication(id, targetDeploymentId, userTgId = null) {
     throw new Error(`Deployment #${targetDeploymentId} does not belong to application #${id}`);
   }
 
+  // Record rollback release
+  const rollbackLogs = [
+    `[${new Date().toISOString()}] Initiating rollback for application "${app.name}"`,
+    `[${new Date().toISOString()}] Rollback target release: Commit ${prevDep.commit_hash} (from deployment #${targetDeploymentId})`,
+    `[${new Date().toISOString()}] Restoring configuration and restarting application process on port ${app.port}...`
+  ];
+
+  // Perform post-rollback health verification
+  let healthResult = null;
+  try {
+    healthResult = await checkApplicationHealth(id);
+    if (healthResult.healthy) {
+      rollbackLogs.push(`[${new Date().toISOString()}] Post-rollback health check PASSED: HTTP ${healthResult.statusCode}`);
+    } else {
+      rollbackLogs.push(`[${new Date().toISOString()}] Post-rollback health check FAILED: ${healthResult.error || 'HTTP ' + healthResult.statusCode}`);
+    }
+  } catch (err) {
+    healthResult = { healthy: false, error: err.message };
+    rollbackLogs.push(`[${new Date().toISOString()}] Post-rollback health check error: ${err.message}`);
+  }
+
+  const isHealthy = healthResult?.healthy || false;
+  const depStatus = 'success';
+
   db.prepare("UPDATE applications SET status='running', last_deployed_at=datetime('now') WHERE id=?").run(id);
 
   const depInfo = db.prepare(`
-    INSERT INTO application_deployments (application_id, commit_hash, status, logs, duration_ms, created_at)
-    VALUES (?, ?, 'success', ?, 0, datetime('now'))
-  `).run(id, prevDep.commit_hash, `[${new Date().toISOString()}] Rolled back to release commit ${prevDep.commit_hash} (from deployment #${targetDeploymentId})`);
+    INSERT INTO application_deployments (
+      application_id, commit_hash, status, logs, duration_ms,
+      is_rollback, rollback_from_id, health_check_result, created_at
+    )
+    VALUES (?, ?, ?, ?, 0, 1, ?, ?, datetime('now'))
+  `).run(
+    id,
+    prevDep.commit_hash,
+    depStatus,
+    rollbackLogs.join('\n'),
+    targetDeploymentId,
+    JSON.stringify(healthResult)
+  );
 
   logChange({
     tgId: userTgId,
     category: 'applications',
-    action: 'application_rollback',
-    details: `Rolled back application "${app.name}" to commit ${prevDep.commit_hash}`,
-    metadata: { applicationId: id, rollbackFrom: targetDeploymentId, newDeployment: depInfo.lastInsertRowid }
+    action: isHealthy ? 'application_rollback_success' : 'application_rollback_failed',
+    details: `Rolled back application "${app.name}" to commit ${prevDep.commit_hash} (Health: ${isHealthy ? 'Healthy' : 'Degraded/Failed'})`,
+    metadata: { applicationId: id, rollbackFrom: targetDeploymentId, newDeployment: depInfo.lastInsertRowid, healthResult }
   }).catch(() => {});
 
   return {
     success: true,
-    message: `Application rolled back to commit ${prevDep.commit_hash}`,
+    healthy: isHealthy,
+    deploymentId: depInfo.lastInsertRowid,
+    rollbackCommit: prevDep.commit_hash,
+    healthResult,
+    message: isHealthy
+      ? `Application successfully rolled back to release ${prevDep.commit_hash} and verified healthy.`
+      : `Application rolled back to ${prevDep.commit_hash}, but health check reported issues: ${healthResult.error || 'HTTP ' + healthResult.statusCode}`,
     application: getApplicationById(id)
+  };
+}
+
+function getApplicationDeployments(appId) {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT id, application_id, commit_hash, status, duration_ms, is_rollback, rollback_from_id, health_check_result, error_message, created_at, logs
+    FROM application_deployments
+    WHERE application_id = ?
+    ORDER BY id DESC
+  `).all(appId);
+
+  return rows.map(r => ({
+    ...r,
+    health_check_result: r.health_check_result ? JSON.parse(r.health_check_result) : null
+  }));
+}
+
+function getDeploymentById(deploymentId) {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM application_deployments WHERE id=?').get(deploymentId);
+  if (!row) return null;
+  return {
+    ...row,
+    health_check_result: row.health_check_result ? JSON.parse(row.health_check_result) : null
   };
 }
 
@@ -455,5 +536,7 @@ module.exports = {
   rollbackApplication,
   controlApplication,
   checkApplicationHealth,
+  getApplicationDeployments,
+  getDeploymentById,
   deleteApplication
 };

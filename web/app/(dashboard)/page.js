@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
 import { extractVerificationCode, formatTimeAgo } from '../../lib/helpers';
+import InfrastructureTopologyMap from '../../components/InfrastructureTopologyMap';
 import {
   InboxIcon,
   AtSymbolIcon,
@@ -459,6 +460,9 @@ export default function OverviewDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Visual Infrastructure Relationship Map (Phase 5) */}
+      <InfrastructureTopologyMap />
     </div>
   );
 }

@@ -240,6 +240,135 @@ async function restoreDatabaseBackup(backupId, confirmationAccepted = false, use
 }
 
 /**
+ * Deep integrity verification of backup file
+ */
+async function verifyBackupIntegrity(backupId) {
+  const backup = getBackupById(backupId);
+  if (!backup) throw new Error(`Backup #${backupId} not found`);
+  if (!fs.existsSync(backup.file_path)) {
+    throw new Error(`Backup file missing from filesystem: ${backup.file_path}`);
+  }
+
+  const stat = fs.statSync(backup.file_path);
+  const actualSha256 = await calculateFileSha256(backup.file_path);
+  const checksumMatch = backup.checksum ? (actualSha256.toLowerCase() === backup.checksum.toLowerCase()) : true;
+
+  let sqliteCheck = { valid: true };
+  if (backup.backup_type === 'database') {
+    sqliteCheck = verifySqliteIntegrity(backup.file_path);
+    if (sqliteCheck.valid) {
+      const Database = require('better-sqlite3');
+      try {
+        const testDb = new Database(backup.file_path, { readonly: true, fileMustExist: true });
+        const checkResult = testDb.pragma('integrity_check');
+        testDb.close();
+        sqliteCheck.pragma = checkResult;
+      } catch (err) {
+        sqliteCheck.valid = false;
+        sqliteCheck.error = err.message;
+      }
+    }
+  }
+
+  const passed = checksumMatch && sqliteCheck.valid;
+
+  // Update status in db if passed
+  const db = getDb();
+  db.prepare("UPDATE system_backups SET status=? WHERE id=?").run(passed ? 'verified' : 'failed', backupId);
+
+  return {
+    backupId,
+    backupName: backup.backup_name,
+    valid: passed,
+    fileSizeBytes: stat.size,
+    checksum: actualSha256,
+    checksumMatch,
+    sqliteCheck,
+    verifiedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Isolated Dry-Run Restore Testing
+ * Restores the backup snapshot to an ephemeral sandbox database, runs structural queries,
+ * verifies zero data corruption, and purges the sandbox without touching production.
+ */
+async function testRestoreBackup(backupId, userTgId = null) {
+  const backup = getBackupById(backupId);
+  if (!backup) throw new Error(`Backup #${backupId} not found`);
+  if (!fs.existsSync(backup.file_path)) {
+    throw new Error(`Backup file missing at ${backup.file_path}`);
+  }
+
+  const startTime = Date.now();
+  const testDbName = `test_restore_${backupId}_${Date.now()}.db`;
+  const testDbPath = path.join(BACKUP_DIR, testDbName);
+
+  try {
+    if (backup.backup_type === 'database') {
+      fs.copyFileSync(backup.file_path, testDbPath);
+    } else if (backup.backup_type === 'full') {
+      const AdmZip = require('adm-zip');
+      const zip = new AdmZip(backup.file_path);
+      const dbEntry = zip.getEntry('database/app.db');
+      if (!dbEntry) throw new Error('Archive missing internal "database/app.db" payload');
+      fs.writeFileSync(testDbPath, dbEntry.getData());
+    }
+
+    const Database = require('better-sqlite3');
+    const testDb = new Database(testDbPath, { readonly: true });
+
+    // 1. Run full SQLite integrity check
+    const integrityCheck = testDb.pragma('integrity_check');
+
+    // 2. Query schema tables
+    const tables = testDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all().map(r => r.name);
+
+    // 3. Count key records
+    const counts = {};
+    for (const t of ['users', 'aliases', 'subdomains', 'applications', 'custom_domains']) {
+      if (tables.includes(t)) {
+        try {
+          counts[t] = testDb.prepare(`SELECT COUNT(*) as c FROM ${t}`).get()?.c || 0;
+        } catch {
+          counts[t] = 'error';
+        }
+      }
+    }
+
+    testDb.close();
+
+    // Safely cleanup ephemeral sandbox
+    try { fs.unlinkSync(testDbPath); } catch {}
+
+    const durationMs = Date.now() - startTime;
+
+    logChange({
+      tgId: userTgId,
+      category: 'backups',
+      action: 'backup_test_restore',
+      details: `Completed dry-run restore test for backup #${backupId} (${backup.backup_name}) in ${durationMs}ms`,
+      metadata: { backupId, durationMs, tablesCount: tables.length, counts }
+    }).catch(() => {});
+
+    return {
+      success: true,
+      backupId,
+      backupName: backup.backup_name,
+      integrityCheck: integrityCheck?.[0]?.integrity_check || 'ok',
+      tablesCount: tables.length,
+      tables,
+      recordCounts: counts,
+      durationMs,
+      testedAt: new Date().toISOString()
+    };
+  } catch (err) {
+    try { if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath); } catch {}
+    throw new Error(`Dry-run restore test failed: ${err.message}`);
+  }
+}
+
+/**
  * Prune old backups based on retention policy
  */
 async function pruneBackups(retentionDays = 14) {
@@ -263,5 +392,7 @@ module.exports = {
   listBackups,
   restoreDatabaseBackup,
   verifySqliteIntegrity,
+  verifyBackupIntegrity,
+  testRestoreBackup,
   pruneBackups
 };

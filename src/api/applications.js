@@ -11,6 +11,8 @@ const {
   rollbackApplication,
   controlApplication,
   checkApplicationHealth,
+  getApplicationDeployments,
+  getDeploymentById,
   deleteApplication
 } = require('../services/applicationService');
 const { body, validationResult } = require('express-validator');
@@ -96,6 +98,29 @@ router.put('/:id', (req, res) => {
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// Get deployment history for application
+router.get('/:id/deployments', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const deployments = getApplicationDeployments(id);
+    res.json({ deployments, count: deployments.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get specific deployment record
+router.get('/:id/deployments/:depId', (req, res) => {
+  try {
+    const depId = parseInt(req.params.depId, 10);
+    const dep = getDeploymentById(depId);
+    if (!dep) return res.status(404).json({ error: 'Deployment record not found' });
+    res.json(dep);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

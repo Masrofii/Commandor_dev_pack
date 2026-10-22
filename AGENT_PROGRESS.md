@@ -11,9 +11,9 @@
 - **Web Frontend**: Next.js 14.2 App Router (`web/`) listening on port 3001.
   - SWR data fetching, WebSocket real-time alerts, Tailwind CSS, dark/light theme, full RTL support for Arabic/Urdu, error boundaries (`app/error.js`, `app/global-error.js`).
 - **Database**: SQLite 3 with WAL mode, foreign keys enabled (`database/database.js`, `data/app.db`).
-  - 13 migrations applied (`database/migrations/`).
+  - 15 migrations applied (`database/migrations/001_initial.sql` through `database/migrations/015_launchpad_and_templates.sql`).
 - **Localization**: 12 complete language translation catalogs (`en`, `ar`, `ru`, `fr`, `es`, `de`, `tr`, `pt`, `zh`, `hi`, `id`, `ur`) verified 100% complete (92/92 keys, 0 missing).
-- **Process Management**: PM2 (`temp-mail-api` ID 0, `temp-mail-web` ID 1).
+- **Process Management**: PM2 (`commandor-api` / `temp-mail-api` ID 0 on port 3000, `commandor-web` / `temp-mail-web` ID 1 on port 3001).
 
 ---
 
@@ -99,13 +99,70 @@
 
 ---
 
+## Phase K: Next-Generation Improvement Sprint (Launchpad, Templates, Visibility & Reliability)
+
+### 1. Consistency & Metadata Scrubbing (Phase 1)
+- Replaced residual legacy temporary email copy in `README.html`, `web/app/(dashboard)/api-keys/page.js`, and `src/bot/commands.js` with Commandor Dev Pack platform metadata.
+- Preserved all email and Telegram bot features, burners, and routing in backward-compatible state.
+- Fixed migration counts in documentation from 13 to 15.
+
+### 2. Commandor Launchpad (Phase 2)
+- Implemented guided 10-step service creation workflow (`src/services/launchpadService.js`, `src/api/launchpad.js`, `web/components/CommandorLaunchpad.js`):
+  1. Source repository / application selection (Git URL, branch).
+  2. Cluster node assignment (Local Host or remote VPS node).
+  3. Runtime and build configuration (Node.js, Python, Go, Static, Docker; build/start scripts, ports).
+  4. Environment variables & secrets management (masked in logs and encrypted at rest).
+  5. Subdomain and base domain routing selection with HTTPS toggle.
+  6. Configuration preview (DNS records, Nginx upstream and virtual host blocks).
+  7. Explicit plan review and confirmation gate.
+  8. Controlled deployment job execution with live log streaming.
+  9. Runtime health check probe (`/health`) with honest reporting.
+  10. Safe recovery & resume path: failure in later steps preserves already provisioned subdomains and routes, permitting step resumption without repeating work.
+
+### 3. Reusable Subdomain Templates (Phase 3)
+- Seeded and editable blueprint templates (`src/services/templateService.js`, `src/api/templates.js`, `web/components/SubdomainTemplates.js`):
+  - `nodejs-express`: Node.js Express/Fastify REST API.
+  - `fastapi-python`: FastAPI / Flask Python web service.
+  - `vitepress-docs`: VitePress / Docusaurus static documentation.
+  - `static-landing`: High-performance HTML/CSS static site.
+  - `status-page`: Infrastructure monitoring & status dashboard.
+- Strict security validation rejecting dangerous shell patterns (`curl | bash`, `rm -rf`, `nc -e`, `sudo`, `dd if=`).
+- Pre-flight DNS and proxy route conflict detection preserving unrelated virtual hosts and records.
+
+### 4. Deployment History & Safe Rollback (Phase 4)
+- Release history logging in `application_deployments` (`commit_hash`, `duration_ms`, `health_check_result`, `is_rollback`, `rollback_from_id`).
+- REST endpoints `GET /api/applications/:id/deployments` and `GET /api/applications/:id/deployments/:depId`.
+- Safe rollback engine (`rollbackApplication`) that restores target release, performs live post-rollback HTTP health check, and reports health honestly without masking degradation.
+- Interactive Release History and Rollback modal in `web/app/(dashboard)/applications/page.js`.
+
+### 5. Infrastructure Visibility & Topology Map (Phase 5)
+- Visual relationship topology engine (`src/services/monitoringService.js`, `src/api/monitoring.js`, `web/components/InfrastructureTopologyMap.js`):
+  - Connects DNS Providers -> Custom Domains -> Subdomains -> Proxy Routes -> Applications -> VPS Nodes.
+  - 4 distinct health states: `healthy` (green), `degraded` (yellow), `unhealthy` (red), `unknown` (gray).
+  - Multi-stage health indicators for DNS resolution, HTTP reachability, TLS handshake, node availability, and app status.
+  - Interactive node drawer displaying ports, hostnames, upstream targets, and live specifications.
+
+### 6. Reliability & Operational Guardrails (Phase 6)
+- **Webhook Retry Engine** (`src/services/webhookService.js`, `src/api/webhooks.js`, `web/app/(dashboard)/webhooks/page.js`):
+  - Exponential backoff calculation and delivery tracking (`attempt_number`, `next_retry_at`).
+  - Manual delivery retry endpoint `POST /api/webhooks/:id/deliveries/:deliveryId/retry`.
+  - Deliveries & Retry Inspector modal in dashboard.
+- **Backup Integrity & Sandbox Restore Testing** (`src/services/backupService.js`, `src/api/backups.js`, `web/app/(dashboard)/backups/page.js`):
+  - Deep SHA-256 checksum and SQLite magic header verification (`POST /api/backups/:id/verify`).
+  - Isolated dry-run sandbox restore (`POST /api/backups/:id/test-restore`): opens backup snapshot in ephemeral test database, verifies table counts and schema integrity without touching production.
+- **Resource Capacity Warnings** (`src/services/monitoringService.js`):
+  - Proactive warning banners for memory (>85%), disk (>90%), CPU (>90%), offline nodes, and failed applications.
+
+---
+
 ## Verification & Test Results
-- **Jest Test Suite**: 19 test suites, 157 tests passed (100% pass rate).
-- **Next.js Production Build**: 19/19 static and dynamic routes compiled cleanly with 0 errors.
+- **Jest Test Suite**: 20 test suites, 170 tests passed (100% pass rate).
+  - Added `tests/services/launchpadAndTemplates.test.js` covering template safety, 10-step Launchpad lifecycle, safe rollback with health check, backup verification/dry-run restore, topology map, and webhook retries.
+- **Next.js Production Build**: 19/19 static and dynamic routes compiled cleanly with 0 errors (`npm run build`).
 - **Translation Completeness**: 15 languages verified 100% complete.
 - **PM2 Production Status**:
-  - `temp-mail-api` (Port 3000): Online, 0 errors.
-  - `temp-mail-web` (Port 3001): Online, 0 errors.
+  - `commandor-api` / `temp-mail-api` (Port 3000): Online, 0 errors.
+  - `commandor-web` / `temp-mail-web` (Port 3001): Online, 0 errors.
 
 ---
 
@@ -120,3 +177,4 @@
 - [x] Phase H: AI Tools, PWA & Quota Engine
 - [x] Phase I: Verification & Production Deployment
 - [x] Phase J: Commandor Dev Pack Master Transformation (Nodes, Subdomains, Apps, Monitoring, Backups, Audit)
+- [x] Phase K: Next-Generation Improvement Sprint (Launchpad, Templates, Visibility & Reliability)

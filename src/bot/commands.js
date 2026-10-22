@@ -354,7 +354,7 @@ Orchestrate high-speed email routing, custom subdomains, and multi-node cloud ho
 async function showUtilitiesHub(ctx) {
   const text = `⚙️ <b>UTILITIES & SYSTEM TOOLS</b>
 ──────────────────────────────
-Fast access to temporary email burners, full-text message search, account statistics, and platform configuration.
+Fast access to email burners, full-text message search, account statistics, and platform configuration.
 
 ⚡ <b>Available Tools:</b>
 • <b>1-Hour Burner:</b> Instant self-destructing throwaway inbox.

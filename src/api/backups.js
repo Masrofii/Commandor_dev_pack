@@ -9,7 +9,9 @@ const {
   createFullSystemBackup,
   listBackups,
   getBackupById,
-  restoreDatabaseBackup
+  restoreDatabaseBackup,
+  verifyBackupIntegrity,
+  testRestoreBackup
 } = require('../services/backupService');
 
 router.use(requireAuth);
@@ -39,6 +41,28 @@ router.post('/', async (req, res) => {
     res.status(201).json(backup);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Verify backup integrity
+router.post('/:id/verify', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const result = await verifyBackupIntegrity(id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Dry-run restore test (isolated test in temporary sandbox)
+router.post('/:id/test-restore', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const result = await testRestoreBackup(id, req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

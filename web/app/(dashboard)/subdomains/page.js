@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import SubdomainTemplates from '../../../components/SubdomainTemplates';
 import {
   GlobeAltIcon,
   PlusIcon,
@@ -444,6 +445,16 @@ export default function SubdomainsAndDomainsPage() {
             >
               Domain Inventory ({customDomains.length})
             </button>
+            <button
+              onClick={() => setSection('templates')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                section === 'templates'
+                  ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              Templates &amp; Blueprints
+            </button>
           </div>
 
           {section === 'subdomains' ? (
@@ -868,6 +879,23 @@ export default function SubdomainsAndDomainsPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* SECTION 3: REUSABLE SUBDOMAIN TEMPLATES */}
+      {section === 'templates' && (
+        <SubdomainTemplates
+          onSelectTemplateForLaunch={(tpl) => {
+            setWizardForm(prev => ({
+              ...prev,
+              subdomain: tpl.template_key.replace(/[^a-z0-9]/g, '-'),
+              internal_port: tpl.default_port,
+              target_url: `http://127.0.0.1:${tpl.default_port}`,
+              destination_type: 'proxy'
+            }));
+            setShowWizard(true);
+            setWizardStep(1);
+          }}
+        />
       )}
 
       {/* 8-STEP SUBDOMAIN GUIDED WIZARD MODAL */}

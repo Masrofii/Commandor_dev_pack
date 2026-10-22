@@ -40,6 +40,8 @@ async function startServer(){
   app.use('/api/subdomains',require('./src/api/subdomains'));
   app.use('/api/hosting',require('./src/api/hosting'));
   app.use('/api/applications',require('./src/api/applications'));
+  app.use('/api/launchpad',require('./src/api/launchpad'));
+  app.use('/api/templates',require('./src/api/templates'));
   app.use('/api/monitoring',require('./src/api/monitoring'));
   app.use('/api/backups',require('./src/api/backups'));
   app.use('/api/aliases',require('./src/api/aliases'));

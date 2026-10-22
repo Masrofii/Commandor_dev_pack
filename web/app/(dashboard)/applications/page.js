@@ -4,6 +4,8 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import CommandorLaunchpad from '../../../components/CommandorLaunchpad';
+import SubdomainTemplates from '../../../components/SubdomainTemplates';
 import {
   CommandLineIcon,
   PlusIcon,
@@ -18,10 +20,14 @@ import {
   ServerStackIcon,
   DocumentTextIcon,
   XMarkIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  RocketLaunchIcon,
+  ClockIcon,
+  Square3Stack3DIcon
 } from '@heroicons/react/24/outline';
 
 export default function ApplicationsPage() {
+  const [activeTab, setActiveTab] = useState('apps'); // 'apps' | 'templates'
   const { data: appsData, isLoading, mutate } = useSWR('apps-list', () => api.getApplications());
   const { data: nodesData } = useSWR('apps-nodes', () => api.getHostingNodes());
   const { data: subsData } = useSWR('apps-subs', () => api.getSubdomains({ limit: 100 }));
@@ -30,7 +36,11 @@ export default function ApplicationsPage() {
   const nodes = nodesData?.nodes || [];
   const subdomains = subsData?.subdomains || [];
 
-  // Modal state
+  // Launchpad Modal state
+  const [showLaunchpad, setShowLaunchpad] = useState(false);
+  const [launchpadTemplate, setLaunchpadTemplate] = useState(null);
+
+  // Manual Create Modal state
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
@@ -51,6 +61,48 @@ export default function ApplicationsPage() {
   const [inspectApp, setInspectApp] = useState(null);
   const [activeLogs, setActiveLogs] = useState(null);
   const [controllingId, setControllingId] = useState(null);
+
+  // Deployment History & Rollback Modal state
+  const [historyApp, setHistoryApp] = useState(null);
+  const [deploymentsList, setDeploymentsList] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [rollingBackId, setRollingBackId] = useState(null);
+
+  async function handleOpenHistory(app) {
+    setHistoryApp(app);
+    setLoadingHistory(true);
+    try {
+      const res = await api.getApplicationDeployments(app.id);
+      setDeploymentsList(res.deployments || []);
+    } catch (err) {
+      toast.error(err.message || 'Failed to load deployment history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  async function handleRollback(deploymentId, commitHash) {
+    if (!confirm(`Are you sure you want to rollback to release commit ${commitHash}? A post-rollback health probe will be executed.`)) {
+      return;
+    }
+    setRollingBackId(deploymentId);
+    try {
+      const res = await api.rollbackApplication(historyApp.id, deploymentId);
+      if (res.healthy) {
+        toast.success(`Rolled back and verified healthy: ${res.rollbackCommit}`);
+      } else {
+        toast.error(`Rolled back but health check failed: ${res.message}`);
+      }
+      // Refresh history list and applications
+      const refreshed = await api.getApplicationDeployments(historyApp.id);
+      setDeploymentsList(refreshed.deployments || []);
+      mutate();
+    } catch (err) {
+      toast.error(err.message || 'Rollback operation failed');
+    } finally {
+      setRollingBackId(null);
+    }
+  }
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -150,6 +202,7 @@ export default function ApplicationsPage() {
       toast.success(`Application "${name}" deleted`);
       mutate();
       if (inspectApp?.id === id) setInspectApp(null);
+      if (historyApp?.id === id) setHistoryApp(null);
     } catch (err) {
       toast.error(err.message || 'Failed to delete application');
     }
@@ -165,186 +218,397 @@ export default function ApplicationsPage() {
             <span>Applications &amp; Deployments</span>
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage Git-backed developer services, environment variables, deployment tasks, and port mappings.
+            Git-backed developer services, automated reverse-proxy ingress, release history, and rollback engine.
           </p>
         </div>
 
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => {
+              setLaunchpadTemplate(null);
+              setShowLaunchpad(true);
+            }}
+            className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-1.5 shadow-md bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white"
+          >
+            <RocketLaunchIcon className="w-4 h-4" />
+            <span>Commandor Launchpad</span>
+          </button>
+
+          <button
+            onClick={() => setShowCreate(true)}
+            className="btn-secondary py-2 px-3 text-xs font-semibold flex items-center gap-1"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>Custom App</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-cyber-800 text-xs font-semibold">
         <button
-          onClick={() => setShowCreate(true)}
-          className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-1.5 self-start shadow-sm"
+          onClick={() => setActiveTab('apps')}
+          className={`pb-3 px-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'apps'
+              ? 'border-indigo-600 dark:border-cyan-400 text-indigo-600 dark:text-cyan-400'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          }`}
         >
-          <PlusIcon className="w-4 h-4" />
-          <span>New Application</span>
+          <CommandLineIcon className="w-4 h-4" />
+          <span>Active Applications ({applications.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`pb-3 px-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'templates'
+              ? 'border-indigo-600 dark:border-cyan-400 text-indigo-600 dark:text-cyan-400'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Square3Stack3DIcon className="w-4 h-4" />
+          <span>Service Blueprints &amp; Templates</span>
         </button>
       </div>
 
-      {/* Applications Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="card p-5 animate-pulse space-y-3">
-              <div className="h-5 bg-slate-200 dark:bg-cyber-800 rounded w-1/2" />
-              <div className="h-4 bg-slate-200 dark:bg-cyber-800 rounded w-3/4" />
+      {/* TAB CONTENT: TEMPLATES */}
+      {activeTab === 'templates' && (
+        <SubdomainTemplates
+          onSelectTemplateForLaunch={(tpl) => {
+            setLaunchpadTemplate(tpl);
+            setShowLaunchpad(true);
+          }}
+        />
+      )}
+
+      {/* TAB CONTENT: APPLICATIONS GRID */}
+      {activeTab === 'apps' && (
+        <>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="card p-5 animate-pulse space-y-3">
+                  <div className="h-5 bg-slate-200 dark:bg-cyber-800 rounded w-1/2" />
+                  <div className="h-4 bg-slate-200 dark:bg-cyber-800 rounded w-3/4" />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : applications.length === 0 ? (
-        <div className="card p-12 text-center space-y-4">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
-            📦
-          </div>
-          <h3 className="font-bold text-base text-slate-900 dark:text-white">No applications deployed yet</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Create an application to pull from your Git repository, inject encrypted environment secrets, and map it directly to a custom subdomain.
-          </p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="btn-primary py-2 px-5 text-xs font-semibold"
-          >
-            Create Your First App
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {applications.map((app) => (
-            <div key={app.id} className="card p-5 space-y-4 hover:border-indigo-300 dark:hover:border-cyber-700 transition-colors flex flex-col justify-between">
-              <div>
-                <div className="flex items-start justify-between gap-2">
+          ) : applications.length === 0 ? (
+            <div className="card p-12 text-center space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
+                🚀
+              </div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">No applications deployed yet</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Use the Commandor Launchpad to guide you through creating a Git repository service, mapping it to a custom subdomain, and deploying with zero downtime.
+              </p>
+              <button
+                onClick={() => {
+                  setLaunchpadTemplate(null);
+                  setShowLaunchpad(true);
+                }}
+                className="btn-primary py-2.5 px-6 text-xs font-semibold shadow-md inline-flex items-center gap-2"
+              >
+                <RocketLaunchIcon className="w-4 h-4" />
+                <span>Open Commandor Launchpad</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {applications.map((app) => (
+                <div key={app.id} className="card p-5 space-y-4 hover:border-indigo-300 dark:hover:border-cyber-700 transition-colors flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${
-                        app.status === 'running' ? 'bg-emerald-500 animate-pulse' :
-                        app.status === 'deploying' ? 'bg-amber-500 animate-spin' :
-                        app.status === 'failed' ? 'bg-rose-500' : 'bg-slate-400'
-                      }`} />
-                      <h3 className="font-bold text-base text-slate-900 dark:text-white">{app.name}</h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${
+                            app.status === 'running' ? 'bg-emerald-500 animate-pulse' :
+                            app.status === 'deploying' ? 'bg-amber-500 animate-spin' :
+                            app.status === 'failed' ? 'bg-rose-500' : 'bg-slate-400'
+                          }`} />
+                          <h3 className="font-bold text-base text-slate-900 dark:text-white">{app.name}</h3>
+                        </div>
+                        {app.description && (
+                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{app.description}</p>
+                        )}
+                      </div>
+
+                      <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full uppercase ${
+                        app.status === 'running' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' :
+                        app.status === 'deploying' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800' :
+                        app.status === 'failed' ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800' :
+                        'bg-slate-100 dark:bg-cyber-850 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-cyber-800'
+                      }`}>
+                        {app.status}
+                      </span>
                     </div>
-                    {app.description && (
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{app.description}</p>
+
+                    {/* Specs Box */}
+                    <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200/70 dark:border-cyber-800 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                        <span>Git:</span>
+                        <span className="truncate max-w-[180px] text-slate-900 dark:text-slate-200" title={app.git_repo}>
+                          {app.git_repo.split('/').slice(-2).join('/')}#{app.git_branch}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                        <span>Port:</span>
+                        <span className="font-bold text-indigo-600 dark:text-cyan-400">{app.port}</span>
+                      </div>
+
+                      {app.node && (
+                        <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                          <span>Node:</span>
+                          <span className="text-slate-800 dark:text-slate-200">{app.node.name}</span>
+                        </div>
+                      )}
+
+                      {app.subdomain && (
+                        <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                          <span>Subdomain:</span>
+                          <a
+                            href={`https://${app.subdomain.full_domain}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-cyan-600 dark:text-cyan-400 hover:underline truncate max-w-[170px]"
+                          >
+                            {app.subdomain.full_domain} ↗
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Latest Release & Health Summary */}
+                    {app.latestDeployment && (
+                      <div className="mt-3 text-[11px] text-slate-400 flex items-center justify-between">
+                        <span>Release: <code className="text-slate-700 dark:text-slate-300 font-bold">{app.latestDeployment.commit_hash}</code></span>
+                        <span>{formatTimeAgo(app.latestDeployment.created_at)}</span>
+                      </div>
                     )}
                   </div>
 
-                  <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full uppercase ${
-                    app.status === 'running' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' :
-                    app.status === 'deploying' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800' :
-                    app.status === 'failed' ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800' :
-                    'bg-slate-100 dark:bg-cyber-850 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-cyber-800'
-                  }`}>
-                    {app.status}
-                  </span>
-                </div>
+                  {/* Action Buttons */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-cyber-800 flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1">
+                      {app.status === 'running' ? (
+                        <button
+                          onClick={() => handleControl(app.id, 'stop')}
+                          disabled={controllingId === `${app.id}-stop`}
+                          title="Stop application"
+                          className="p-1.5 rounded-lg border border-slate-200 dark:border-cyber-800 hover:bg-slate-100 dark:hover:bg-cyber-800 text-slate-600 dark:text-slate-300 text-xs"
+                        >
+                          <StopIcon className="w-4 h-4 text-amber-500" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleControl(app.id, 'start')}
+                          disabled={controllingId === `${app.id}-start`}
+                          title="Start application"
+                          className="p-1.5 rounded-lg border border-slate-200 dark:border-cyber-800 hover:bg-slate-100 dark:hover:bg-cyber-800 text-slate-600 dark:text-slate-300 text-xs"
+                        >
+                          <PlayIcon className="w-4 h-4 text-emerald-500" />
+                        </button>
+                      )}
 
-                {/* Specs Box */}
-                <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200/70 dark:border-cyber-800 space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                    <span>Git:</span>
-                    <span className="truncate max-w-[180px] text-slate-900 dark:text-slate-200" title={app.git_repo}>
-                      {app.git_repo.split('/').slice(-2).join('/')}#{app.git_branch}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                    <span>Port:</span>
-                    <span className="font-bold text-indigo-600 dark:text-cyan-400">{app.port}</span>
-                  </div>
-
-                  {app.node && (
-                    <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                      <span>Node:</span>
-                      <span className="text-slate-800 dark:text-slate-200">{app.node.name}</span>
-                    </div>
-                  )}
-
-                  {app.subdomain && (
-                    <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                      <span>Subdomain:</span>
-                      <a
-                        href={`https://${app.subdomain.full_domain}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-cyan-600 dark:text-cyan-400 hover:underline truncate max-w-[170px]"
+                      <button
+                        onClick={() => handleDeploy(app.id, app.name)}
+                        disabled={deployingId === app.id}
+                        title="Trigger Build & Deploy"
+                        className="btn-primary py-1 px-2.5 text-xs flex items-center gap-1"
                       >
-                        {app.subdomain.full_domain} ↗
-                      </a>
+                        <ArrowPathIcon className={`w-3.5 h-3.5 ${deployingId === app.id ? 'animate-spin' : ''}`} />
+                        <span>Deploy</span>
+                      </button>
                     </div>
-                  )}
-                </div>
 
-                {/* Latest Release */}
-                {app.latestDeployment && (
-                  <div className="mt-3 text-[11px] text-slate-400 flex items-center justify-between">
-                    <span>Release: <code className="text-slate-700 dark:text-slate-300 font-bold">{app.latestDeployment.commit_hash}</code></span>
-                    <span>{formatTimeAgo(app.latestDeployment.created_at)}</span>
+                    <div className="flex items-center gap-1">
+                      {/* Deployment History & Rollback Button */}
+                      <button
+                        onClick={() => handleOpenHistory(app)}
+                        title="Deployment History & Safe Rollback"
+                        className="p-1.5 rounded-lg border border-indigo-200 dark:border-indigo-900/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-cyan-400 text-xs flex items-center gap-1"
+                      >
+                        <ClockIcon className="w-4 h-4" />
+                        <span className="hidden sm:inline font-semibold text-[11px]">Releases</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setInspectApp(app);
+                          setActiveLogs(app.latestDeployment ? {
+                            appName: app.name,
+                            commit: app.latestDeployment.commit_hash,
+                            logs: app.latestDeployment.logs || 'No deployment logs stored yet.',
+                            status: app.latestDeployment.status
+                          } : null);
+                        }}
+                        title="Inspect & Logs"
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-cyber-800 hover:bg-slate-100 dark:hover:bg-cyber-800 text-slate-600 dark:text-slate-300 text-xs"
+                      >
+                        <DocumentTextIcon className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(app.id, app.name)}
+                        title="Delete application"
+                        className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 dark:border-cyber-800 flex items-center justify-between gap-1">
-                <div className="flex items-center gap-1">
-                  {app.status === 'running' ? (
-                    <button
-                      onClick={() => handleControl(app.id, 'stop')}
-                      disabled={controllingId === `${app.id}-stop`}
-                      title="Stop application"
-                      className="p-1.5 rounded-lg border border-slate-200 dark:border-cyber-800 hover:bg-slate-100 dark:hover:bg-cyber-800 text-slate-600 dark:text-slate-300 text-xs"
-                    >
-                      <StopIcon className="w-4 h-4 text-amber-500" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleControl(app.id, 'start')}
-                      disabled={controllingId === `${app.id}-start`}
-                      title="Start application"
-                      className="p-1.5 rounded-lg border border-slate-200 dark:border-cyber-800 hover:bg-slate-100 dark:hover:bg-cyber-800 text-slate-600 dark:text-slate-300 text-xs"
-                    >
-                      <PlayIcon className="w-4 h-4 text-emerald-500" />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => handleDeploy(app.id, app.name)}
-                    disabled={deployingId === app.id}
-                    title="Trigger Build & Deploy"
-                    className="btn-primary py-1 px-2.5 text-xs flex items-center gap-1"
-                  >
-                    <ArrowPathIcon className={`w-3.5 h-3.5 ${deployingId === app.id ? 'animate-spin' : ''}`} />
-                    <span>Deploy</span>
-                  </button>
                 </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setInspectApp(app);
-                      setActiveLogs(app.latestDeployment ? {
-                        appName: app.name,
-                        commit: app.latestDeployment.commit_hash,
-                        logs: app.latestDeployment.logs || 'No deployment logs stored yet.',
-                        status: app.latestDeployment.status
-                      } : null);
-                    }}
-                    title="Inspect & Logs"
-                    className="p-1.5 rounded-lg border border-slate-200 dark:border-cyber-800 hover:bg-slate-100 dark:hover:bg-cyber-800 text-slate-600 dark:text-slate-300 text-xs"
-                  >
-                    <DocumentTextIcon className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(app.id, app.name)}
-                    title="Delete application"
-                    className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
+        </>
+      )}
+
+      {/* Commandor Launchpad Wizard Modal */}
+      <CommandorLaunchpad
+        isOpen={showLaunchpad}
+        onClose={() => setShowLaunchpad(false)}
+        initialTemplate={launchpadTemplate}
+        onWorkflowCompleted={() => {
+          mutate();
+        }}
+      />
+
+      {/* DEPLOYMENT HISTORY & ROLLBACK MODAL */}
+      {historyApp && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="card max-w-3xl w-full p-6 space-y-5 max-h-[88vh] flex flex-col border-indigo-300 dark:border-cyber-700 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                  <ClockIcon className="w-5 h-5 text-indigo-600 dark:text-cyan-400" />
+                  <span>Deployment History &amp; Rollback — {historyApp.name}</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">
+                  Inspect commit logs, probe health outcomes, and safely rollback to prior verified releases.
+                </p>
+              </div>
+              <button onClick={() => setHistoryApp(null)} className="text-slate-400 hover:text-slate-600">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 text-xs pr-1">
+              {loadingHistory ? (
+                <div className="p-8 text-center text-slate-400 font-mono animate-pulse">
+                  Loading deployment releases...
+                </div>
+              ) : deploymentsList.length === 0 ? (
+                <div className="p-8 text-center text-slate-400">
+                  No deployment history records found for this service.
+                </div>
+              ) : (
+                deploymentsList.map((dep, idx) => (
+                  <div
+                    key={dep.id}
+                    className="p-4 rounded-xl border border-slate-200 dark:border-cyber-800 bg-slate-50 dark:bg-cyber-900 space-y-2.5"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border ${
+                          dep.status === 'success'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
+                            : 'bg-rose-50 text-rose-600 border-rose-300'
+                        }`}>
+                          {dep.status}
+                        </span>
+
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          Release {dep.commit_hash}
+                        </span>
+
+                        {dep.is_rollback === 1 && (
+                          <span className="badge-amber text-[10px] font-mono flex items-center gap-1">
+                            <ArrowUturnLeftIcon className="w-3 h-3" /> Rollback Release
+                          </span>
+                        )}
+
+                        {idx === 0 && (
+                          <span className="badge-cyan text-[10px] font-mono font-bold">
+                            Current Active
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono">
+                        <span>Duration: {dep.duration_ms}ms</span>
+                        <span>{formatTimeAgo(dep.created_at)}</span>
+                      </div>
+                    </div>
+
+                    {/* Health Check Results */}
+                    {dep.health_check_result && (
+                      <div className={`p-2.5 rounded-lg border text-[11px] font-mono flex items-center justify-between ${
+                        dep.health_check_result.healthy
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+                          : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800'
+                      }`}>
+                        <div className="flex items-center gap-1.5">
+                          {dep.health_check_result.healthy ? (
+                            <CheckCircleIcon className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          ) : (
+                            <ExclamationCircleIcon className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                          )}
+                          <span>
+                            Health Check: {dep.health_check_result.healthy ? 'PASSED (200 OK)' : `FAILED (${dep.health_check_result.error || 'Status ' + dep.health_check_result.statusCode})`}
+                          </span>
+                        </div>
+                        <span className="text-[10px] opacity-80">{dep.health_check_result.endpoint}</span>
+                      </div>
+                    )}
+
+                    {/* Actions & Rollback */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-cyber-800">
+                      <button
+                        onClick={() => {
+                          setActiveLogs({
+                            appName: historyApp.name,
+                            commit: dep.commit_hash,
+                            logs: dep.logs || 'No log body captured.',
+                            status: dep.status
+                          });
+                        }}
+                        className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1"
+                      >
+                        <DocumentTextIcon className="w-3.5 h-3.5" />
+                        <span>View Build Logs</span>
+                      </button>
+
+                      {idx !== 0 && (
+                        <button
+                          onClick={() => handleRollback(dep.id, dep.commit_hash)}
+                          disabled={rollingBackId === dep.id}
+                          className="btn-primary py-1 px-3 text-xs flex items-center gap-1 font-semibold"
+                        >
+                          <ArrowUturnLeftIcon className={`w-3.5 h-3.5 ${rollingBackId === dep.id ? 'animate-spin' : ''}`} />
+                          <span>{rollingBackId === dep.id ? 'Rolling back...' : 'Rollback to this Release'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-cyber-800">
+              <button
+                onClick={() => setHistoryApp(null)}
+                className="btn-secondary py-1.5 px-4 text-xs font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Create Application Modal */}
+      {/* Manual Create Application Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="card max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">

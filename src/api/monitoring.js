@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuthOrApiKey } = require('../middleware/auth');
-const { getSystemOverview, getHostSystemMetrics } = require('../services/monitoringService');
+const { getSystemOverview, getHostSystemMetrics, getInfrastructureTopology } = require('../services/monitoringService');
 
 router.use(requireAuthOrApiKey());
 
@@ -11,6 +11,16 @@ router.get('/overview', (req, res) => {
   try {
     const overview = getSystemOverview();
     res.json(overview);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Visual infrastructure topology relationship map
+router.get('/topology', (req, res) => {
+  try {
+    const topology = getInfrastructureTopology();
+    res.json(topology);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

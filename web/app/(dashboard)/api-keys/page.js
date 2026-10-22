@@ -182,7 +182,7 @@ export default function ApiKeysPage() {
           <div className="p-8 text-center">
             <KeyIcon className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
             <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">No API keys created</h4>
-            <p className="text-xs text-slate-400 mt-1">Create an API key to access your temporary emails via REST API.</p>
+            <p className="text-xs text-slate-400 mt-1">Create an API key to access developer services, subdomains, hosting, and platform APIs via REST.</p>
           </div>
         ) : (
           (data?.keys || []).map((k) => (
