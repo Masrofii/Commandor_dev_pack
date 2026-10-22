@@ -18,9 +18,12 @@ import {
   DocumentTextIcon,
   MagnifyingGlassIcon,
   ArrowPathIcon,
-  AdjustmentsHorizontalIcon
+  AdjustmentsHorizontalIcon,
+  TicketIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { SUPPORTED_LANGUAGES, applyLanguage, getSavedLanguage, useTranslation } from '../../../lib/i18n';
+import VoucherRedeemCard from '../../../components/VoucherRedeemCard';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('preferences'); // 'preferences' | 'logs'
@@ -83,10 +86,10 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center p-1 bg-slate-100 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800 text-xs font-semibold">
+        <div className="flex items-center p-1 bg-slate-100 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800 text-xs font-semibold overflow-x-auto">
           <button
             onClick={() => setActiveTab('preferences')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all ${
+            className={`px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap ${
               activeTab === 'preferences'
                 ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -95,8 +98,19 @@ export default function SettingsPage() {
             Preferences &amp; Security
           </button>
           <button
+            onClick={() => setActiveTab('subscription')}
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'subscription'
+                ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <TicketIcon className="w-3.5 h-3.5" />
+            <span>Subscription &amp; Vouchers</span>
+          </button>
+          <button
             onClick={() => setActiveTab('logs')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'logs'
                 ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -281,6 +295,10 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+      ) : activeTab === 'subscription' ? (
+        <div className="animate-fade-in">
+          <VoucherRedeemCard />
         </div>
       ) : (
         /* AUDIT LOGS TAB */

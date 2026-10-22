@@ -7,6 +7,8 @@ const { getDatabaseStats, getProcessStats, getCounters } = require('../monitorin
 const { getAllSubdomainsAdmin, updateSubdomain, deleteSubdomain, getSubdomainById } = require('../services/subdomainService');
 const { getAllSitesAdmin, deleteSite, getSecurityLogs } = require('../services/hostingService');
 const { listNodes, enrollNode, updateNode, bulkAddNodes, validateBulkNodes, testNodeConnection, deleteNode, parseNodeConnectionString, pingNode, executeNodeCommand, getNodeWithSites } = require('../services/nodeManagerService');
+const { listUsers, getUserDetails, banUser, unbanUser, setSubscription, listSubscriptionPlans } = require('../services/userService');
+const { createRedeemCode, listRedeemCodes, revokeRedeemCode, deleteRedeemCode, listRedeemLogs } = require('../services/redeemService');
 
 router.use(requireAdmin);
 
@@ -45,27 +47,71 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// Users Management
+// Users Management & Advanced Filtering
 router.get('/users', (req, res) => {
   try {
-    const { page = 1, limit = 50, search } = req.query;
-    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    const db = getDb();
-    let q = 'SELECT tg_id, username, first_name, role, is_banned, created_at, last_seen_at, storage_used, storage_limit, alias_limit FROM users';
-    const p = [];
-    if (search) {
-      q += ' WHERE username LIKE ? OR first_name LIKE ? OR CAST(tg_id AS TEXT) LIKE ?';
-      p.push(`%${search}%`, `%${search}%`, `%${search}%`);
-    }
-    q += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    p.push(parseInt(limit, 10), offset);
+    const { page = 1, limit = 50, search, role, status, plan } = req.query;
+    const result = listUsers({ page, limit, search, role, status, plan });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    const countQuery = search
-      ? 'SELECT COUNT(*) as c FROM users WHERE username LIKE ? OR first_name LIKE ? OR CAST(tg_id AS TEXT) LIKE ?'
-      : 'SELECT COUNT(*) as c FROM users';
-    const total = db.prepare(countQuery).get(...(search ? [`%${search}%`, `%${search}%`, `%${search}%`] : []))?.c || 0;
+router.get('/users/:tgId', (req, res) => {
+  try {
+    const user = getUserDetails(req.params.tgId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    res.json({ users: db.prepare(q).all(...p), total, page: parseInt(page, 10), totalPages: Math.ceil(total / parseInt(limit, 10)) });
+router.post('/users/:tgId/ban', (req, res) => {
+  try {
+    const result = banUser(req.params.tgId, {
+      reason: req.body.reason,
+      adminTgId: req.user.tg_id,
+      ipAddress: req.ip
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/users/:tgId/unban', (req, res) => {
+  try {
+    const result = unbanUser(req.params.tgId, {
+      adminTgId: req.user.tg_id,
+      ipAddress: req.ip
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/users/:tgId/subscription', (req, res) => {
+  try {
+    const { planId = 'free', durationDays = 30, isLifetime = false } = req.body;
+    const result = setSubscription(req.params.tgId, {
+      planId,
+      durationDays,
+      isLifetime,
+      adminTgId: req.user.tg_id,
+      ipAddress: req.ip
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/subscription-plans', (req, res) => {
+  try {
+    res.json({ plans: listSubscriptionPlans() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -74,7 +120,7 @@ router.get('/users', (req, res) => {
 router.patch('/users/:tgId', (req, res) => {
   try {
     const db = getDb();
-    const allowed = ['is_banned', 'role', 'alias_limit', 'storage_limit'];
+    const allowed = ['is_banned', 'role', 'alias_limit', 'storage_limit', 'custom_domain_limit', 'application_limit', 'node_limit'];
     const updates = [], values = [];
     for (const k of allowed) {
       if (req.body[k] !== undefined) {
@@ -88,6 +134,58 @@ router.patch('/users/:tgId', (req, res) => {
     db.prepare('INSERT INTO audit_logs(tg_id, action, resource, resource_id, details, ip_address) VALUES(?,?,?,?,?,?)')
       .run(req.user.tg_id, 'admin.user.update', 'user', req.params.tgId, JSON.stringify(req.body), req.ip);
     res.json({ status: 'updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Redeem Codes Administration
+router.get('/redeem-codes', (req, res) => {
+  try {
+    const codes = listRedeemCodes({
+      search: req.query.search,
+      activeOnly: req.query.activeOnly === 'true'
+    });
+    res.json({ codes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/redeem-codes', (req, res) => {
+  try {
+    const code = createRedeemCode({
+      ...req.body,
+      adminTgId: req.user.tg_id
+    });
+    res.status(201).json(code);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/redeem-codes/:id/toggle', (req, res) => {
+  try {
+    const result = revokeRedeemCode(req.params.id, req.user.tg_id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/redeem-codes/:id', (req, res) => {
+  try {
+    const ok = deleteRedeemCode(req.params.id, req.user.tg_id);
+    res.json({ success: ok });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/redeem-codes/logs', (req, res) => {
+  try {
+    const logs = listRedeemLogs({ limit: req.query.limit || 50 });
+    res.json({ logs });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

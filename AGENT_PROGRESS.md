@@ -155,9 +155,50 @@
 
 ---
 
+## Phase L: User Management, Subscriptions & Voucher Engine
+
+### 1. User Suspension & Session Purging
+- **Ban & Unban Lifecycle** (`src/services/userService.js`, `src/api/admin.js`):
+  - Added `ban_reason`, `banned_at`, and `banned_by` tracking to `users` table.
+  - Multi-tier enforcement: instantly closes active WebSockets, purges active web sessions (`DELETE FROM web_sessions WHERE tg_id = ?`), revokes API keys, and rejects authentication middleware (`requireAuth`, `requireApiKey`) with `403 Account suspended`.
+  - Telegram bot security gate (`src/bot/bot.js`): blocks banned users from executing bot commands or pressing inline keyboards.
+  - Telegram bot administrative commands: `/ban <tg_id> [reason]` and `/unban <tg_id>`.
+
+### 2. Tiered Subscription Quota Management
+- **Subscription Engine** (`database/migrations/016_user_management_subscriptions_redeem.sql`, `src/services/userService.js`, `src/api/subscriptions.js`):
+  - Pre-seeded subscription tiers:
+    - `free`: 10 aliases, 1 domain, 3 applications, 1 node, 1GB storage.
+    - `starter`: 50 aliases, 3 domains, 10 applications, 3 nodes, 5GB storage.
+    - `pro`: 200 aliases, 10 domains, 50 applications, 10 nodes, 25GB storage.
+    - `enterprise`: Unlimited aliases/domains/applications/nodes, 100GB storage.
+  - Admin subscription management: support for custom expiration dates, day-based renewals extending current expiry, or lifetime permanent access.
+  - User subscription status endpoint: `GET /api/subscription/current` returning current tier, active quotas, usage counts, and expiration dates.
+  - Telegram bot commands: `/plan` to check active quotas and subscription expiration.
+
+### 3. Promo Codes & Voucher Redemptions
+- **Voucher System** (`src/services/redeemService.js`, `src/api/subscriptions.js`, `src/api/admin.js`):
+  - Voucher creation with code formatting (e.g. `COMMANDOR-PRO-2026`), title, max usages, expiration date, and reward payload:
+    - `subscription`: upgrades tier and extends days.
+    - `storage_boost`: grants additional storage bytes.
+    - `alias_boost`: grants additional alias creation quota.
+    - `domain_boost`: grants additional custom domain quota.
+  - Duplicate redemption prevention: guarantees a user can redeem a single voucher code only once using unique composite tracking in `redeem_logs`.
+  - Concurrency & usage limit protection: tracks `used_count` vs `max_uses`.
+  - Multi-channel redemption: web dashboard card and Telegram bot command (`/redeem <code>`).
+  - Redemptions audit log with user details, reward summary, IP address, and timestamp.
+
+### 4. Admin & User Interface Components
+- **Admin Center** (`web/app/(dashboard)/admin/page.js`):
+  - Dedicated "Vouchers & Promo Codes" tab (`tab === 'redeem'`) with code search, creation modal, one-click clipboard copy, status toggle, delete, and real-time redemptions audit log.
+  - Enhanced "Users Directory" tab with status filter (`all`, `active`, `banned`), plan filter (`all`, `free`, `starter`, `pro`, `enterprise`), user quota indicators, Ban/Unban modal with custom reason, and Subscription Tier management modal.
+- **User Settings & Dashboard** (`web/app/(dashboard)/settings/page.js`, `web/components/VoucherRedeemCard.js`):
+  - "Subscription & Vouchers" settings tab displaying user's active tier badge, quota progress bars (Aliases, Domains, Apps, Storage), expiration countdown, voucher code entry form, and tier comparison card.
+
+---
+
 ## Verification & Test Results
-- **Jest Test Suite**: 20 test suites, 170 tests passed (100% pass rate).
-  - Added `tests/services/launchpadAndTemplates.test.js` covering template safety, 10-step Launchpad lifecycle, safe rollback with health check, backup verification/dry-run restore, topology map, and webhook retries.
+- **Jest Test Suite**: 21 test suites, 185 tests passed (100% pass rate).
+  - Added `tests/services/userManagementAndRedeem.test.js` (15/15 tests passing) covering ban enforcement, unbanning, session eviction, subscription plan upgrades, lifetime grants, voucher redemption rewards, duplicate prevention, revoked code rejection, and max usage exhaustion.
 - **Next.js Production Build**: 19/19 static and dynamic routes compiled cleanly with 0 errors (`npm run build`).
 - **Translation Completeness**: 15 languages verified 100% complete.
 - **PM2 Production Status**:
@@ -178,3 +219,4 @@
 - [x] Phase I: Verification & Production Deployment
 - [x] Phase J: Commandor Dev Pack Master Transformation (Nodes, Subdomains, Apps, Monitoring, Backups, Audit)
 - [x] Phase K: Next-Generation Improvement Sprint (Launchpad, Templates, Visibility & Reliability)
+- [x] Phase L: User Management, Subscriptions & Voucher Engine

@@ -56,6 +56,7 @@ async function startServer(){
   app.use('/api/export',require('./src/api/export'));
   app.use('/api/automations',require('./src/api/automations'));
   app.use('/api/forwarding',require('./src/api/forwarding'));
+  app.use('/api/subscription',require('./src/api/subscriptions'));
   app.use('/api/admin',require('./src/api/admin'));
   app.use('/api/auth/telegram',require('./src/auth/webAuth'));
   app.use('/api/auth',require('./src/api/auth'));

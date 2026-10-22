@@ -26,13 +26,17 @@ import {
   AdjustmentsHorizontalIcon,
   WrenchScrewdriverIcon,
   ListBulletIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
+  TicketIcon,
+  SparklesIcon,
+  GiftIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
 
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [tab, setTab] = useState('overview'); // 'overview' | 'users' | 'emails' | 'subdomains' | 'hosting' | 'security' | 'broadcast' | 'logs'
+  const [tab, setTab] = useState('overview'); // 'overview' | 'users' | 'redeem' | 'emails' | 'subdomains' | 'hosting' | 'security' | 'broadcast' | 'logs'
 
   useEffect(() => {
     const ok = isAdmin();
@@ -40,15 +44,41 @@ export default function AdminPage() {
     setCurrentUser(getUser());
   }, []);
 
-  // Search states
+  // Search & filter states
   const [userSearch, setUserSearch] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState('all');
+  const [userPlanFilter, setUserPlanFilter] = useState('all');
   const [emailSearch, setEmailSearch] = useState('');
   const [subSearch, setSubSearch] = useState('');
   const [siteSearch, setSiteSearch] = useState('');
 
-  // Modals
+  // Modals & Action states
   const [editingUser, setEditingUser] = useState(null);
   const [userForm, setUserForm] = useState({ role: 'user', alias_limit: 999999, storage_limit: 107374182400 });
+  const [banningUser, setBanningUser] = useState(null);
+  const [banReason, setBanReason] = useState('Administrative policy violation');
+  const [banning, setBanning] = useState(false);
+  const [subscribingUser, setSubscribingUser] = useState(null);
+  const [subForm, setSubForm] = useState({ planId: 'pro', durationDays: 30, isLifetime: false });
+  const [submittingSub, setSubmittingSub] = useState(false);
+
+  // Redeem Codes states
+  const [redeemSearch, setRedeemSearch] = useState('');
+  const [showCreateCodeModal, setShowCreateCodeModal] = useState(false);
+  const [codeForm, setCodeForm] = useState({
+    code: '',
+    title: '',
+    rewardType: 'subscription',
+    rewardPlan: 'pro',
+    rewardDurationDays: 30,
+    rewardStorageBytes: 1073741824,
+    rewardAliasCount: 10,
+    rewardDomainCount: 2,
+    maxUses: 1,
+    expiresAt: ''
+  });
+  const [creatingCode, setCreatingCode] = useState(false);
+
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcasting, setBroadcasting] = useState(false);
   const [showAddNode, setShowAddNode] = useState(false);
@@ -68,8 +98,28 @@ export default function AdminPage() {
   );
 
   const { data: usersData, mutate: mutateUsers, isLoading: loadingUsers } = useSWR(
-    authorized ? ['admin-users', userSearch] : null,
-    () => api.getAdminUsers({ search: userSearch, limit: 100 })
+    authorized ? ['admin-users', userSearch, userStatusFilter, userPlanFilter] : null,
+    () => api.getAdminUsers({
+      search: userSearch || undefined,
+      status: userStatusFilter !== 'all' ? userStatusFilter : undefined,
+      plan: userPlanFilter !== 'all' ? userPlanFilter : undefined,
+      limit: 100
+    })
+  );
+
+  const { data: redeemData, mutate: mutateRedeem, isLoading: loadingRedeem } = useSWR(
+    authorized && (tab === 'redeem' || tab === 'overview') ? ['admin-redeem-codes', redeemSearch] : null,
+    () => api.getAdminRedeemCodes({ search: redeemSearch })
+  );
+
+  const { data: redeemLogsData, mutate: mutateRedeemLogs } = useSWR(
+    authorized && tab === 'redeem' ? 'admin-redeem-logs' : null,
+    () => api.getRedeemLogs({ limit: 50 })
+  );
+
+  const { data: plansData } = useSWR(
+    authorized ? 'subscription-plans' : null,
+    api.getSubscriptionPlans
   );
 
   const { data: emailsData, mutate: mutateEmails, isLoading: loadingEmails } = useSWR(
@@ -118,15 +168,107 @@ export default function AdminPage() {
   }
 
   // Action handlers
-  async function handleToggleBan(u) {
-    const nextBan = u.is_banned ? 0 : 1;
+  async function handleConfirmBan(e) {
+    e.preventDefault();
+    if (!banningUser) return;
+    setBanning(true);
     try {
-      await api.updateUser(u.tg_id, { is_banned: nextBan });
-      toast.success(nextBan ? `User @${u.username || u.tg_id} suspended` : `User @${u.username || u.tg_id} reinstated`);
+      await api.banUser(banningUser.tg_id, banReason);
+      toast.success(`User @${banningUser.username || banningUser.tg_id} suspended and sessions terminated`);
+      setBanningUser(null);
+      setBanReason('Administrative policy violation');
+      mutateUsers();
+      mutateStats();
+    } catch (err) {
+      toast.error(err.message || 'Ban action failed');
+    } finally {
+      setBanning(false);
+    }
+  }
+
+  async function handleUnban(u) {
+    try {
+      await api.unbanUser(u.tg_id);
+      toast.success(`User @${u.username || u.tg_id} reinstated`);
+      mutateUsers();
+      mutateStats();
+    } catch (err) {
+      toast.error(err.message || 'Unban action failed');
+    }
+  }
+
+  async function handleSaveSubscription(e) {
+    e.preventDefault();
+    if (!subscribingUser) return;
+    setSubmittingSub(true);
+    try {
+      await api.setUserSubscription(subscribingUser.tg_id, subForm);
+      toast.success(`Subscription updated for @${subscribingUser.username || subscribingUser.tg_id}`);
+      setSubscribingUser(null);
       mutateUsers();
     } catch (err) {
-      toast.error(err.message || 'Action failed');
+      toast.error(err.message || 'Subscription update failed');
+    } finally {
+      setSubmittingSub(false);
     }
+  }
+
+  async function handleCreateCode(e) {
+    e.preventDefault();
+    setCreatingCode(true);
+    try {
+      await api.createRedeemCode(codeForm);
+      toast.success('Voucher code created successfully');
+      setShowCreateCodeModal(false);
+      setCodeForm({
+        code: '',
+        title: '',
+        rewardType: 'subscription',
+        rewardPlan: 'pro',
+        rewardDurationDays: 30,
+        rewardStorageBytes: 1073741824,
+        rewardAliasCount: 10,
+        rewardDomainCount: 2,
+        maxUses: 1,
+        expiresAt: ''
+      });
+      mutateRedeem();
+    } catch (err) {
+      toast.error(err.message || 'Failed to create code');
+    } finally {
+      setCreatingCode(false);
+    }
+  }
+
+  async function handleToggleCode(id) {
+    try {
+      await api.toggleRedeemCode(id);
+      toast.success('Voucher status toggled');
+      mutateRedeem();
+    } catch (err) {
+      toast.error(err.message || 'Toggle failed');
+    }
+  }
+
+  async function handleDeleteCode(id) {
+    if (!confirm(`Delete voucher #${id}?`)) return;
+    try {
+      await api.deleteRedeemCode(id);
+      toast.success('Voucher deleted');
+      mutateRedeem();
+    } catch (err) {
+      toast.error(err.message || 'Delete failed');
+    }
+  }
+
+  function generateRandomVoucher() {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let rand = '';
+    for (let i = 0; i < 8; i++) rand += chars.charAt(Math.floor(Math.random() * chars.length));
+    setCodeForm(prev => ({
+      ...prev,
+      code: `CMD-${rand.substring(0, 4)}-${rand.substring(4)}`
+    }));
   }
 
   async function handleSaveUser(e) {
@@ -335,6 +477,7 @@ export default function AdminPage() {
         {[
           { id: 'overview', label: 'System Health', icon: CircleStackIcon, count: null },
           { id: 'users', label: 'Users Directory', icon: UsersIcon, count: overview.users },
+          { id: 'redeem', label: 'Vouchers & Redeem', icon: TicketIcon, count: redeemData?.codes?.length || null },
           { id: 'emails', label: 'Live Email Feed', icon: EnvelopeIcon, count: overview.emails },
           { id: 'subdomains', label: 'Subdomains', icon: GlobeAltIcon, count: overview.subdomains },
           { id: 'hosting', label: 'Cloud Sites & Nodes', icon: ServerStackIcon, count: overview.sites },
@@ -505,18 +648,45 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {tab === 'users' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="relative w-full sm:w-80">
-              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search username, name, or TG ID..."
-                value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
-              />
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="relative flex-1 max-w-xs">
+                <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search username, name, or TG ID..."
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <select
+                value={userStatusFilter}
+                onChange={e => setUserStatusFilter(e.target.value)}
+                className="px-2.5 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium outline-none"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active Only</option>
+                <option value="banned">Banned Only</option>
+              </select>
+
+              {/* Plan Filter */}
+              <select
+                value={userPlanFilter}
+                onChange={e => setUserPlanFilter(e.target.value)}
+                className="px-2.5 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium outline-none"
+              >
+                <option value="all">All Subscription Plans</option>
+                <option value="free">Free Tier</option>
+                <option value="starter">Starter Pack</option>
+                <option value="pro">Pro Developer</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
             </div>
-            <div className="text-xs text-gray-500">
+
+            <div className="text-xs text-gray-500 shrink-0">
               Showing <b>{usersList.length}</b> users
             </div>
           </div>
@@ -530,8 +700,8 @@ export default function AdminPage() {
                     <th className="px-4 py-3">User</th>
                     <th className="px-4 py-3">Role</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Aliases Limit</th>
-                    <th className="px-4 py-3">Storage Limit</th>
+                    <th className="px-4 py-3">Subscription</th>
+                    <th className="px-4 py-3">Quotas (Aliases/Domains/Apps)</th>
                     <th className="px-4 py-3">Joined Date</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
@@ -542,7 +712,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3 font-bold">{u.tg_id}</td>
                       <td className="px-4 py-3 font-sans">
                         <div className="font-semibold text-gray-900 dark:text-white">
-                          {u.first_name || 'N/A'}
+                          {u.first_name || 'N/A'} {u.last_name || ''}
                         </div>
                         <div className="text-[11px] text-indigo-500 font-mono">
                           {u.username ? `@${u.username}` : 'No username'}
@@ -557,21 +727,65 @@ export default function AdminPage() {
                           {u.role}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          u.is_banned
-                            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                        }`}>
-                          {u.is_banned ? 'BANNED' : 'ACTIVE'}
-                        </span>
+                      <td className="px-4 py-3 font-sans">
+                        {u.is_banned ? (
+                          <div>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                              BANNED
+                            </span>
+                            {u.ban_reason && (
+                              <p className="text-[10px] text-red-500 mt-0.5 max-w-[140px] truncate" title={u.ban_reason}>
+                                {u.ban_reason}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                            ACTIVE
+                          </span>
+                        )}
                       </td>
-                      <td className="px-4 py-3">{u.alias_limit > 90000 ? 'Unlimited' : u.alias_limit}</td>
-                      <td className="px-4 py-3">{(u.storage_limit / 1024 / 1024 / 1024).toFixed(0)} GB</td>
+                      <td className="px-4 py-3 font-sans">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                          u.subscription_plan === 'enterprise'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : u.subscription_plan === 'pro'
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                            : u.subscription_plan === 'starter'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        }`}>
+                          {u.subscription_plan || 'free'}
+                        </span>
+                        {u.subscription_expires_at && (
+                          <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                            Exp: {new Date(u.subscription_expires_at).toLocaleDateString()}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[11px]">
+                        <div>Aliases: <b>{u.alias_limit > 90000 ? '∞' : u.alias_limit}</b></div>
+                        <div>Domains: <b>{u.custom_domain_limit > 90000 ? '∞' : u.custom_domain_limit || 1}</b></div>
+                        <div>Apps: <b>{u.application_limit > 90000 ? '∞' : u.application_limit || 3}</b></div>
+                      </td>
                       <td className="px-4 py-3 text-[11px] text-gray-500">
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3 text-right space-x-1 font-sans">
+                      <td className="px-4 py-3 text-right space-x-1 font-sans whitespace-nowrap">
+                        <button
+                          onClick={() => {
+                            setSubscribingUser(u);
+                            setSubForm({
+                              planId: u.subscription_plan || 'pro',
+                              durationDays: 30,
+                              isLifetime: u.subscription_status === 'lifetime'
+                            });
+                          }}
+                          className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold rounded text-xs"
+                          title="Set Subscription Tier"
+                        >
+                          Plan
+                        </button>
                         <button
                           onClick={() => {
                             setEditingUser(u);
@@ -585,17 +799,216 @@ export default function AdminPage() {
                         >
                           Edit
                         </button>
+                        {u.is_banned ? (
+                          <button
+                            onClick={() => handleUnban(u)}
+                            className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium"
+                          >
+                            Unban
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setBanningUser(u);
+                              setBanReason('Violation of platform policies');
+                            }}
+                            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium"
+                          >
+                            Ban
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────
+          TAB: VOUCHERS & REDEEM CODES
+      ────────────────────────────────────────────────────────────────────── */}
+      {tab === 'redeem' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <TicketIcon className="h-5 w-5 text-rose-500" />
+                Vouchers &amp; Promo Codes Manager
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Generate promo codes for subscription passes, extra domain quotas, and storage boosts.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                generateRandomVoucher();
+                setShowCreateCodeModal(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <PlusIcon className="h-4 w-4" />
+              <span>Create New Voucher</span>
+            </button>
+          </div>
+
+          {/* Vouchers Table */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center justify-between gap-4">
+              <div className="relative w-full sm:w-72">
+                <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search code or title..."
+                  value={redeemSearch}
+                  onChange={e => setRedeemSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs outline-none"
+                />
+              </div>
+
+              <div className="text-xs text-gray-500">
+                Total Codes: <b>{redeemData?.codes?.length || 0}</b>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold">
+                  <tr>
+                    <th className="px-4 py-3">Promo Code</th>
+                    <th className="px-4 py-3">Description</th>
+                    <th className="px-4 py-3">Reward Granted</th>
+                    <th className="px-4 py-3">Redemptions</th>
+                    <th className="px-4 py-3">Expires At</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                  {(redeemData?.codes || []).map(c => (
+                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-gray-900 dark:text-white px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs tracking-wider">
+                            {c.code}
+                          </span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(c.code);
+                              toast.success(`Copied ${c.code}`);
+                            }}
+                            className="text-gray-400 hover:text-indigo-600"
+                            title="Copy Code"
+                          >
+                            <ClipboardDocumentIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-sans font-semibold text-gray-800 dark:text-gray-200">
+                        {c.title}
+                      </td>
+                      <td className="px-4 py-3 font-sans">
+                        {c.reward_type === 'subscription' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                            {c.reward_plan} Plan ({c.reward_duration_days} Days)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                            {c.reward_type}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono">
+                        <span className="font-bold text-gray-900 dark:text-white">{c.used_count}</span>
+                        <span className="text-gray-400"> / {c.max_uses === 0 ? '∞' : c.max_uses}</span>
+                      </td>
+                      <td className="px-4 py-3 font-sans text-gray-500 text-[11px]">
+                        {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : 'Never (Permanent)'}
+                      </td>
+                      <td className="px-4 py-3 font-sans">
                         <button
-                          onClick={() => handleToggleBan(u)}
-                          className={`px-2.5 py-1 rounded text-xs font-medium text-white ${
-                            u.is_banned ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                          onClick={() => handleToggleCode(c.id)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            c.is_active
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 hover:bg-emerald-200'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200'
                           }`}
                         >
-                          {u.is_banned ? 'Unban' : 'Ban'}
+                          {c.is_active ? 'ACTIVE' : 'DISABLED'}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right font-sans">
+                        <button
+                          onClick={() => handleDeleteCode(c.id)}
+                          className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                          title="Delete Code"
+                        >
+                          <TrashIcon className="h-4 w-4" />
                         </button>
                       </td>
                     </tr>
                   ))}
+                  {(!redeemData?.codes || redeemData.codes.length === 0) && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-400 font-sans">
+                        No voucher codes found. Click "Create New Voucher" to generate one.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Redemptions Audit Log */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
+            <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <GiftIcon className="h-4 w-4 text-emerald-500" />
+              <span>Recent User Redemptions Log</span>
+            </h3>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold">
+                  <tr>
+                    <th className="px-3 py-2">User</th>
+                    <th className="px-3 py-2">Voucher Code</th>
+                    <th className="px-3 py-2">Reward Granted</th>
+                    <th className="px-3 py-2">Redeemed At</th>
+                    <th className="px-3 py-2">IP Address</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                  {(redeemLogsData?.logs || []).map(l => (
+                    <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                      <td className="px-3 py-2 font-sans">
+                        <b>{l.first_name || l.tg_id}</b>
+                        {l.username && <span className="text-gray-400 font-mono text-[11px] ml-1">(@{l.username})</span>}
+                      </td>
+                      <td className="px-3 py-2 font-bold text-indigo-600 dark:text-indigo-400">
+                        {l.code}
+                      </td>
+                      <td className="px-3 py-2 font-sans text-gray-700 dark:text-gray-300">
+                        {l.reward_summary}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500 text-[11px] font-sans">
+                        {new Date(l.redeemed_at).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-gray-400 text-[11px]">
+                        {l.ip_address || 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                  {(!redeemLogsData?.logs || redeemLogsData.logs.length === 0) && (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-4 text-center text-gray-400 font-sans">
+                        Zero voucher redemptions recorded yet.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1349,6 +1762,347 @@ export default function AdminPage() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {/* ────────────────────────────────────────────────────────────────────
+          MODAL: BAN USER & PURGE SESSIONS
+      ────────────────────────────────────────────────────────────────────── */}
+      {banningUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200 dark:border-red-900/50">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                <ShieldExclamationIcon className="h-5 w-5" />
+                Suspend User &amp; Terminate Access
+              </h2>
+              <button onClick={() => setBanningUser(null)} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmBan} className="space-y-4 mt-4 text-xs">
+              <div className="p-3 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300">
+                <p className="font-semibold text-sm">
+                  User: {banningUser.first_name || 'N/A'} {banningUser.last_name || ''} (@{banningUser.username || banningUser.tg_id})
+                </p>
+                <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">
+                  ⚠️ This action immediately invalidates all active web sessions, disconnects open WebSockets, revokes API keys, and blocks Telegram bot commands.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Reason for Suspension
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Explain why this account is being banned..."
+                  value={banReason}
+                  onChange={e => setBanReason(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setBanningUser(null)}
+                  className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={banning}
+                  className="px-4 py-2 text-xs bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {banning ? 'Suspending...' : 'Confirm Suspension'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────
+          MODAL: SET USER SUBSCRIPTION
+      ────────────────────────────────────────────────────────────────────── */}
+      {subscribingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <SparklesIcon className="h-5 w-5 text-indigo-500" />
+                Manage User Subscription
+              </h2>
+              <button onClick={() => setSubscribingUser(null)} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSubscription} className="space-y-4 mt-4 text-xs">
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900/40 text-indigo-900 dark:text-indigo-200">
+                <div className="font-semibold text-sm">
+                  {subscribingUser.first_name || 'N/A'} {subscribingUser.last_name || ''} (@{subscribingUser.username || subscribingUser.tg_id})
+                </div>
+                <div className="text-[11px] mt-1 text-indigo-700 dark:text-indigo-300">
+                  Current Tier: <span className="font-bold uppercase">{subscribingUser.subscription_plan || 'free'}</span> ({subscribingUser.subscription_status || 'active'})
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Select Subscription Tier
+                </label>
+                <select
+                  value={subForm.planId}
+                  onChange={e => setSubForm({ ...subForm, planId: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-medium"
+                >
+                  <option value="free">Free Tier (1 Domain, 3 Apps, 10 Aliases, 1GB)</option>
+                  <option value="starter">Starter Pack (3 Domains, 10 Apps, 50 Aliases, 5GB)</option>
+                  <option value="pro">Pro Developer (10 Domains, 50 Apps, 200 Aliases, 25GB)</option>
+                  <option value="enterprise">Enterprise Tier (Unlimited Domains, Apps, Aliases, 100GB)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 py-1">
+                <input
+                  type="checkbox"
+                  id="isLifetime"
+                  checked={subForm.isLifetime}
+                  onChange={e => setSubForm({ ...subForm, isLifetime: e.target.checked })}
+                  className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="isLifetime" className="font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                  Grant Permanent / Lifetime Access
+                </label>
+              </div>
+
+              {!subForm.isLifetime && (
+                <div>
+                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Duration (Days to add/extend)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="3650"
+                    required
+                    value={subForm.durationDays}
+                    onChange={e => setSubForm({ ...subForm, durationDays: parseInt(e.target.value, 10) || 30 })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Will extend from existing expiry date if currently active, or from today.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setSubscribingUser(null)}
+                  className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingSub}
+                  className="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {submittingSub ? 'Updating...' : 'Apply Subscription'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────
+          MODAL: CREATE VOUCHER / REDEEM CODE
+      ────────────────────────────────────────────────────────────────────── */}
+      {showCreateCodeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <TicketIcon className="h-5 w-5 text-rose-500" />
+                Generate Promo / Voucher Code
+              </h2>
+              <button onClick={() => setShowCreateCodeModal(false)} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCode} className="space-y-4 mt-4 text-xs">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-gray-700 dark:text-gray-300">
+                    Voucher Code
+                  </label>
+                  <button
+                    type="button"
+                    onClick={generateRandomVoucher}
+                    className="text-xs text-indigo-600 hover:underline font-medium cursor-pointer"
+                  >
+                    🎲 Generate Random
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. COMMANDOR-PRO-2026"
+                  value={codeForm.code}
+                  onChange={e => setCodeForm({ ...codeForm, code: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono uppercase font-bold tracking-wider"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Description / Campaign Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. VIP Developer Pass 30 Days"
+                  value={codeForm.title}
+                  onChange={e => setCodeForm({ ...codeForm, title: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Reward Type
+                  </label>
+                  <select
+                    value={codeForm.rewardType}
+                    onChange={e => setCodeForm({ ...codeForm, rewardType: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-medium"
+                  >
+                    <option value="subscription">Subscription Tier Upgrade</option>
+                    <option value="storage_boost">Extra Storage Boost</option>
+                    <option value="alias_boost">Extra Alias Quota</option>
+                    <option value="domain_boost">Extra Domain Limit</option>
+                  </select>
+                </div>
+
+                {codeForm.rewardType === 'subscription' ? (
+                  <div>
+                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Target Plan
+                    </label>
+                    <select
+                      value={codeForm.rewardPlan}
+                      onChange={e => setCodeForm({ ...codeForm, rewardPlan: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-medium"
+                    >
+                      <option value="starter">Starter Pack</option>
+                      <option value="pro">Pro Developer</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
+                ) : codeForm.rewardType === 'storage_boost' ? (
+                  <div>
+                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Storage Size (GB)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={Math.round(codeForm.rewardStorageBytes / 1073741824)}
+                      onChange={e => setCodeForm({ ...codeForm, rewardStorageBytes: parseInt(e.target.value, 10) * 1073741824 })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Bonus Count
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={codeForm.rewardType === 'domain_boost' ? codeForm.rewardDomainCount : codeForm.rewardAliasCount}
+                      onChange={e => setCodeForm({
+                        ...codeForm,
+                        rewardDomainCount: parseInt(e.target.value, 10),
+                        rewardAliasCount: parseInt(e.target.value, 10)
+                      })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {codeForm.rewardType === 'subscription' && (
+                <div>
+                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Subscription Duration (Days)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="3650"
+                    required
+                    value={codeForm.rewardDurationDays}
+                    onChange={e => setCodeForm({ ...codeForm, rewardDurationDays: parseInt(e.target.value, 10) || 30 })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Max Redemptions (0 = Unlimited)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={codeForm.maxUses}
+                    onChange={e => setCodeForm({ ...codeForm, maxUses: parseInt(e.target.value, 10) || 0 })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Expiration Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={codeForm.expiresAt}
+                    onChange={e => setCodeForm({ ...codeForm, expiresAt: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateCodeModal(false)}
+                  className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingCode}
+                  className="px-4 py-2 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {creatingCode ? 'Creating...' : 'Create Voucher Code'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

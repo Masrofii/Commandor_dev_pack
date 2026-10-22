@@ -1526,6 +1526,89 @@ function setupCommands(bot) {
     return replyHtml(ctx, text);
   }));
 
+  // Redeem Voucher / Promo Code
+  bot.command(['redeem', 'voucher', 'promo'], wrap(async ctx => {
+    const raw = ctx.message.text.split(' ').slice(1).join(' ').trim();
+    if (!raw) {
+      return replyHtml(ctx, '🎟️ <b>Redeem Voucher / Gift Code</b>\n──────────────────────────────\nUsage: <code>/redeem YOUR-CODE</code>\n\nEnter your promotional code to activate subscription passes, extra custom domains, or storage boosts.');
+    }
+    const { redeemCodeForUser } = require('../services/redeemService');
+    try {
+      const res = await redeemCodeForUser(raw, ctx.from.id, { ipAddress: 'telegram-bot' });
+      const expDate = res.user.subscription_expires_at ? new Date(res.user.subscription_expires_at).toLocaleDateString() : 'Lifetime / Permanent';
+      const text = `🎉 <b>VOUCHER REDEEMED SUCCESSFULLY!</b>\n──────────────────────────────\n🏷 <b>Code:</b> <code>${escapeHtml(res.code)}</code>\n🎁 <b>Reward:</b> <b>${escapeHtml(res.rewardSummary)}</b>\n\n⭐ <b>Current Plan:</b> <code>${escapeHtml(res.user.subscription_plan.toUpperCase())}</code>\n📅 <b>Expires:</b> <i>${expDate}</i>\n──────────────────────────────`;
+      return replyHtml(ctx, text);
+    } catch (err) {
+      return replyHtml(ctx, `❌ <b>Redemption Failed</b>\n──────────────────────────────\n${escapeHtml(err.message)}`);
+    }
+  }));
+
+  // User Plan & Subscription Info
+  bot.command(['plan', 'subscription', 'tier'], wrap(async ctx => {
+    const { getUserDetails } = require('../services/userService');
+    const u = getUserDetails(ctx.from.id);
+    if (!u) return replyHtml(ctx, 'User profile not found.');
+
+    const expStr = u.subscription_expires_at 
+      ? `${new Date(u.subscription_expires_at).toLocaleDateString()} (${u.daysRemaining} days left)`
+      : (u.subscription_status === 'lifetime' ? 'Lifetime Pass' : 'Standard Free');
+
+    let text = `💎 <b>COMMANDOR SUBSCRIPTION & QUOTAS</b>\n──────────────────────────────\n`;
+    text += `• <b>Tier:</b> <b>${escapeHtml(u.subscription_plan.toUpperCase())}</b> (${escapeHtml(u.subscription_status)})\n`;
+    text += `• <b>Valid Until:</b> <i>${escapeHtml(expStr)}</i>\n\n`;
+    text += `📊 <b>Platform Resource Quotas:</b>\n`;
+    text += `• Custom Domains: <b>${u.usage.domains}</b> / ${u.custom_domain_limit > 90000 ? 'Unlimited' : u.custom_domain_limit}\n`;
+    text += `• Git Applications: <b>${u.usage.applications}</b> / ${u.application_limit > 90000 ? 'Unlimited' : u.application_limit}\n`;
+    text += `• Email Aliases: <b>${u.usage.aliases}</b> / ${u.alias_limit > 90000 ? 'Unlimited' : u.alias_limit}\n`;
+    text += `• Storage: <b>${(u.storage_used / 1024 / 1024).toFixed(1)} MB</b> / ${(u.storage_limit / 1024 / 1024 / 1024).toFixed(1)} GB\n`;
+    text += `──────────────────────────────\n`;
+    text += `<i>Have a voucher code? Type: <code>/redeem YOUR-CODE</code></i>`;
+
+    return replyHtml(ctx, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🎟️ Redeem Code', callback_data: 'user:redeem_prompt' }],
+          [{ text: '🌐 Web Dashboard', url: config.webUrl || 'http://localhost:3001' }]
+        ]
+      }
+    });
+  }));
+
+  // Admin Ban Command
+  bot.command('ban', wrap(async ctx => {
+    if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+    const parts = ctx.message.text.split(' ');
+    const targetId = parseInt(parts[1], 10);
+    const reason = parts.slice(2).join(' ').trim() || 'Violating platform policies';
+    if (!targetId || isNaN(targetId)) {
+      return replyHtml(ctx, 'Usage: <code>/ban &lt;tg_id&gt; [reason]</code>');
+    }
+    const { banUser } = require('../services/userService');
+    try {
+      const res = await banUser(targetId, { reason, adminTgId: ctx.from.id });
+      return replyHtml(ctx, `🚫 <b>User #${targetId} Banned</b>\n──────────────────────────────\nReason: <i>${escapeHtml(res.ban_reason)}</i>\nActive sessions terminated: ${res.terminatedSessions}`);
+    } catch (err) {
+      return replyHtml(ctx, `❌ ${escapeHtml(err.message)}`);
+    }
+  }));
+
+  // Admin Unban Command
+  bot.command('unban', wrap(async ctx => {
+    if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+    const parts = ctx.message.text.split(' ');
+    const targetId = parseInt(parts[1], 10);
+    if (!targetId || isNaN(targetId)) {
+      return replyHtml(ctx, 'Usage: <code>/unban &lt;tg_id&gt;</code>');
+    }
+    const { unbanUser } = require('../services/userService');
+    try {
+      await unbanUser(targetId, { adminTgId: ctx.from.id });
+      return replyHtml(ctx, `🟢 <b>User #${targetId} Unbanned</b>\nAccess reinstated successfully.`);
+    } catch (err) {
+      return replyHtml(ctx, `❌ ${escapeHtml(err.message)}`);
+    }
+  }));
+
   bot.command(['broadcasts', 'broadcast_history'], wrap(async ctx => {
     if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
     const db = getDb();
