@@ -1,5 +1,6 @@
 'use strict';
 const crypto=require('crypto');
+const { bytesToGib, bytesToMib, formatMemoryMb } = require('./memoryTelemetry');
 function generateAliasLocalPart(len=10){const chars='abcdefghijklmnopqrstuvwxyz0123456789';let r='';const b=crypto.randomBytes(len);for(let i=0;i<len;i++)r+=chars[b[i]%chars.length];return r;}
 function formatBytes(b){if(b<1024)return`${b} B`;if(b<1048576)return`${(b/1024).toFixed(1)} KB`;if(b<1073741824)return`${(b/1048576).toFixed(1)} MB`;return`${(b/1073741824).toFixed(2)} GB`;}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
@@ -247,5 +248,8 @@ module.exports={
   detectServiceAndCategory,
   summarizeEmail,
   formatCustomAliasLocalPart,
-  RESERVED_ALIAS_WORDS
+  RESERVED_ALIAS_WORDS,
+  bytesToGib,
+  bytesToMib,
+  formatMemoryMb
 };

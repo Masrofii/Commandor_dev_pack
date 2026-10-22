@@ -33,6 +33,7 @@ async function apiFetch(path, opts = {}) {
 }
 
 export const api = {
+  getAuthConfig: () => apiFetch('/api/auth/config'),
   loginWithToken: (token) => apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ token }) }),
   loginWithTelegram: (i, t) => apiFetch('/api/auth/telegram', { method: 'POST', body: JSON.stringify({ initData: i, totpToken: t }) }),
   logout: () => apiFetch('/api/auth/logout', { method: 'POST' }),

@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { isAdmin } from '../../../lib/auth';
-import { formatTimeAgo } from '../../../lib/helpers';
+import { formatTimeAgo, formatMemoryMb } from '../../../lib/helpers';
 import {
   ServerStackIcon,
   PlusIcon,
@@ -424,9 +424,11 @@ export default function NodesPage() {
       (n.username || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (n.group_name || '').toLowerCase().includes(searchQuery.toLowerCase());
 
+    const isStaleNode = n.is_stale || (n.status === 'online' && (!n.last_ping_at || (Date.now() - new Date(n.last_ping_at.includes('T') ? n.last_ping_at : n.last_ping_at.replace(' ', 'T') + 'Z').getTime() > 15 * 60 * 1000)));
     const matchesStatus =
       statusFilter === 'all' ? true :
-      statusFilter === 'online' ? n.status === 'online' :
+      statusFilter === 'online' ? (n.status === 'online' && !isStaleNode) :
+      statusFilter === 'stale' ? (n.status === 'online' && isStaleNode) :
       statusFilter === 'offline' ? n.status !== 'online' :
       statusFilter === 'active' ? n.is_active !== 0 :
       statusFilter === 'inactive' ? n.is_active === 0 : true;
@@ -441,7 +443,7 @@ export default function NodesPage() {
   const onlineNodes = nodes.filter(n => n.status === 'online').length;
   const totalSites = nodes.reduce((acc, n) => acc + (n.current_sites || 0), 0);
   const totalCpus = nodes.reduce((acc, n) => acc + (n.system_info?.cpus || 1), 0);
-  const totalRamGb = (nodes.reduce((acc, n) => acc + (n.system_info?.ramTotalMb || n.system_info?.ramMb || 512), 0) / 1024).toFixed(1);
+  const totalRamGb = (nodes.reduce((acc, n) => acc + (n.system_info?.ramTotalMb || n.system_info?.ramMb || 0), 0) / 1024).toFixed(1);
 
   return (
     <div className="space-y-6 animate-fade-in pb-16">
@@ -557,6 +559,7 @@ export default function NodesPage() {
           >
             <option value="all">All Statuses</option>
             <option value="online">Online Only</option>
+            <option value="stale">Stale Telemetry</option>
             <option value="offline">Offline Only</option>
             <option value="active">Active Only</option>
             <option value="inactive">Disabled Only</option>
@@ -616,10 +619,11 @@ export default function NodesPage() {
           {filteredNodes.map((node) => {
             const isOnline = node.status === 'online';
             const isActive = node.is_active !== 0;
+            const isStale = node.is_stale || (isOnline && (!node.last_ping_at || (Date.now() - new Date(node.last_ping_at.includes('T') ? node.last_ping_at : node.last_ping_at.replace(' ', 'T') + 'Z').getTime() > 15 * 60 * 1000)));
             const sys = node.system_info || {};
-            const ramTotal = sys.ramTotalMb || sys.ramMb || 512;
+            const ramTotal = sys.ramTotalMb || sys.ramMb || 0;
             const ramUsed = sys.ramUsedMb || 0;
-            const ramPercent = Math.min(100, Math.round((ramUsed / ramTotal) * 100));
+            const ramPercent = ramTotal > 0 ? Math.min(100, Math.round((ramUsed / ramTotal) * 100)) : 0;
             const isPinging = pingingId === node.id;
             const isProvisioning = provisioningId === node.id;
 
@@ -635,16 +639,18 @@ export default function NodesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="relative flex h-2.5 w-2.5">
-                        {isOnline && isActive && (
+                        {isOnline && isActive && !isStale && (
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                         )}
                         <span
                           className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
                             !isActive
                               ? 'bg-slate-400'
-                              : isOnline
-                              ? 'bg-emerald-500'
-                              : 'bg-rose-500'
+                              : !isOnline
+                              ? 'bg-rose-500'
+                              : isStale
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-500'
                           }`}
                         />
                       </span>
@@ -655,12 +661,14 @@ export default function NodesPage() {
                         className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
                           !isActive
                             ? 'bg-slate-100 text-slate-600 dark:bg-cyber-800 dark:text-slate-400'
-                            : isOnline
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                            : !isOnline
+                            ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                            : isStale
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                         }`}
                       >
-                        {!isActive ? 'Disabled' : node.status}
+                        {!isActive ? 'Disabled' : !isOnline ? node.status : isStale ? 'Stale' : 'Online'}
                       </span>
                     </div>
 
@@ -768,19 +776,30 @@ export default function NodesPage() {
                       <span>RAM</span>
                       <CircleStackIcon className="w-3.5 h-3.5 text-cyan-500" />
                     </div>
-                    <div className="font-bold text-slate-900 dark:text-white">
-                      {ramTotal} MB
+                    <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between gap-1">
+                      <span>{formatMemoryMb(ramTotal)}</span>
+                      {sys.containerLimitMb && sys.containerLimitMb < ramTotal && (
+                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-cyan-400 border border-indigo-200/50 dark:border-indigo-800/50" title={`Container limit: ${formatMemoryMb(sys.containerLimitMb)}`}>
+                          cgroup: {formatMemoryMb(sys.containerLimitMb)}
+                        </span>
+                      )}
                     </div>
                     {ramUsed > 0 ? (
-                      <div className="w-full bg-slate-200 dark:bg-cyber-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
-                        <div
-                          className="bg-cyan-500 h-full rounded-full transition-all"
-                          style={{ width: `${ramPercent}%` }}
-                        />
+                      <div>
+                        <div className="w-full bg-slate-200 dark:bg-cyber-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                          <div
+                            className="bg-cyan-500 h-full rounded-full transition-all"
+                            style={{ width: `${ramPercent}%` }}
+                          />
+                        </div>
+                        <div className="text-[10px] text-slate-500 flex justify-between mt-1">
+                          <span>{formatMemoryMb(ramUsed)} used</span>
+                          <span>{formatMemoryMb(sys.ramAvailableMb || sys.ramFreeMb)} free</span>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                        Free: {sys.ramFreeMb ? `${sys.ramFreeMb}MB` : 'Ready'}
+                        Free: {sys.ramAvailableMb || sys.ramFreeMb ? formatMemoryMb(sys.ramAvailableMb || sys.ramFreeMb) : 'Ready'}
                       </div>
                     )}
                   </div>
@@ -1431,7 +1450,7 @@ export default function NodesPage() {
                               </div>
                               <div className="p-1.5 rounded bg-white dark:bg-cyber-950 border border-slate-200/60 dark:border-cyber-800">
                                 <span className="text-slate-400 block">RAM:</span>
-                                <span className="font-bold text-slate-800 dark:text-slate-200">{testResult.specs.ramTotalMb || 512} MB</span>
+                                <span className="font-bold text-slate-800 dark:text-slate-200">{formatMemoryMb(testResult.specs.ramTotalMb || testResult.specs.ramMb || 0)}</span>
                               </div>
                             </div>
                           )}

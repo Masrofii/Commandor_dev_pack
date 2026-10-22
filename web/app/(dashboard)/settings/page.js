@@ -249,11 +249,11 @@ export default function SettingsPage() {
                   Official Commandor Dev Pack Bot
                 </div>
                 <div className="text-xs text-cyan-600 dark:text-cyan-400 font-mono mt-0.5">
-                  @{process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_dev_pack_bot'}
+                  @{process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot'}
                 </div>
               </div>
               <a
-                href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_dev_pack_bot'}`}
+                href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot'}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary py-1.5 px-4 text-xs font-semibold shadow-xs"

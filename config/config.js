@@ -8,7 +8,7 @@ const config={
   isProduction:optional('NODE_ENV','production')==='production',
   server:{port:optionalInt('PORT',3000),webPort:optionalInt('WEB_PORT',3001),webUrl:optional('WEB_URL','http://localhost:3001'),corsOrigins:optional('CORS_ORIGINS','http://localhost:3001').split(',').map(s=>s.trim())},
   database:{path:optional('DATABASE_PATH','./data/app.db')},
-  telegram:{token:optional('TELEGRAM_BOT_TOKEN',''),adminId:optionalInt('ADMIN_TELEGRAM_ID',0)},
+  telegram:{token:optional('TELEGRAM_BOT_TOKEN',''),adminId:optionalInt('ADMIN_TELEGRAM_ID',0),botUsername:optional('TELEGRAM_BOT_USERNAME','commandor_mail_bot')},
   incoming:{secret:optional('INCOMING_SECRET','')},
   domains:{list:optional('DOMAINS','').split(',').map(d=>d.trim()).filter(Boolean),defaultDomain:optional('DEFAULT_DOMAIN','')},
   quotas:{maxAliases:optionalInt('MAX_ALIASES',5),maxStorageBytes:optionalInt('MAX_STORAGE_BYTES',104857600),maxEmailSize:optionalInt('MAX_EMAIL_SIZE',10485760),maxAttachmentSize:optionalInt('MAX_ATTACHMENT_SIZE',5242880),maxWebhooks:optionalInt('MAX_WEBHOOKS',5),maxApiKeys:optionalInt('MAX_API_KEYS',10),emailTtlDays:optionalInt('EMAIL_TTL_DAYS',7),aliasTtlDays:optionalInt('ALIAS_TTL_DAYS',30),burnerTtlMinutes:optionalInt('BURNER_TTL_MINUTES',60)},

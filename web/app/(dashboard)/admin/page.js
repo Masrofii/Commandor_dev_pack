@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { isAdmin, getUser } from '../../../lib/auth';
+import { formatMemoryMb } from '../../../lib/helpers';
 import {
   ShieldCheckIcon,
   UsersIcon,
@@ -1441,7 +1442,7 @@ export default function AdminPage() {
                       </div>
                       <div className="p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                         <span className="text-[10px] text-gray-400 uppercase">RAM</span>
-                        <div className="font-bold">{n.system_info?.ramMb || 512} MB</div>
+                        <div className="font-bold">{formatMemoryMb(n.system_info?.ramTotalMb || n.system_info?.ramMb)}</div>
                       </div>
                       <div className="p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                         <span className="text-[10px] text-gray-400 uppercase">Capacity</span>
@@ -1914,7 +1915,7 @@ export default function AdminPage() {
                       </div>
                       {r.status === 'success' ? (
                         <div className="mt-1 text-gray-600 dark:text-gray-300 pl-5">
-                          Node: <span className="font-semibold">{r.node?.name || r.name}</span> • {r.node?.system_info?.cpus || 1} vCPU • {r.node?.system_info?.ramMb || 512}MB RAM
+                          Node: <span className="font-semibold">{r.node?.name || r.name}</span> • {r.node?.system_info?.cpus || 1} vCPU • {formatMemoryMb(r.node?.system_info?.ramTotalMb || r.node?.system_info?.ramMb)} RAM
                         </div>
                       ) : (
                         <div className="mt-1 text-red-600 dark:text-red-400 pl-5 font-sans">

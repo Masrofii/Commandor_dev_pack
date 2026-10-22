@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { isAdmin } from '../../../lib/auth';
+import { formatMemoryMb } from '../../../lib/helpers';
 import {
   ServerStackIcon,
   PlusIcon,
@@ -425,7 +426,7 @@ export default function HostingPage() {
                       </div>
                       <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="text-gray-400 text-[10px] uppercase">RAM</div>
-                        <div className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{n.system_info?.ramMb || 512} MB</div>
+                        <div className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{formatMemoryMb(n.system_info?.ramTotalMb || n.system_info?.ramMb)}</div>
                       </div>
                       <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="text-gray-400 text-[10px] uppercase">Capacity</div>
@@ -790,7 +791,7 @@ export default function HostingPage() {
                       </div>
                       {r.status === 'success' ? (
                         <div className="mt-1 text-gray-600 dark:text-gray-300 pl-5">
-                          Node: <span className="font-semibold">{r.node?.name || r.name}</span> • {r.node?.system_info?.cpus || 1} vCPU • {r.node?.system_info?.ramMb || 512}MB RAM
+                          Node: <span className="font-semibold">{r.node?.name || r.name}</span> • {r.node?.system_info?.cpus || 1} vCPU • {formatMemoryMb(r.node?.system_info?.ramTotalMb || r.node?.system_info?.ramMb)} RAM
                         </div>
                       ) : (
                         <div className="mt-1 text-red-600 dark:text-red-400 pl-5 font-sans">

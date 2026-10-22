@@ -20,6 +20,17 @@ router.post('/login',(req,res)=>{
   res.json({token:rawToken,sessionId,user:{tgId:user.tg_id,role:user.role,language:user.language,timezone:user.timezone}});
 });
 
+router.get('/config', (req, res) => {
+  const { getBot } = require('../bot/bot');
+  const config = require('../../config/config');
+  const bot = getBot();
+  const botUsername = bot?.botInfo?.username || config.telegram?.botUsername || process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot';
+  res.json({
+    botUsername,
+    appName: 'Commandor Dev Pack'
+  });
+});
+
 router.patch('/profile', requireAuth, (req, res) => {
   const { language, timezone } = req.body || {};
   const db = getDb();

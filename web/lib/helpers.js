@@ -109,7 +109,14 @@ export function summarizeEmail(subject = '', text = '') {
 
 export function formatTimeAgo(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  let isoStr = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(isoStr)) {
+    isoStr = isoStr.replace(' ', 'T') + 'Z';
+  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(isoStr) && !isoStr.endsWith('Z') && !isoStr.includes('+')) {
+    isoStr = isoStr + 'Z';
+  }
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '';
   const now = new Date();
   const diffSec = Math.floor((now - d) / 1000);
   if (diffSec < 60) return 'just now';
@@ -120,6 +127,29 @@ export function formatTimeAgo(dateStr) {
   const diffDays = Math.floor(diffHr / 24);
   if (diffDays < 7) return `${diffDays}d ago`;
   return d.toLocaleDateString();
+}
+
+export function formatMemoryMb(mb) {
+  if (mb === undefined || mb === null || isNaN(mb)) return '0 MB';
+  const num = Number(mb);
+  if (num >= 1024) {
+    const gb = num / 1024;
+    return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
+  }
+  return `${Math.round(num)} MB`;
+}
+
+export function bytesToGib(bytes, decimals = 2) {
+  const num = Number(bytes);
+  if (isNaN(num) || num <= 0) return 0;
+  const gib = num / (1024 * 1024 * 1024);
+  return decimals === 0 ? Math.round(gib) : parseFloat(gib.toFixed(decimals));
+}
+
+export function bytesToMib(bytes) {
+  const num = Number(bytes);
+  if (isNaN(num) || num <= 0) return 0;
+  return Math.round(num / (1024 * 1024));
 }
 
 export function formatBytes(b) {

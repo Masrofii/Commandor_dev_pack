@@ -4,8 +4,19 @@ const { getDb } = require('../../database/database');
 const logger = require('../monitoring/logger');
 const { logChange } = require('./auditLogger');
 const { encrypt, decrypt } = require('../utils/encryption');
+const { parseMemoryTelemetry, isTelemetryStale } = require('../utils/memoryTelemetry');
 
 const REMOTE_SITES_ROOT = '/var/www/nodesites';
+
+const MEMORY_PROBE_COMMAND = [
+  'cat /proc/meminfo 2>/dev/null || LC_ALL=C free -m 2>/dev/null',
+  'echo "===CGROUP_LIMIT==="',
+  'cat /sys/fs/cgroup/memory.max 2>/dev/null || cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo "NONE"',
+  'echo "===CGROUP_USAGE==="',
+  'cat /sys/fs/cgroup/memory.current 2>/dev/null || cat /sys/fs/cgroup/memory/memory.usage_in_bytes 2>/dev/null || echo "NONE"',
+  'echo "===OPEN_VZ_UBC==="',
+  'grep -E "physpages|oomguarpages" /proc/user_beancounters 2>/dev/null || echo "NONE"'
+].join('\n');
 
 const SITESERVER_PYTHON_SCRIPT = `
 import http.server, socketserver, os, urllib.parse, sys
@@ -212,11 +223,11 @@ async function testNodeConnection({
     // Run non-destructive inventory queries
     const unameRes = await executeSshCommand(conn, 'uname -s -m && (cat /etc/os-release 2>/dev/null | grep PRETTY_NAME || true)');
     const cpuRes = await executeSshCommand(conn, 'nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo || echo 1');
-    const ramRes = await executeSshCommand(conn, "free -m 2>/dev/null | grep Mem | awk '{print $2, $3, $4}' || echo '512 0 512'");
+    const memRes = await executeSshCommand(conn, MEMORY_PROBE_COMMAND);
     const diskRes = await executeSshCommand(conn, "df -h / 2>/dev/null | tail -n 1 | awk '{print $2, $3, $4, $5}' || echo '10G 1G 9G 10%'");
     const uptimeRes = await executeSshCommand(conn, 'uptime -p 2>/dev/null || uptime 2>/dev/null || echo "up unknown"');
 
-    const ramParts = ramRes.stdout.split(/\s+/);
+    const memData = parseMemoryTelemetry(memRes.stdout);
     const diskParts = diskRes.stdout.split(/\s+/);
     const osLine = unameRes.stdout.split('\n')[0] || 'Linux';
     const prettyNameMatch = unameRes.stdout.match(/PRETTY_NAME="?([^"\n]+)"?/);
@@ -225,9 +236,13 @@ async function testNodeConnection({
     const sysInfo = {
       os: osPretty,
       cpus: parseInt(cpuRes.stdout, 10) || 1,
-      ramTotalMb: parseInt(ramParts[0], 10) || 512,
-      ramUsedMb: parseInt(ramParts[1], 10) || 0,
-      ramFreeMb: parseInt(ramParts[2], 10) || 512,
+      ramTotalMb: memData.ramTotalMb,
+      ramMb: memData.ramMb,
+      ramUsedMb: memData.ramUsedMb,
+      ramFreeMb: memData.ramFreeMb,
+      ramAvailableMb: memData.ramAvailableMb,
+      containerLimitMb: memData.containerLimitMb,
+      containerUsedMb: memData.containerUsedMb,
       diskTotal: diskParts[0] || 'N/A',
       diskUsed: diskParts[1] || 'N/A',
       diskFree: diskParts[2] || 'N/A',
@@ -329,7 +344,7 @@ async function enrollNode({
           host_key_fingerprint = COALESCE(?, host_key_fingerprint),
           labels = ?, groups = ?, notes = ?,
           http_port = ?, public_url = ?,
-          status = 'online', last_ping_at = datetime('now'),
+          status = 'online', last_ping_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
           system_info = ?, is_active = 1, last_error = NULL
       WHERE id = ?
     `).run(
@@ -348,7 +363,7 @@ async function enrollNode({
         auth_method, host_key_fingerprint, labels, groups, notes,
         http_port, public_url, status, last_ping_at, system_info, is_active, created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', datetime('now'), ?, 1, datetime('now'))
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     `).run(
       nodeName, host, cleanPort, username, encPassword, encPrivateKey,
       determinedAuthMethod, verifiedFingerprint,
@@ -450,7 +465,7 @@ async function provisionNodeServices(id, userTgId = null) {
       fi
     `);
 
-    db.prepare("UPDATE hosting_nodes SET status = 'online', last_ping_at = datetime('now') WHERE id = ?").run(id);
+    db.prepare("UPDATE hosting_nodes SET status = 'online', last_ping_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?").run(id);
 
     logChange({
       tgId: userTgId,
@@ -476,8 +491,22 @@ async function testAndProvisionNode(params) {
 function sanitizeNode(node) {
   if (!node) return null;
   const { password, private_key, ...safe } = node;
+
+  let lastPingIso = safe.last_ping_at;
+  if (lastPingIso && typeof lastPingIso === 'string') {
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(lastPingIso)) {
+      lastPingIso = lastPingIso.replace(' ', 'T') + 'Z';
+    } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(lastPingIso) && !lastPingIso.endsWith('Z') && !lastPingIso.includes('+')) {
+      lastPingIso = lastPingIso + 'Z';
+    }
+  }
+
+  const isStale = isTelemetryStale(lastPingIso);
+
   return {
     ...safe,
+    last_ping_at: lastPingIso,
+    is_stale: isStale,
     has_password: Boolean(password),
     has_private_key: Boolean(private_key),
     auth_method: node.auth_method || (private_key ? 'key' : 'password'),
@@ -836,11 +865,11 @@ async function pingNode(id) {
     // Query runtime stats: uptime, loadavg, memory, disk, docker
     const uptimeRes = await executeSshCommand(conn, 'uptime -p 2>/dev/null || uptime 2>/dev/null || echo "up"');
     const loadRes = await executeSshCommand(conn, "cat /proc/loadavg 2>/dev/null | awk '{print $1, $2, $3}' || echo '0.00 0.00 0.00'");
-    const memRes = await executeSshCommand(conn, "free -m 2>/dev/null | grep Mem | awk '{print $2, $3, $4}' || echo '512 0 512'");
+    const memRes = await executeSshCommand(conn, MEMORY_PROBE_COMMAND);
     const diskRes = await executeSshCommand(conn, "df -h / 2>/dev/null | tail -n 1 | awk '{print $2, $3, $4, $5}' || echo '10G 1G 9G 10%'");
     const dockerRes = await executeSshCommand(conn, '(command -v docker >/dev/null 2>&1 && docker ps -q 2>/dev/null | wc -l) || echo "0"');
 
-    const memParts = memRes.stdout.split(/\s+/);
+    const memData = parseMemoryTelemetry(memRes.stdout);
     const diskParts = diskRes.stdout.split(/\s+/);
     const latencyMs = Date.now() - startTime;
 
@@ -850,9 +879,13 @@ async function pingNode(id) {
       ...previousInfo,
       uptime: uptimeRes.stdout.trim() || 'N/A',
       loadAvg: loadRes.stdout.trim() || '0.00 0.00 0.00',
-      ramTotalMb: parseInt(memParts[0], 10) || previousInfo.ramTotalMb || 512,
-      ramUsedMb: parseInt(memParts[1], 10) || 0,
-      ramFreeMb: parseInt(memParts[2], 10) || 512,
+      ramTotalMb: memData.ramTotalMb || previousInfo.ramTotalMb || 0,
+      ramMb: memData.ramMb || previousInfo.ramMb || memData.ramTotalMb || 0,
+      ramUsedMb: memData.ramUsedMb || 0,
+      ramFreeMb: memData.ramFreeMb || 0,
+      ramAvailableMb: memData.ramAvailableMb || memData.ramFreeMb || 0,
+      containerLimitMb: memData.containerLimitMb || null,
+      containerUsedMb: memData.containerUsedMb || null,
       diskTotal: diskParts[0] || 'N/A',
       diskUsed: diskParts[1] || 'N/A',
       diskFree: diskParts[2] || 'N/A',
@@ -864,7 +897,7 @@ async function pingNode(id) {
 
     db.prepare(`
       UPDATE hosting_nodes
-      SET status = 'online', last_ping_at = datetime('now'), system_info = ?, last_error = NULL
+      SET status = 'online', last_ping_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), system_info = ?, last_error = NULL
       WHERE id = ?
     `).run(JSON.stringify(updatedMetrics), id);
 
@@ -878,7 +911,7 @@ async function pingNode(id) {
   } catch (err) {
     db.prepare(`
       UPDATE hosting_nodes
-      SET status = 'offline', last_ping_at = datetime('now'), last_error = ?, last_error_at = datetime('now')
+      SET status = 'offline', last_error = ?, last_error_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
       WHERE id = ?
     `).run(err.message, id);
 
@@ -949,6 +982,26 @@ function getNodeWithSites(id) {
   };
 }
 
+/**
+ * Refreshes telemetry for all active hosting nodes.
+ * Used by scheduled background health checks and dashboard sync.
+ */
+async function refreshAllNodesTelemetry() {
+  const db = getDb();
+  const activeNodes = db.prepare('SELECT id, name, host FROM hosting_nodes WHERE is_active = 1').all();
+  const results = [];
+  for (const n of activeNodes) {
+    try {
+      const res = await pingNode(n.id);
+      results.push({ id: n.id, host: n.host, success: res.success, status: res.status });
+    } catch (err) {
+      logger.warn({ nodeId: n.id, host: n.host, err: err.message }, 'Scheduled background node ping failed');
+      results.push({ id: n.id, host: n.host, success: false, error: err.message });
+    }
+  }
+  return results;
+}
+
 module.exports = {
   parseNodeConnectionString,
   parseBulkConnectionStrings,
@@ -968,5 +1021,6 @@ module.exports = {
   deployFilesToNode,
   removeSiteFromNode,
   pingNode,
-  executeNodeCommand
+  executeNodeCommand,
+  refreshAllNodesTelemetry
 };

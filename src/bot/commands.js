@@ -69,7 +69,7 @@ const {
   deleteNode: deleteHostingNode
 } = require('../services/nodeManagerService');
 const { getDb } = require('../../database/database');
-const { truncate, formatBytes, escapeHtml, extractVerificationCode, formatTelegramEntitiesToHtml } = require('../utils/helpers');
+const { truncate, formatBytes, formatMemoryMb, escapeHtml, extractVerificationCode, formatTelegramEntitiesToHtml } = require('../utils/helpers');
 const { parseSearchQuery } = require('../utils/validation');
 const { createLoginToken } = require('../auth/loginToken');
 const {
@@ -1123,7 +1123,7 @@ async function showHostingNodeDetails(ctx, nodeId) {
 
   const icon = node.status === 'online' ? '🟢' : '🔴';
   const cpus = node.system_info?.cpus || 1;
-  const ram = node.system_info?.ramMb ? `${node.system_info.ramMb} MB` : 'Unknown';
+  const ram = (node.system_info?.ramTotalMb || node.system_info?.ramMb) ? formatMemoryMb(node.system_info?.ramTotalMb || node.system_info?.ramMb) : 'Unknown';
   const disk = node.system_info?.freeDisk || 'Unknown';
   const createdStr = new Date(node.created_at).toLocaleDateString();
 
@@ -1149,7 +1149,8 @@ async function handleNodePing(ctx, nodeId) {
       name: node.name
     });
     const latency = Date.now() - start;
-    return replyHtml(ctx, `🟢 <b>Node Online & Healthy!</b>\n──────────────────────────────\n• <b>Node:</b> ${escapeHtml(node.name)}\n• <b>Latency:</b> ${latency}ms\n• <b>OS:</b> ${res.system_info?.os || 'Linux'}\n• <b>CPU:</b> ${res.system_info?.cpus || 1} vCPU\n• <b>Free RAM:</b> ${res.system_info?.ramMb || 512} MB\n• <b>Free Disk:</b> ${res.system_info?.freeDisk || 'N/A'}\n──────────────────────────────`, hostingNodeActionsKeyboard(node));
+    const freeRamStr = res.system_info?.ramAvailableMb ? formatMemoryMb(res.system_info.ramAvailableMb) : (res.system_info?.ramFreeMb ? formatMemoryMb(res.system_info.ramFreeMb) : formatMemoryMb(res.system_info?.ramTotalMb || res.system_info?.ramMb));
+    return replyHtml(ctx, `🟢 <b>Node Online & Healthy!</b>\n──────────────────────────────\n• <b>Node:</b> ${escapeHtml(node.name)}\n• <b>Latency:</b> ${latency}ms\n• <b>OS:</b> ${res.system_info?.os || 'Linux'}\n• <b>CPU:</b> ${res.system_info?.cpus || 1} vCPU\n• <b>Free RAM:</b> ${freeRamStr}\n• <b>Free Disk:</b> ${res.system_info?.freeDisk || 'N/A'}\n──────────────────────────────`, hostingNodeActionsKeyboard(node));
   } catch (err) {
     const latency = Date.now() - start;
     return replyHtml(ctx, `🔴 <b>Node Connection Failed (${latency}ms):</b>\n<code>${escapeHtml(err.message)}</code>`, hostingNodeActionsKeyboard(node));
@@ -2191,7 +2192,7 @@ async function showHostingNodes(ctx) {
     for (const n of nodes) {
       const icon = n.status === 'online' ? '🟢' : '🔴';
       const cpus = n.system_info?.cpus || 1;
-      const ram = n.system_info?.ramMb ? `${n.system_info.ramMb}MB` : 'Unknown';
+      const ram = (n.system_info?.ramTotalMb || n.system_info?.ramMb) ? formatMemoryMb(n.system_info.ramTotalMb || n.system_info.ramMb) : 'Unknown';
       text += `\n${icon} <b>${escapeHtml(n.name)}</b>\n`;
       text += `   Host: <code>${escapeHtml(n.host)}:${n.port}</code>\n`;
       text += `   Specs: ${cpus} vCPU | ${ram} RAM | Disk: ${n.system_info?.freeDisk || 'N/A'}\n`;
@@ -2245,7 +2246,7 @@ async function handleAddNodeConnection(ctx, connectionText) {
       });
 
       const cpus = node.system_info?.cpus || 1;
-      const ram = node.system_info?.ramMb ? `${node.system_info.ramMb}MB` : '512MB';
+      const ram = formatMemoryMb(node.system_info?.ramTotalMb || node.system_info?.ramMb);
 
       let text = `🎉 <b>Server Node Connected!</b>\n\n`;
       text += `• <b>Node Name:</b> <code>${escapeHtml(node.name)}</code>\n`;
@@ -2286,7 +2287,7 @@ async function handleAddNodeConnection(ctx, connectionText) {
       const hostLabel = r.host ? `${escapeHtml(r.host)}:${r.port || 22}` : escapeHtml(r.input);
       if (r.status === 'success') {
         const cpus = r.node?.system_info?.cpus || 1;
-        const ram = r.node?.system_info?.ramMb ? `${r.node.system_info.ramMb}MB` : '512MB';
+        const ram = formatMemoryMb(r.node?.system_info?.ramTotalMb || r.node?.system_info?.ramMb);
         text += `🟢 <b>${hostLabel}</b> — <code>${escapeHtml(r.name || r.node?.name)}</code> (${cpus} vCPU, ${ram})\n`;
       } else {
         text += `🔴 <b>${hostLabel}</b> — <i>${escapeHtml(r.error || 'Failed')}</i>\n`;
@@ -2426,7 +2427,7 @@ async function showSupportInfo(ctx) {
   let text = `🎧 <b>Commandor Dev Pack — Support & Helpdesk</b>\n\n`;
   text += `Need assistance, want to report a bug, or request a feature?\n\n`;
   text += `👤 <b>Your Diagnostic ID:</b> <code>User #${tgId}</code>\n`;
-  text += `🤖 <b>Bot Service:</b> @${ctx.botInfo?.username || 'commandor_dev_pack_bot'}\n`;
+  text += `🤖 <b>Bot Service:</b> @${ctx.botInfo?.username || config.telegram?.botUsername || 'commandor_mail_bot'}\n`;
   text += `💬 <b>Direct Support:</b> <a href="https://t.me/Masrofii">@Masrofii</a>\n\n`;
   text += `💡 <b>Quick Tips:</b>\n`;
   text += `• Generate aliases instantly: <code>/new [label]</code>\n`;

@@ -15,7 +15,13 @@ function LoginForm() {
   const [totp, setTotp] = useState('');
   const [pending, setPending] = useState(null);
 
-  const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_dev_pack_bot';
+  const [botUsername, setBotUsername] = useState(process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_mail_bot');
+
+  useEffect(() => {
+    api.getAuthConfig().then(res => {
+      if (res?.botUsername) setBotUsername(res.botUsername);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated()) {
