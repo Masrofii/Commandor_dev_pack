@@ -7,11 +7,15 @@ const { getDb } = require('../../database/database');
 const logger = require('../monitoring/logger');
 const { logChange } = require('./auditLogger');
 
-const ROUTES_DIR = path.resolve(__dirname, '../../../nginx/routes');
-const BACKUPS_DIR = path.resolve(__dirname, '../../../nginx/backups');
+const ROUTES_DIR = path.resolve(__dirname, '../../nginx/routes');
+const BACKUPS_DIR = path.resolve(__dirname, '../../nginx/backups');
 
 for (const d of [ROUTES_DIR, BACKUPS_DIR]) {
-  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+  try {
+    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+  } catch (err) {
+    logger.warn({ error: err.message, dir: d }, 'Could not ensure directory exists');
+  }
 }
 
 function sanitizeServerName(name) {

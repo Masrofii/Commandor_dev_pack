@@ -10,8 +10,12 @@ const config = require('../../config/config');
 const logger = require('../monitoring/logger');
 const { logChange } = require('./auditLogger');
 
-const BACKUP_DIR = config.backup?.dir || path.resolve(__dirname, '../../../backups');
-if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+const BACKUP_DIR = config.backup?.dir || path.resolve(__dirname, '../../backups');
+try {
+  if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+} catch (err) {
+  logger.warn({ error: err.message, dir: BACKUP_DIR }, 'Could not ensure backup directory exists');
+}
 
 function calculateFileSha256(filePath) {
   return new Promise((resolve, reject) => {
@@ -115,7 +119,7 @@ async function createFullSystemBackup(notes = 'Full system backup', userTgId = n
     archive.file(dbSnap.file_path, { name: 'database/app.db' });
 
     // Add nginx routes if they exist
-    const routesDir = path.resolve(__dirname, '../../../nginx/routes');
+    const routesDir = path.resolve(__dirname, '../../nginx/routes');
     if (fs.existsSync(routesDir)) {
       archive.directory(routesDir, 'nginx/routes');
     }
@@ -174,7 +178,7 @@ async function restoreDatabaseBackup(backupId, confirmationAccepted = false, use
     throw new Error(`Cannot restore: Backup file failed integrity check (${integrity.error})`);
   }
 
-  const activeDbPath = config.database?.path || path.resolve(__dirname, '../../../data/app.db');
+  const activeDbPath = config.database?.path || path.resolve(__dirname, '../../data/app.db');
 
   // Step 1: Create a safety snapshot of the CURRENT database before overwriting
   let preRestoreSnapshotPath = null;
