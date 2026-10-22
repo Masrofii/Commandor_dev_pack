@@ -774,6 +774,13 @@ export default function AdminPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <a
+                  href="/nodes"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-cyan-400 rounded-lg text-xs font-semibold border border-indigo-200 dark:border-indigo-800 shadow-sm"
+                >
+                  <ServerStackIcon className="h-4 w-4" />
+                  Full Nodes Control Plane ↗
+                </a>
                 <button
                   onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); setShowAddNode(true); }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-semibold border border-gray-200 dark:border-gray-600 shadow-sm"

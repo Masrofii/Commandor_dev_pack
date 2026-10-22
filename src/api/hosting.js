@@ -21,7 +21,10 @@ const {
   provisionNodesBulk,
   listNodes,
   deleteNode,
-  getNodeById
+  getNodeById,
+  getNodeWithSites,
+  pingNode,
+  executeNodeCommand
 } = require('../services/nodeManagerService');
 
 const upload = multer({
@@ -214,6 +217,53 @@ router.post('/nodes/bulk', async (req, res) => {
     res.status(200).json(result);
   } catch (err) {
     res.status(500).json({ error: `Bulk node provisioning failed: ${err.message}` });
+  }
+});
+
+// Get Node details with deployed sites
+router.get('/nodes/:id', (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const node = getNodeWithSites(id);
+    if (!node) return res.status(404).json({ error: 'Node not found' });
+    res.json(node);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ping / Re-test Node Connectivity and Health
+router.post('/nodes/:id/ping', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const result = await pingNode(id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Execute Command on Node (Admin only)
+router.post('/nodes/:id/exec', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const { command } = req.body;
+    if (!command) {
+      return res.status(400).json({ error: 'command is required' });
+    }
+    const result = await executeNodeCommand(id, command, req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

@@ -6,7 +6,7 @@ const { getDb } = require('../../database/database');
 const { getDatabaseStats, getProcessStats, getCounters } = require('../monitoring/metrics');
 const { getAllSubdomainsAdmin, updateSubdomain, deleteSubdomain, getSubdomainById } = require('../services/subdomainService');
 const { getAllSitesAdmin, deleteSite, getSecurityLogs } = require('../services/hostingService');
-const { listNodes, testAndProvisionNode, provisionNodesBulk, deleteNode, parseNodeConnectionString } = require('../services/nodeManagerService');
+const { listNodes, testAndProvisionNode, provisionNodesBulk, deleteNode, parseNodeConnectionString, pingNode, executeNodeCommand, getNodeWithSites } = require('../services/nodeManagerService');
 
 router.use(requireAdmin);
 
@@ -282,6 +282,41 @@ router.post('/nodes/bulk', async (req, res) => {
     res.status(200).json(result);
   } catch (err) {
     res.status(500).json({ error: `Bulk node provisioning failed: ${err.message}` });
+  }
+});
+
+router.get('/nodes/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const node = getNodeWithSites(id);
+    if (!node) return res.status(404).json({ error: 'Node not found' });
+    res.json(node);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ping', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const result = await pingNode(id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/exec', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { command } = req.body;
+    if (!command) {
+      return res.status(400).json({ error: 'command is required' });
+    }
+    const result = await executeNodeCommand(id, command, req.user?.tg_id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

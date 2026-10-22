@@ -34,10 +34,30 @@ function validateSubdomainName(name, isAdmin = false) {
   return clean;
 }
 
-function getAvailableBaseDomains() {
+function getAvailableBaseDomains(tgId = null) {
+  const bases = new Set();
   const list = config.domains?.list || [];
-  if (list.length > 0) return list;
-  return [config.domains?.defaultDomain || 'commandor.my.id'];
+  list.forEach(d => {
+    if (d && typeof d === 'string') bases.add(d.toLowerCase().trim());
+  });
+  if (config.domains?.defaultDomain) {
+    bases.add(config.domains.defaultDomain.toLowerCase().trim());
+  }
+  if (bases.size === 0) {
+    bases.add('commandor.my.id');
+  }
+
+  if (tgId) {
+    try {
+      const db = getDb();
+      const verified = db.prepare('SELECT domain FROM custom_domains WHERE (tg_id=? OR verified=1) AND active=1').all(tgId);
+      verified.forEach(r => {
+        if (r.domain) bases.add(r.domain.toLowerCase().trim());
+      });
+    } catch {}
+  }
+
+  return Array.from(bases);
 }
 
 function claimSubdomain({
@@ -61,7 +81,7 @@ function claimSubdomain({
   const isAdmin = (user.role === 'admin') || (config.telegram?.adminId && (String(tgId) === String(config.telegram.adminId)));
   const cleanSub = validateSubdomainName(subdomain, isAdmin);
 
-  const allowedBases = getAvailableBaseDomains();
+  const allowedBases = getAvailableBaseDomains(tgId);
   const targetBase = baseDomain ? baseDomain.toLowerCase().trim() : allowedBases[0];
   if (!allowedBases.includes(targetBase)) {
     throw new Error(`Base domain '${targetBase}' is not supported. Allowed: ${allowedBases.join(', ')}`);

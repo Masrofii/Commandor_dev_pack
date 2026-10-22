@@ -2,8 +2,8 @@ import './globals.css';
 import ToastProvider from '../components/ToastProvider';
 
 export const metadata = {
-  title: 'Commandor Mail — Email Infrastructure & Alias Platform',
-  description: 'Enterprise-grade email alias management, domain routing, and cloud hosting infrastructure platform.',
+  title: 'Commandor Dev Pack — Cloud Infrastructure & Self-Hosting Control Panel',
+  description: 'Enterprise-grade VPS node management, domain routing, reverse proxy, application deployments, and email platform.',
   manifest: '/manifest.json'
 };
 

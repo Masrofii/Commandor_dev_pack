@@ -102,6 +102,7 @@ export const api = {
   deleteSubdomain: (id) => apiFetch(`/api/subdomains/${id}`, { method: 'DELETE' }),
   getSubdomainRequests: (id) => apiFetch(`/api/subdomains/${id}/requests`),
   checkSubdomain: (name) => apiFetch(`/api/subdomains/check/${encodeURIComponent(name)}`),
+  getSubdomainBases: () => apiFetch('/api/subdomains/bases'),
   // Hosting & Nodes
   getHostingTOS: () => apiFetch('/api/hosting/tos'),
   getHostingPlans: () => apiFetch('/api/hosting/plans'),
@@ -114,6 +115,9 @@ export const api = {
   }),
   deleteHostingSite: (id) => apiFetch(`/api/hosting/sites/${id}`, { method: 'DELETE' }),
   getHostingNodes: () => apiFetch('/api/hosting/nodes'),
+  getNodeWithSites: (id) => apiFetch(`/api/hosting/nodes/${id}`),
+  pingHostingNode: (id) => apiFetch(`/api/hosting/nodes/${id}/ping`, { method: 'POST' }),
+  execNodeCommand: (id, command) => apiFetch(`/api/hosting/nodes/${id}/exec`, { method: 'POST', body: JSON.stringify({ command }) }),
   addHostingNode: (data) => apiFetch('/api/hosting/nodes', { method: 'POST', body: JSON.stringify(data) }),
   addHostingNodesBulk: (data) => apiFetch('/api/hosting/nodes/bulk', { method: 'POST', body: JSON.stringify(data) }),
   deleteHostingNode: (id) => apiFetch(`/api/hosting/nodes/${id}`, { method: 'DELETE' }),

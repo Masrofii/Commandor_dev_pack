@@ -503,6 +503,132 @@ async function provisionNodesBulk(input, options = {}) {
   };
 }
 
+async function pingNode(id) {
+  const db = getDb();
+  const node = db.prepare('SELECT * FROM hosting_nodes WHERE id=?').get(id);
+  if (!node) {
+    throw new Error(`Node #${id} not found`);
+  }
+
+  const startTime = Date.now();
+  let conn;
+  try {
+    conn = await connectSsh(node);
+
+    // Query runtime stats: uptime, loadavg, memory, disk, docker
+    const uptimeRes = await executeSshCommand(conn, 'uptime -p 2>/dev/null || uptime');
+    const loadRes = await executeSshCommand(conn, "cat /proc/loadavg 2>/dev/null | awk '{print $1, $2, $3}' || echo '0.00 0.00 0.00'");
+    const memRes = await executeSshCommand(conn, "free -m 2>/dev/null | grep Mem | awk '{print $2, $3, $4}' || echo '512 0 512'");
+    const diskRes = await executeSshCommand(conn, "df -h / 2>/dev/null | tail -n 1 | awk '{print $2, $3, $4, $5}' || echo '10G 1G 9G 10%'");
+    const dockerRes = await executeSshCommand(conn, '(command -v docker >/dev/null 2>&1 && docker ps -q 2>/dev/null | wc -l) || echo "0"');
+
+    const memParts = memRes.stdout.split(/\s+/);
+    const diskParts = diskRes.stdout.split(/\s+/);
+    const latencyMs = Date.now() - startTime;
+
+    const previousInfo = node.system_info ? safeJsonParse(node.system_info) : {};
+
+    const updatedMetrics = {
+      ...previousInfo,
+      uptime: uptimeRes.stdout.trim() || 'N/A',
+      loadAvg: loadRes.stdout.trim() || '0.00 0.00 0.00',
+      ramTotalMb: parseInt(memParts[0], 10) || previousInfo.ramMb || 512,
+      ramUsedMb: parseInt(memParts[1], 10) || 0,
+      ramFreeMb: parseInt(memParts[2], 10) || 512,
+      diskTotal: diskParts[0] || 'N/A',
+      diskUsed: diskParts[1] || 'N/A',
+      diskFree: diskParts[2] || 'N/A',
+      diskUsagePercent: diskParts[3] || '0%',
+      dockerContainers: parseInt(dockerRes.stdout.trim(), 10) || 0,
+      latencyMs,
+      testedAt: new Date().toISOString()
+    };
+
+    db.prepare(`
+      UPDATE hosting_nodes
+      SET status = 'online', last_ping_at = datetime('now'), system_info = ?
+      WHERE id = ?
+    `).run(JSON.stringify(updatedMetrics), id);
+
+    return {
+      success: true,
+      status: 'online',
+      latencyMs,
+      metrics: updatedMetrics,
+      node: getNodeById(id)
+    };
+  } catch (err) {
+    db.prepare(`
+      UPDATE hosting_nodes
+      SET status = 'offline', last_ping_at = datetime('now')
+      WHERE id = ?
+    `).run(id);
+
+    return {
+      success: false,
+      status: 'offline',
+      error: err.message,
+      node: getNodeById(id)
+    };
+  } finally {
+    if (conn) {
+      try { conn.end(); } catch {}
+    }
+  }
+}
+
+async function executeNodeCommand(id, command, userTgId = null) {
+  if (!command || typeof command !== 'string' || !command.trim()) {
+    throw new Error('Command string is required');
+  }
+
+  const db = getDb();
+  const node = db.prepare('SELECT * FROM hosting_nodes WHERE id=?').get(id);
+  if (!node) {
+    throw new Error(`Node #${id} not found`);
+  }
+
+  const cleanCmd = command.trim();
+  const startTime = Date.now();
+  let conn;
+  try {
+    conn = await connectSsh(node);
+    const result = await executeSshCommand(conn, cleanCmd);
+    const durationMs = Date.now() - startTime;
+
+    logChange({
+      tgId: userTgId,
+      category: 'hosting',
+      action: 'node_command_executed',
+      details: `Executed command on node "${node.name}": ${cleanCmd.slice(0, 100)}`,
+      metadata: { nodeId: id, nodeName: node.name, command: cleanCmd.slice(0, 300), durationMs, exitCode: result.code }
+    }).catch(() => {});
+
+    return {
+      success: result.code === 0,
+      code: result.code,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      durationMs
+    };
+  } finally {
+    if (conn) {
+      try { conn.end(); } catch {}
+    }
+  }
+}
+
+function getNodeWithSites(id) {
+  const node = getNodeById(id);
+  if (!node) return null;
+  const db = getDb();
+  const sites = db.prepare('SELECT * FROM hosting_sites WHERE node_id=? ORDER BY created_at DESC').all(id);
+  return {
+    ...node,
+    sites
+  };
+}
+
 module.exports = {
   parseNodeConnectionString,
   parseBulkConnectionStrings,
@@ -510,9 +636,12 @@ module.exports = {
   testAndProvisionNode,
   provisionNodesBulk,
   getNodeById,
+  getNodeWithSites,
   listNodes,
   deleteNode,
   getAvailableNode,
   deployFilesToNode,
-  removeSiteFromNode
+  removeSiteFromNode,
+  pingNode,
+  executeNodeCommand
 };

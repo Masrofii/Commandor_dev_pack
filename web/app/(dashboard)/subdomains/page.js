@@ -18,7 +18,15 @@ import {
   ShieldCheckIcon,
   ShieldExclamationIcon,
   ClockIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  ArrowTopRightOnSquareIcon,
+  ServerStackIcon,
+  RocketLaunchIcon,
+  CodeBracketIcon,
+  ArrowsRightLeftIcon,
+  CheckIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
 const WEB_MODES = [
@@ -40,17 +48,48 @@ export default function SubdomainsAndDomainsPage() {
   const { data: customDomainsData, isLoading: loadingDomains, mutate: mutateDomains } = useSWR('custom-domains', api.getDomainList);
   const customDomains = Array.isArray(customDomainsData) ? customDomainsData : [];
 
-  // Subdomain Claim Form
+  // Subdomain Base Domains and Cluster Nodes for wizard
+  const { data: basesData } = useSWR('subdomain-bases', api.getSubdomainBases);
+  const { data: nodesData } = useSWR('hosting-nodes-subdomains', api.getHostingNodes);
+  const baseDomains = basesData?.baseDomains || ['commandor.my.id'];
+  const defaultBase = basesData?.defaultDomain || baseDomains[0] || 'commandor.my.id';
+  const serverIp = basesData?.serverIp || '74.248.38.38';
+  const nodes = nodesData?.nodes || [];
+
+  // Subdomain Wizard State
   const [showClaim, setShowClaim] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1); // 1: Name & Domain, 2: Purpose & Mode, 3: Target & Config, 4: DNS & Deploy
   const [claiming, setClaiming] = useState(false);
+  const [availability, setAvailability] = useState({ checking: false, checked: false, available: false, error: null });
+
   const [form, setForm] = useState({
     subdomain: '',
+    base_domain: 'commandor.my.id',
     email_catch_all: true,
     web_enabled: true,
-    web_mode: 'landing',
+    web_mode: 'proxy',
     web_target: '',
-    web_custom_body: ''
+    web_custom_body: '<h1>Welcome to my edge service!</h1>\n<p>Deployed with Commandor Dev Pack.</p>',
+    web_custom_status: 200,
+    web_notify_telegram: true
   });
+
+  async function checkAvailability(name, base) {
+    const targetBase = base || form.base_domain || defaultBase;
+    if (!name || name.trim().length < 3) {
+      setAvailability({ checking: false, checked: false, available: false, error: null });
+      return;
+    }
+    setAvailability({ checking: true, checked: false, available: false, error: null });
+    try {
+      const res = await api.checkSubdomain(name.trim());
+      const baseCheck = res?.check?.find(c => c.base_domain.toLowerCase() === targetBase.toLowerCase());
+      const isAvail = baseCheck ? baseCheck.available : (res?.check?.[0]?.available ?? false);
+      setAvailability({ checking: false, checked: true, available: isAvail, error: null });
+    } catch (err) {
+      setAvailability({ checking: false, checked: true, available: false, error: err.message });
+    }
+  }
 
   // Custom Domain Add Form
   const [showAddDomain, setShowAddDomain] = useState(false);
@@ -68,24 +107,39 @@ export default function SubdomainsAndDomainsPage() {
   const [loadingRequests, setLoadingRequests] = useState(false);
 
   async function handleClaim(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!form.subdomain.trim()) {
-      toast.error('Subdomain name is required');
+      toast.error('Subdomain prefix is required');
       return;
     }
     setClaiming(true);
     try {
-      await api.claimSubdomain(form);
-      toast.success('Subdomain claimed successfully!');
+      await api.claimSubdomain({
+        subdomain: form.subdomain.trim(),
+        base_domain: form.base_domain || defaultBase,
+        email_catch_all: form.email_catch_all,
+        web_enabled: form.web_enabled,
+        web_mode: form.web_mode,
+        web_target: form.web_target || undefined,
+        web_custom_body: form.web_custom_body || undefined,
+        web_custom_status: parseInt(form.web_custom_status, 10) || 200,
+        web_notify_telegram: form.web_notify_telegram
+      });
+      toast.success(`Subdomain ${form.subdomain}.${form.base_domain || defaultBase} claimed!`);
       setShowClaim(false);
+      setWizardStep(1);
       setForm({
         subdomain: '',
+        base_domain: defaultBase,
         email_catch_all: true,
         web_enabled: true,
-        web_mode: 'landing',
+        web_mode: 'proxy',
         web_target: '',
-        web_custom_body: ''
+        web_custom_body: '<h1>Welcome to my edge service!</h1>\n<p>Deployed with Commandor Dev Pack.</p>',
+        web_custom_status: 200,
+        web_notify_telegram: true
       });
+      setAvailability({ checking: false, checked: false, available: false, error: null });
       mutateSubs();
     } catch (err) {
       toast.error(err.message || 'Failed to claim subdomain');
@@ -266,125 +320,494 @@ export default function SubdomainsAndDomainsPage() {
       {/* SECTION 1: SUBDOMAINS */}
       {section === 'subdomains' && (
         <div className="space-y-6">
-          {/* Claim Subdomain Card/Modal */}
+          {/* Claim Subdomain Card/Modal - Multi-Step Wizard */}
           {showClaim && (
-            <div className="card p-5 sm:p-6 border-indigo-200 dark:border-cyber-800 shadow-md animate-fade-in space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Claim Subdomain Routing Point
-                </h3>
-                <button onClick={() => setShowClaim(false)} className="text-slate-400 hover:text-slate-600">
-                  <XMarkIcon className="w-4 h-4" />
+            <div className="card p-5 sm:p-6 border-indigo-200 dark:border-cyber-800 shadow-xl animate-fade-in space-y-6">
+              {/* Wizard Header with Progress Stepper */}
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-4">
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    <GlobeAltIcon className="w-5 h-5 text-indigo-500" />
+                    Subdomain Provisioning Wizard
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Step {wizardStep} of 4 — {
+                      wizardStep === 1 ? 'Select Domain & Subdomain Name' :
+                      wizardStep === 2 ? 'Choose Web Purpose & Routing Mode' :
+                      wizardStep === 3 ? 'Configure Upstream Target & Options' :
+                      'DNS Configuration & Instant Deployment'
+                    }
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowClaim(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                >
+                  <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleClaim} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">
-                      Subdomain Name
-                    </label>
-                    <div className="flex items-center">
-                      <input
-                        type="text"
-                        placeholder="e.g. dev, api, webhooks"
-                        value={form.subdomain}
-                        onChange={(e) => setForm({ ...form, subdomain: e.target.value })}
-                        className="input rounded-r-none font-mono text-xs"
-                      />
-                      <span className="px-3 py-2 bg-slate-100 dark:bg-cyber-800 border border-l-0 border-slate-200 dark:border-cyber-700 rounded-r-xl text-xs font-mono text-slate-500">
-                        .commandor.my.id
-                      </span>
+              {/* Wizard Stepper Dots */}
+              <div className="flex items-center justify-between max-w-md mx-auto px-2">
+                {[
+                  { step: 1, label: 'Identity' },
+                  { step: 2, label: 'Routing' },
+                  { step: 3, label: 'Target' },
+                  { step: 4, label: 'DNS & Deploy' }
+                ].map((s) => (
+                  <div key={s.step} className="flex items-center gap-2">
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                        wizardStep === s.step
+                          ? 'bg-indigo-600 text-white shadow-sm ring-4 ring-indigo-100 dark:ring-indigo-900/50'
+                          : wizardStep > s.step
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-100 dark:bg-cyber-800 text-slate-400'
+                      }`}
+                    >
+                      {wizardStep > s.step ? <CheckIcon className="w-4 h-4" /> : s.step}
+                    </div>
+                    <span
+                      className={`text-xs font-medium hidden sm:inline ${
+                        wizardStep === s.step
+                          ? 'text-indigo-600 dark:text-cyan-400 font-bold'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* STEP 1: DOMAIN & PREFIX */}
+              {wizardStep === 1 && (
+                <div className="space-y-4 max-w-xl mx-auto py-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-1">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Parent Domain
+                      </label>
+                      <select
+                        value={form.base_domain}
+                        onChange={(e) => {
+                          setForm({ ...form, base_domain: e.target.value });
+                          checkAvailability(form.subdomain, e.target.value);
+                        }}
+                        className="input text-xs w-full"
+                      >
+                        {baseDomains.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Subdomain Prefix
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="e.g. api, app, auth, blog, status"
+                          value={form.subdomain}
+                          onChange={(e) => {
+                            const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                            setForm({ ...form, subdomain: val });
+                            checkAvailability(val, form.base_domain);
+                          }}
+                          className="input font-mono text-xs w-full pr-24"
+                        />
+                        <div className="absolute right-2.5 top-2 flex items-center">
+                          {availability.checking ? (
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <ArrowPathIcon className="w-3 h-3 animate-spin" /> Checking
+                            </span>
+                          ) : availability.checked && form.subdomain ? (
+                            availability.available ? (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded">
+                                <CheckCircleIcon className="w-3 h-3" /> Available
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1 bg-rose-50 dark:bg-rose-950/80 px-2 py-0.5 rounded">
+                                <XMarkIcon className="w-3 h-3" /> Taken
+                              </span>
+                            )
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">
-                      Web Routing Mode
-                    </label>
-                    <select
-                      value={form.web_mode}
-                      onChange={(e) => setForm({ ...form, web_mode: e.target.value })}
-                      className="input text-xs"
+                  {/* Live URL Preview Card */}
+                  <div className="p-3.5 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/80 dark:border-cyber-800 text-xs flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 text-[11px] block">Resulting FQDN:</span>
+                      <span className="font-mono font-bold text-indigo-600 dark:text-cyan-400 text-sm">
+                        https://{form.subdomain ? form.subdomain : '[subdomain]'}.{form.base_domain || defaultBase}
+                      </span>
+                    </div>
+                    <span className="badge-cyan text-[10px] uppercase font-mono">Edge Point</span>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowClaim(false)}
+                      className="btn-secondary py-1.5 px-3.5 text-xs"
                     >
-                      {WEB_MODES.map((m) => (
-                        <option key={m.value} value={m.value}>{m.label}</option>
-                      ))}
-                    </select>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!form.subdomain || form.subdomain.length < 3 || (availability.checked && !availability.available)}
+                      onClick={() => setWizardStep(2)}
+                      className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
+                    >
+                      <span>Continue to Purpose</span>
+                      <ArrowRightIcon className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
+              )}
 
-                {/* Target URL if proxy or redirect */}
-                {(form.web_mode === 'proxy' || form.web_mode === 'redirect') && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">
-                      Destination Target URL
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://my-internal-server.vercel.app or http://127.0.0.1:8080"
-                      value={form.web_target}
-                      onChange={(e) => setForm({ ...form, web_target: e.target.value })}
-                      className="input text-xs font-mono"
-                    />
-                  </div>
-                )}
-
-                {/* Static Body if static */}
-                {form.web_mode === 'static' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">
-                      Static HTML or JSON Payload
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="<h1>Hello World</h1> or { 'status': 'ok' }"
-                      value={form.web_custom_body}
-                      onChange={(e) => setForm({ ...form, web_custom_body: e.target.value })}
-                      className="input font-mono text-xs"
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center gap-6 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={form.email_catch_all}
-                      onChange={(e) => setForm({ ...form, email_catch_all: e.target.checked })}
-                      className="rounded border-slate-300 dark:border-cyber-700 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">Email Catch-All Active</span>
+              {/* STEP 2: ROUTING PURPOSE */}
+              {wizardStep === 2 && (
+                <div className="space-y-4 max-w-xl mx-auto py-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    How would you like to route web traffic to this subdomain?
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={form.web_enabled}
-                      onChange={(e) => setForm({ ...form, web_enabled: e.target.checked })}
-                      className="rounded border-slate-300 dark:border-cyber-700 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">Web Traffic Enabled</span>
-                  </label>
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      {
+                        mode: 'proxy',
+                        title: 'Application / Reverse Proxy',
+                        desc: 'Route HTTP requests to a cluster node port or local internal server (e.g. 127.0.0.1:3000).',
+                        icon: RocketLaunchIcon,
+                        color: 'text-indigo-500'
+                      },
+                      {
+                        mode: 'static',
+                        title: 'Static HTML / Web Service',
+                        desc: 'Serve high-performance HTML/CSS or custom JSON directly from the edge cache.',
+                        icon: CodeBracketIcon,
+                        color: 'text-cyan-500'
+                      },
+                      {
+                        mode: 'redirect',
+                        title: 'HTTP 302 Redirect',
+                        desc: 'Forward all visitors to another external website, portfolio, or documentation URL.',
+                        icon: ArrowsRightLeftIcon,
+                        color: 'text-purple-500'
+                      },
+                      {
+                        mode: 'webhook',
+                        title: 'Webhook Request Inspector',
+                        desc: 'Capture incoming HTTP POST/GET webhooks with real-time payload logs and Telegram alerts.',
+                        icon: CommandLineIcon,
+                        color: 'text-emerald-500'
+                      },
+                      {
+                        mode: 'landing',
+                        title: 'Email Catch-All & Landing',
+                        desc: 'Default edge landing card; ready for email receiving on all addresses (*@subdomain).',
+                        icon: EnvelopeIcon,
+                        color: 'text-amber-500'
+                      }
+                    ].map((item) => (
+                      <div
+                        key={item.mode}
+                        onClick={() => setForm({ ...form, web_mode: item.mode })}
+                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                          form.web_mode === item.mode
+                            ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                            : 'border-slate-200 dark:border-cyber-800 hover:border-slate-300 dark:hover:border-cyber-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <item.icon className={`w-4 h-4 ${item.color}`} />
+                          <span className="font-bold text-xs text-slate-900 dark:text-white">{item.title}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          {item.desc}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowClaim(false)}
-                    className="btn-secondary py-1.5 px-3.5 text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={claiming}
-                    className="btn-primary py-1.5 px-4 text-xs font-semibold"
-                  >
-                    {claiming ? 'Claiming...' : 'Claim Subdomain'}
-                  </button>
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(1)}
+                      className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
+                    >
+                      <ArrowLeftIcon className="w-3.5 h-3.5" />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(3)}
+                      className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
+                    >
+                      <span>Configure Target</span>
+                      <ArrowRightIcon className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </form>
+              )}
+
+              {/* STEP 3: TARGET & OPTIONS */}
+              {wizardStep === 3 && (
+                <div className="space-y-4 max-w-xl mx-auto py-2">
+                  {form.web_mode === 'proxy' && (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Upstream Destination URL
+                      </label>
+
+                      {nodes.length > 0 && (
+                        <div className="p-2.5 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/80 dark:border-cyber-800 space-y-1.5">
+                          <span className="text-[11px] text-slate-400 block font-semibold">Auto-fill from Connected Cluster Nodes:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {nodes.map((n) => (
+                              <button
+                                key={n.id}
+                                type="button"
+                                onClick={() => setForm({ ...form, web_target: `${n.public_url || 'http://' + n.host + ':' + (n.http_port || 8080)}/sites/${form.subdomain || 'app'}/` })}
+                                className="px-2 py-1 bg-white dark:bg-cyber-800 border border-slate-200 dark:border-cyber-700 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 hover:border-indigo-500 transition-colors"
+                              >
+                                🖥️ {n.name} ({n.host})
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setForm({ ...form, web_target: 'http://127.0.0.1:3000' })}
+                              className="px-2 py-1 bg-white dark:bg-cyber-800 border border-slate-200 dark:border-cyber-700 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 hover:border-indigo-500 transition-colors"
+                            >
+                              Localhost :3000
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <input
+                        type="url"
+                        placeholder="http://127.0.0.1:8080 or https://my-backend-app.com"
+                        value={form.web_target}
+                        onChange={(e) => setForm({ ...form, web_target: e.target.value })}
+                        className="input font-mono text-xs w-full"
+                      />
+                    </div>
+                  )}
+
+                  {form.web_mode === 'redirect' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Target Redirect URL
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://github.com/my-profile or https://mysite.com"
+                        value={form.web_target}
+                        onChange={(e) => setForm({ ...form, web_target: e.target.value })}
+                        className="input font-mono text-xs w-full"
+                      />
+                    </div>
+                  )}
+
+                  {form.web_mode === 'static' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Static HTML or JSON Payload
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          {[
+                            {
+                              name: 'Under Construction',
+                              body: `<!DOCTYPE html><html><body style="background:#0f172a;color:#f8fafc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><div><h1>🚧 Under Construction</h1><p>This service is being provisioned on Commandor Dev Pack.</p></div></body></html>`
+                            },
+                            {
+                              name: 'API Status JSON',
+                              body: `{\n  "status": "healthy",\n  "service": "operational",\n  "uptime": "99.99%",\n  "version": "1.0.0"\n}`
+                            }
+                          ].map((tmpl) => (
+                            <button
+                              key={tmpl.name}
+                              type="button"
+                              onClick={() => setForm({ ...form, web_custom_body: tmpl.body })}
+                              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-cyber-850 hover:bg-indigo-50 dark:hover:bg-cyber-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-cyber-700"
+                            >
+                              {tmpl.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <textarea
+                        rows={4}
+                        value={form.web_custom_body}
+                        onChange={(e) => setForm({ ...form, web_custom_body: e.target.value })}
+                        className="input font-mono text-xs w-full"
+                      />
+                    </div>
+                  )}
+
+                  {/* Feature Switches */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200/70 dark:border-cyber-800 cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={form.email_catch_all}
+                        onChange={(e) => setForm({ ...form, email_catch_all: e.target.checked })}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">Email Catch-All Active</span>
+                        <span className="text-[10px] text-slate-500">Route all *@subdomain incoming emails</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200/70 dark:border-cyber-800 cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={form.web_enabled}
+                        onChange={(e) => setForm({ ...form, web_enabled: e.target.checked })}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">Web Traffic Active</span>
+                        <span className="text-[10px] text-slate-500">Respond to incoming HTTP requests</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(2)}
+                      className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
+                    >
+                      <ArrowLeftIcon className="w-3.5 h-3.5" />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(4)}
+                      className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
+                    >
+                      <span>Review &amp; DNS Guide</span>
+                      <ArrowRightIcon className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: DNS GUIDANCE & DEPLOY */}
+              {wizardStep === 4 && (
+                <div className="space-y-4 max-w-xl mx-auto py-2">
+                  {/* Review Card */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200/80 dark:border-cyber-800 space-y-2 text-xs">
+                    <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-cyber-800 pb-2">
+                      <span>Routing Overview</span>
+                      <span className="badge-cyan uppercase font-mono text-[10px]">{form.web_mode} mode</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 block">Public Domain:</span>
+                        <span className="font-mono font-bold text-indigo-600 dark:text-cyan-400">
+                          {form.subdomain}.{form.base_domain || defaultBase}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Target / Handler:</span>
+                        <span className="font-mono truncate block text-slate-700 dark:text-slate-300">
+                          {form.web_mode === 'proxy' ? form.web_target || 'Internal proxy' : form.web_mode}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DNS Records Guidance Card */}
+                  <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-cyber-900 border border-indigo-200 dark:border-indigo-900/60 space-y-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                        <ShieldCheckIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+                        Required DNS Record for your Registrar / Cloudflare:
+                      </span>
+                    </div>
+
+                    <div className="bg-white dark:bg-cyber-950 p-2.5 rounded-lg border border-indigo-100 dark:border-cyber-800 font-mono text-[11px] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Type:</span>
+                        <span className="font-bold text-indigo-600 dark:text-cyan-400">A Record</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Name / Host:</span>
+                        <div className="flex items-center gap-1">
+                          <span>{form.subdomain}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(form.subdomain, 'Host')}
+                            className="p-0.5 hover:text-indigo-600"
+                          >
+                            <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Target IPv4:</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{serverIp}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(serverIp, 'Server IP')}
+                            className="p-0.5 hover:text-indigo-600"
+                          >
+                            <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-cyber-800">
+                        <span className="text-slate-400">Cloudflare Proxy:</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-sans font-medium">
+                          🟠 Proxied (Orange Cloud) for Auto SSL
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(3)}
+                      className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
+                    >
+                      <ArrowLeftIcon className="w-3.5 h-3.5" />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClaim}
+                      disabled={claiming}
+                      className="btn-primary py-2 px-5 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                    >
+                      {claiming ? (
+                        <>
+                          <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                          <span>Deploying Subdomain...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="w-4 h-4" />
+                          <span>Claim &amp; Deploy Subdomain</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

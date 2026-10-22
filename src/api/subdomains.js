@@ -33,12 +33,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+// List available parent base domains and server DNS IP for subdomain creation
+router.get('/bases', (req, res) => {
+  try {
+    const bases = getAvailableBaseDomains(req.tgId);
+    const defaultDomain = config.domains?.defaultDomain || (bases[0] || 'commandor.my.id');
+    res.json({
+      defaultDomain,
+      baseDomains: bases,
+      serverIp: '74.248.38.38'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Check subdomain availability
 router.get('/check/:name', (req, res) => {
   const name = req.params.name;
   try {
     const clean = validateSubdomainName(name, req.user?.role === 'admin');
-    const bases = getAvailableBaseDomains();
+    const bases = getAvailableBaseDomains(req.tgId);
     const db = getDb();
     const results = bases.map(base => {
       const full = `${clean}.${base}`.toLowerCase();

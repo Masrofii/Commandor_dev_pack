@@ -32,6 +32,7 @@ export default function OverviewDashboardPage() {
   const { data: subdomainsData } = useSWR('overview-subdomains', () => api.getSubdomains({ limit: 50 }));
   const { data: domainsData } = useSWR('overview-domains', () => api.getDomains());
   const { data: hostingData } = useSWR('overview-hosting', () => api.getHostingSites());
+  const { data: nodesData } = useSWR('overview-nodes', () => api.getHostingNodes());
   const { data: apiKeysData } = useSWR('overview-api-keys', () => api.getApiKeys());
 
   const [quickCreating, setQuickCreating] = useState(false);
@@ -47,6 +48,7 @@ export default function OverviewDashboardPage() {
   const subdomains = subdomainsData?.subdomains || [];
   const domains = domainsData?.domains || [];
   const sites = hostingData?.sites || [];
+  const nodes = nodesData?.nodes || [];
   const apiKeys = apiKeysData?.keys || [];
 
   async function handleQuickInstantAlias() {
@@ -85,17 +87,24 @@ export default function OverviewDashboardPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-cyan-950/60 text-indigo-700 dark:text-cyan-300 border border-indigo-200/60 dark:border-cyan-800/60">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span>Commandor Mail Control Center</span>
+              <span>Commandor Dev Pack Control Center</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Email Infrastructure & Routing Platform
+              Cloud Infrastructure &amp; Self-Hosting Platform
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-              Generate disposable and custom aliases, route traffic via isolated subdomains, deploy edge-hosted sites, and monitor incoming messages with real-time OTP code extraction.
+              Manage multi-node VPS clusters, provision subdomains with automatic DNS, route reverse proxies, deploy edge websites, and manage secure email aliases.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 flex-shrink-0">
+            <Link
+              href="/nodes"
+              className="btn bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-cyan-300 border border-indigo-200 dark:border-indigo-900/60 py-2.5 px-4 text-xs sm:text-sm font-semibold flex items-center gap-1.5"
+            >
+              <ServerStackIcon className="w-4 h-4 text-indigo-500" />
+              <span>Server Nodes ({nodes.length})</span>
+            </Link>
             <button
               onClick={handleQuickInstantAlias}
               disabled={quickCreating}
@@ -194,10 +203,10 @@ export default function OverviewDashboardPage() {
         </Link>
 
         {/* Metric 4: Cloud Edge & Nodes */}
-        <Link href="/hosting" className="card-hover p-5 space-y-3 group">
+        <Link href="/nodes" className="card-hover p-5 space-y-3 group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Hosted Sites
+              Servers &amp; Nodes
             </span>
             <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/60 border border-violet-100 dark:border-violet-900/50 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-105 transition-transform">
               <ServerStackIcon className="w-5 h-5" />
@@ -205,12 +214,12 @@ export default function OverviewDashboardPage() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-              {sites.length}
+              {nodes.length}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-              <span>{apiKeys.length} API keys</span>
+              <span>{sites.length} deployed sites</span>
               <span>•</span>
-              <span>Active edge</span>
+              <span className="text-emerald-500 font-medium">Cluster ready</span>
             </div>
           </div>
         </Link>

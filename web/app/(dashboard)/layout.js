@@ -31,13 +31,14 @@ import {
 
 const NAV_ITEMS = [
   { href: '/', key: 'nav.overview', defaultLabel: 'Overview', icon: Squares2X2Icon, exact: true },
+  { href: '/nodes', key: 'nav.nodes', defaultLabel: 'Nodes & Servers', icon: ServerStackIcon },
+  { href: '/subdomains', key: 'nav.subdomains', defaultLabel: 'Domains & Subdomains', icon: GlobeAltIcon },
+  { href: '/hosting', key: 'nav.hosting', defaultLabel: 'Cloud Hosting & Apps', icon: ComputerDesktopIcon },
   { href: '/inbox', key: 'nav.inbox', defaultLabel: 'Inbox', icon: InboxIcon },
   { href: '/aliases', key: 'nav.aliases', defaultLabel: 'Email Aliases', icon: AtSymbolIcon },
-  { href: '/subdomains', key: 'nav.subdomains', defaultLabel: 'Domains & Subdomains', icon: GlobeAltIcon },
-  { href: '/hosting', key: 'nav.hosting', defaultLabel: 'Cloud Hosting', icon: ServerStackIcon },
   { href: '/api-keys', key: 'nav.api_keys', defaultLabel: 'API Keys', icon: KeyIcon },
   { href: '/webhooks', key: 'nav.webhooks', defaultLabel: 'Webhooks', icon: LinkIcon },
-  { href: '/sessions', key: 'nav.sessions', defaultLabel: 'Sessions & Auth', icon: ComputerDesktopIcon },
+  { href: '/sessions', key: 'nav.sessions', defaultLabel: 'Sessions & Auth', icon: ShieldCheckIcon },
   { href: '/settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Cog6ToothIcon },
 ];
 
@@ -201,11 +202,11 @@ export default function DashboardLayout({ children }) {
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-cyber-800">
           <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-500/20">
-            CM
+            CD
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">Commandor Mail</span>
-            <span className="block text-[11px] text-cyan-600 dark:text-cyan-400 font-medium">Email Infrastructure</span>
+            <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">Commandor Dev Pack</span>
+            <span className="block text-[11px] text-cyan-600 dark:text-cyan-400 font-medium">Cloud &amp; Hosting Platform</span>
           </div>
           <button
             onClick={() => setOpen(false)}
