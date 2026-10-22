@@ -43,7 +43,19 @@ export const api = {
   deleteAlias: (a) => apiFetch(`/api/aliases/${encodeURIComponent(a)}`, { method: 'DELETE' }),
   renewAlias: (a, minutes = 60) => apiFetch(`/api/aliases/${encodeURIComponent(a)}/renew`, { method: 'POST', body: JSON.stringify({ minutes }) }),
   updateAlias: (a, d) => apiFetch(`/api/aliases/${encodeURIComponent(a)}`, { method: 'PATCH', body: JSON.stringify(d) }),
-  getAliasQr: (a) => `${API_URL}/api/aliases/${encodeURIComponent(a)}/qr`,
+  getAliasQr: (a, opts = {}) => {
+    const token = getToken();
+    const params = new URLSearchParams();
+    if (token) params.set('token', token);
+    if (opts && typeof opts === 'object') {
+      if (opts.format) params.set('format', opts.format);
+      if (opts.width) params.set('width', String(opts.width));
+    } else if (typeof opts === 'string') {
+      params.set('format', opts);
+    }
+    const q = params.toString();
+    return `${API_URL}/api/aliases/${encodeURIComponent(a)}/qr${q ? `?${q}` : ''}`;
+  },
   bulkAliasAction: (addresses, action) => apiFetch('/api/aliases/bulk', { method: 'POST', body: JSON.stringify({ addresses, action }) }),
   getDomains: () => apiFetch('/api/aliases/domains'),
   getEmails: (p = {}) => apiFetch('/api/emails' + toQueryString(p)),
@@ -52,7 +64,10 @@ export const api = {
   starEmail: (id, starred) => apiFetch(`/api/emails/${id}/star`, { method: 'PATCH', body: JSON.stringify({ starred }) }),
   deleteEmail: (id) => apiFetch(`/api/emails/${id}`, { method: 'DELETE' }),
   sendReply: (emailId, text, html) => apiFetch('/api/replies', { method: 'POST', body: JSON.stringify({ emailId, text, html }) }),
-  getAttachmentUrl: (id) => `${API_URL}/api/attachments/${id}`,
+  getAttachmentUrl: (id) => {
+    const token = getToken();
+    return `${API_URL}/api/attachments/${id}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
   getWebhooks: () => apiFetch('/api/webhooks'),
   createWebhook: (d) => apiFetch('/api/webhooks', { method: 'POST', body: JSON.stringify(d) }),
   deleteWebhook: (id) => apiFetch(`/api/webhooks/${id}`, { method: 'DELETE' }),
@@ -170,7 +185,10 @@ export const api = {
   verifyBackup: (id) => apiFetch(`/api/backups/${id}/verify`, { method: 'POST' }),
   testRestoreBackup: (id) => apiFetch(`/api/backups/${id}/test-restore`, { method: 'POST' }),
   restoreBackup: (id, confirmation_accepted = true) => apiFetch(`/api/backups/${id}/restore`, { method: 'POST', body: JSON.stringify({ confirmation_accepted }) }),
-  getBackupDownloadUrl: (id) => `${API_URL}/api/backups/${id}/download`,
+  getBackupDownloadUrl: (id) => {
+    const token = getToken();
+    return `${API_URL}/api/backups/${id}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
 
   // Webhook Delivery Retry
   retryWebhookDelivery: (webhookId, deliveryId) => apiFetch(`/api/webhooks/${webhookId}/deliveries/${deliveryId}/retry`, { method: 'POST' }),

@@ -673,7 +673,7 @@ async function createThrowaway(ctx, lang, label = null) {
       inline_keyboard: [
         [
           { text: '📨 View Inbox', callback_data: `alias_inbox:${a.address}:1` },
-          { text: '📱 QR Code', callback_data: `qr_alias:${a.address}` }
+          { text: '📱 QR Code', callback_data: `qr_alias:${a.id || a.address}` }
         ],
         [
           { text: '🗑 Delete', callback_data: `delete_alias:${a.address}` },
@@ -698,7 +698,7 @@ async function createBurnerAlias(ctx, lang) {
       inline_keyboard: [
         [
           { text: '📨 View Inbox', callback_data: `alias_inbox:${a.address}:1` },
-          { text: '📱 QR Code', callback_data: `qr_alias:${a.address}` }
+          { text: '📱 QR Code', callback_data: `qr_alias:${a.id || a.address}` }
         ],
         [
           { text: '🗑 Delete Burner', callback_data: `delete_alias:${a.address}` },
@@ -724,7 +724,7 @@ async function createCustom(ctx, customName, lang) {
         inline_keyboard: [
           [
             { text: '📨 View Inbox', callback_data: `alias_inbox:${a.address}:1` },
-            { text: '📱 QR Code', callback_data: `qr_alias:${a.address}` }
+            { text: '📱 QR Code', callback_data: `qr_alias:${a.id || a.address}` }
           ],
           [
             { text: '🗑 Delete', callback_data: `delete_alias:${a.address}` },

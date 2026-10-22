@@ -13,6 +13,7 @@ import {
   ClipboardDocumentIcon,
   ClipboardDocumentCheckIcon,
   ArrowPathIcon,
+  ArrowDownTrayIcon,
   PauseIcon,
   PlayIcon,
   XMarkIcon,
@@ -35,6 +36,9 @@ export default function AliasesPage() {
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState('all'); // all, active, paused, burner, custom
   const [qrModalAlias, setQrModalAlias] = useState(null);
+  const [qrLoading, setQrLoading] = useState(true);
+  const [qrError, setQrError] = useState(false);
+  const [qrFormat, setQrFormat] = useState('mailto');
   const [deleteConfirmAlias, setDeleteConfirmAlias] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -507,7 +511,11 @@ export default function AliasesPage() {
 
                   {/* QR Code */}
                   <button
-                    onClick={() => setQrModalAlias(a.address)}
+                    onClick={() => {
+                      setQrModalAlias(a.address);
+                      setQrLoading(true);
+                      setQrError(false);
+                    }}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                     title="QR Code"
                   >
@@ -553,35 +561,98 @@ export default function AliasesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                Scan or Share Alias QR Code
-              </h3>
-              <button onClick={() => setQrModalAlias(null)} className="text-slate-400 hover:text-slate-600">
+              <div className="text-left">
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <QrCodeIcon className="w-4 h-4 text-indigo-500" />
+                  Alias QR Code
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Scan with your phone camera to compose or copy</p>
+              </div>
+              <button onClick={() => setQrModalAlias(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <XMarkIcon className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 bg-white rounded-xl inline-block shadow-sm">
-              <img
-                src={api.getAliasQr(qrModalAlias)}
-                alt={`QR code for ${qrModalAlias}`}
-                className="w-48 h-48 mx-auto"
-              />
+            <div className="p-4 bg-white rounded-xl inline-flex items-center justify-center shadow-sm relative min-w-[208px] min-h-[208px] mx-auto">
+              {qrLoading && !qrError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 rounded-xl z-10">
+                  <ArrowPathIcon className="w-6 h-6 text-indigo-600 animate-spin" />
+                  <span className="text-[11px] font-medium text-slate-600 mt-2">Generating QR...</span>
+                </div>
+              )}
+              {qrError ? (
+                <div className="p-4 text-center text-rose-500">
+                  <p className="text-xs font-semibold mb-2">Failed to load QR code</p>
+                  <button
+                    onClick={() => { setQrError(false); setQrLoading(true); }}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 underline font-medium"
+                  >
+                    Tap to retry
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={api.getAliasQr(qrModalAlias, { format: qrFormat })}
+                  alt={`QR code for ${qrModalAlias}`}
+                  className={`w-48 h-48 mx-auto object-contain transition-opacity duration-200 ${qrLoading ? 'opacity-0' : 'opacity-100'}`}
+                  onLoad={() => setQrLoading(false)}
+                  onError={() => { setQrLoading(false); setQrError(true); }}
+                />
+              )}
             </div>
 
-            <p className="font-mono text-xs text-slate-700 dark:text-slate-300 break-all select-all">
+            {/* Format toggle: mailto vs raw address */}
+            <div className="flex items-center justify-center gap-2 text-xs">
+              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Payload:</span>
+              <button
+                type="button"
+                onClick={() => { setQrFormat('mailto'); setQrLoading(true); setQrError(false); }}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                  qrFormat === 'mailto'
+                    ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Mailto Link
+              </button>
+              <button
+                type="button"
+                onClick={() => { setQrFormat('plain'); setQrLoading(true); setQrError(false); }}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                  qrFormat === 'plain'
+                    ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Plain Address
+              </button>
+            </div>
+
+            <p className="font-mono text-xs text-slate-700 dark:text-slate-300 break-all select-all bg-slate-50 dark:bg-cyber-900/50 p-2 rounded-lg border border-slate-100 dark:border-cyber-800">
               {qrModalAlias}
             </p>
 
-            <button
-              onClick={() => {
-                handleCopy(qrModalAlias);
-                setQrModalAlias(null);
-              }}
-              className="btn-primary w-full py-2 text-xs font-semibold"
-            >
-              Copy Address
-            </button>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => {
+                  handleCopy(qrModalAlias);
+                }}
+                className="btn-secondary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
+              >
+                <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                Copy Address
+              </button>
+              <a
+                href={api.getAliasQr(qrModalAlias, { format: qrFormat })}
+                download={`${qrModalAlias}-qr.png`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
+              >
+                <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                Download PNG
+              </a>
+            </div>
           </div>
         </div>
       )}

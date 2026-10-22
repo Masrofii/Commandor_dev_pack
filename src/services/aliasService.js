@@ -12,7 +12,18 @@ function getUserAliases(tgId,opts={}){
   q+=' ORDER BY created_at DESC LIMIT ? OFFSET ?';p.push(limit,offset);
   return{aliases:db.prepare(q).all(...p),total:db.prepare('SELECT COUNT(*)as c FROM aliases WHERE tg_id=?').get(tgId).c,page,limit};
 }
-function getAliasByAddress(address,tgId){return getDb().prepare('SELECT * FROM aliases WHERE address=? AND tg_id=?').get(address,tgId);}
+function getAliasByAddress(address,tgId){
+  if (!address) return null;
+  return getDb().prepare('SELECT * FROM aliases WHERE address=? COLLATE NOCASE AND tg_id=?').get(address.trim(), tgId);
+}
+function getAliasById(id, tgId = null){
+  if (!id) return null;
+  const db = getDb();
+  if (tgId) {
+    return db.prepare('SELECT * FROM aliases WHERE id=? AND tg_id=?').get(id, tgId);
+  }
+  return db.prepare('SELECT * FROM aliases WHERE id=?').get(id);
+}
 function getAllowedDomains(tgId){
   const db=getDb();
   const custom=db.prepare('SELECT domain FROM custom_domains WHERE tg_id=? AND verified=1 AND active=1').all(tgId).map(r=>r.domain);
@@ -59,8 +70,8 @@ function createAlias({tgId,domain,type='throwaway',label=null,expiresAt=null,bur
 }
 function deleteAlias(address,tgId){
   const db=getDb();
-  if(!db.prepare('SELECT 1 FROM aliases WHERE address=? AND tg_id=?').get(address,tgId))return false;
-  db.prepare('DELETE FROM aliases WHERE address=?').run(address);
+  if(!db.prepare('SELECT 1 FROM aliases WHERE address=? COLLATE NOCASE AND tg_id=?').get(address,tgId))return false;
+  db.prepare('DELETE FROM aliases WHERE address=? COLLATE NOCASE').run(address);
   logChange({
     tgId,
     category: 'email',
@@ -70,12 +81,12 @@ function deleteAlias(address,tgId){
   }).catch(() => {});
   return true;
 }
-function deactivateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=0 WHERE address=? AND tg_id=?').run(address,tgId).changes>0;}
-function activateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=1 WHERE address=? AND tg_id=?').run(address,tgId).changes>0;}
+function deactivateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=0 WHERE address=? COLLATE NOCASE AND tg_id=?').run(address,tgId).changes>0;}
+function activateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=1 WHERE address=? COLLATE NOCASE AND tg_id=?').run(address,tgId).changes>0;}
 
 function renewAlias(address, tgId, additionalMinutes = 60) {
   const db = getDb();
-  const alias = db.prepare('SELECT * FROM aliases WHERE address=? AND tg_id=?').get(address, tgId);
+  const alias = db.prepare('SELECT * FROM aliases WHERE address=? COLLATE NOCASE AND tg_id=?').get(address, tgId);
   if (!alias) throw new Error('Alias not found');
 
   const currentExpiry = alias.burner_expires_at || alias.expires_at;
@@ -86,10 +97,10 @@ function renewAlias(address, tgId, additionalMinutes = 60) {
   const newExpiry = new Date(baseTime + additionalMinutes * 60000).toISOString();
 
   if (alias.burner) {
-    db.prepare('UPDATE aliases SET burner_expires_at=?, active=1 WHERE address=? AND tg_id=?')
+    db.prepare('UPDATE aliases SET burner_expires_at=?, active=1 WHERE address=? COLLATE NOCASE AND tg_id=?')
       .run(newExpiry, address, tgId);
   } else {
-    db.prepare('UPDATE aliases SET expires_at=?, active=1 WHERE address=? AND tg_id=?')
+    db.prepare('UPDATE aliases SET expires_at=?, active=1 WHERE address=? COLLATE NOCASE AND tg_id=?')
       .run(newExpiry, address, tgId);
   }
 
@@ -101,7 +112,7 @@ function renewAlias(address, tgId, additionalMinutes = 60) {
     metadata: { address, newExpiry }
   }).catch(() => {});
 
-  return db.prepare('SELECT * FROM aliases WHERE address=?').get(address);
+  return db.prepare('SELECT * FROM aliases WHERE address=? COLLATE NOCASE').get(address);
 }
 
-module.exports={getUserAliases,getAliasByAddress,createAlias,deleteAlias,deactivateAlias,activateAlias,renewAlias,getAllowedDomains};
+module.exports={getUserAliases,getAliasByAddress,getAliasById,createAlias,deleteAlias,deactivateAlias,activateAlias,renewAlias,getAllowedDomains};

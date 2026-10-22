@@ -1,7 +1,7 @@
 'use strict';
 const{verifyWebSession}=require('../auth/sessions');
 const{verifyApiKey}=require('../services/apiKeyService');
-function extractToken(req){const ah=req.headers.authorization;if(ah?.startsWith('Bearer '))return ah.slice(7);if(req.cookies?.session_token)return req.cookies.session_token;if(typeof req.query?.token==='string'&&req.query.token)return req.query.token;return null;}
+function extractToken(req){const ah=req.headers.authorization;if(ah?.startsWith('Bearer '))return ah.slice(7);if(req.cookies?.session_token)return req.cookies.session_token;if(typeof req.query?.token==='string'&&req.query.token)return req.query.token;if(typeof req.query?.session_token==='string'&&req.query.session_token)return req.query.session_token;return null;}
 function requireAuth(req,res,next){
   const t=extractToken(req);
   if(!t)return res.status(401).json({error:'Unauthorized'});
@@ -58,5 +58,17 @@ function requireApiKey(scopes=[]){
     next();
   };
 }
-function requireAuthOrApiKey(scopes=[]){return(req,res,next)=>{const ah=req.headers.authorization;if(ah?.startsWith('Bearer tmk_'))return requireApiKey(scopes)(req,res,next);return requireAuth(req,res,next);};}
+function requireAuthOrApiKey(scopes=[]){
+  return(req,res,next)=>{
+    const ah=req.headers.authorization;
+    const tokenParam = typeof req.query?.token === 'string' ? req.query.token : null;
+    const apiKeyParam = typeof req.query?.apiKey === 'string' ? req.query.apiKey : (typeof req.query?.api_key === 'string' ? req.query.api_key : null);
+    if(ah?.startsWith('Bearer tmk_'))return requireApiKey(scopes)(req,res,next);
+    if(tokenParam?.startsWith('tmk_') || apiKeyParam?.startsWith('tmk_')) {
+      req.headers.authorization = `Bearer ${tokenParam || apiKeyParam}`;
+      return requireApiKey(scopes)(req,res,next);
+    }
+    return requireAuth(req,res,next);
+  };
+}
 module.exports={requireAuth,requireAdmin,requireApiKey,requireAuthOrApiKey};

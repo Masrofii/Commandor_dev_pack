@@ -5,6 +5,7 @@ const config=require('../../config/config');
 function applySecurity(app){
   app.use(helmet({
     contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
     hsts: config.isProduction ? {maxAge: 31536000, includeSubDomains: true} : false
   }));
   app.use(cors({

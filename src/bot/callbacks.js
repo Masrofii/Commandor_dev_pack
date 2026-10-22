@@ -669,15 +669,26 @@ function setupCallbacks(bot) {
         case 'qr_alias': {
           await ctx.answerCbQuery('📱 Generating QR code...').catch(() => {});
           try {
-            const buf = await generateQRBuffer(param);
+            let emailAddress = param;
+            const db = getDb();
+            if (/^\d+$/.test(param)) {
+              const row = db.prepare('SELECT address FROM aliases WHERE id=?').get(parseInt(param, 10));
+              if (row?.address) emailAddress = row.address;
+            } else {
+              const row = db.prepare('SELECT address FROM aliases WHERE address=? COLLATE NOCASE').get(param);
+              if (row?.address) emailAddress = row.address;
+            }
+
+            const buf = await generateQRBuffer(`mailto:${emailAddress}`);
             await ctx.replyWithPhoto(
               { source: buf },
               {
-                caption: `📱 <b>QR Code for Email:</b>\n<code>${escapeHtml(param)}</code>\n<i>Scan to copy or compose to this address</i>`,
+                caption: `📱 <b>QR Code for Email:</b>\n<code>${escapeHtml(emailAddress)}</code>\n\n<i>Scan with any phone camera or scanner to compose or copy this email address.</i>`,
                 parse_mode: 'HTML'
               }
             );
-          } catch {
+          } catch (err) {
+            logger.error({ err: err?.message, param }, 'Failed to generate QR code in Telegram');
             await ctx.reply('❌ Failed to generate QR code.');
           }
           break;

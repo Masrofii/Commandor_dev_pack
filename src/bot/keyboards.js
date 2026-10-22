@@ -304,19 +304,32 @@ function emailActionsKeyboard(emailId, isStarred = false, hasAttachments = false
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function aliasActionsKeyboard(address, isActive = true, isBurner = false) {
+function aliasActionsKeyboard(address, isActive = true, isBurner = false, aliasId = null) {
+  let addrStr = typeof address === 'object' && address !== null ? address.address : address;
+  let qrTarget = aliasId || (typeof address === 'object' && address !== null ? address.id : null);
+  if (!qrTarget) {
+    if (addrStr && addrStr.length > 40) {
+      try {
+        const { getDb } = require('../../database/database');
+        const r = getDb().prepare('SELECT id FROM aliases WHERE address=? COLLATE NOCASE').get(addrStr);
+        if (r?.id) qrTarget = r.id;
+      } catch {}
+    }
+  }
+  if (!qrTarget) qrTarget = addrStr;
+
   const rows = [
     [
-      { text: '📨 View Inbox', callback_data: `alias_inbox:${address}:1` },
-      { text: '📱 QR Code', callback_data: `qr_alias:${address}` }
+      { text: '📨 View Inbox', callback_data: `alias_inbox:${addrStr}:1` },
+      { text: '📱 QR Code', callback_data: `qr_alias:${qrTarget}` }
     ]
   ];
   if (isBurner) {
-    rows.push([{ text: '⏳ Renew Expiry (+1 Hour)', callback_data: `renew_alias:${address}` }]);
+    rows.push([{ text: '⏳ Renew Expiry (+1 Hour)', callback_data: `renew_alias:${addrStr}` }]);
   }
   rows.push([
-    { text: isActive ? '⏸ Deactivate' : '▶️ Activate', callback_data: `toggle_alias:${address}` },
-    { text: '🗑 Delete', callback_data: `delete_alias:${address}` }
+    { text: isActive ? '⏸ Deactivate' : '▶️ Activate', callback_data: `toggle_alias:${addrStr}` },
+    { text: '🗑 Delete', callback_data: `delete_alias:${addrStr}` }
   ]);
   rows.push([
     { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' }

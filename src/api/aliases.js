@@ -15,6 +15,38 @@ router.post('/bulk',async(req,res)=>{const{addresses,action}=req.body;if(!Array.
 router.get('/:address',(req,res)=>{const a=getAliasByAddress(req.params.address,req.tgId);if(!a)return res.status(404).json({error:'Alias not found'});res.json(a);});
 router.patch('/:address',async(req,res)=>{const db=getDb();const a=getAliasByAddress(req.params.address,req.tgId);if(!a)return res.status(404).json({error:'Alias not found'});const allowed=['label','auto_reply_enabled','auto_reply_subject','auto_reply_body','auto_reply_cooldown_hours','notes','tag_ids'];const updates=[],values=[];for(const k of allowed)if(req.body[k]!==undefined){updates.push(`${k}=?`);values.push(typeof req.body[k]==='object'?JSON.stringify(req.body[k]):req.body[k]);}if(!updates.length)return res.status(400).json({error:'Nothing to update'});values.push(req.params.address);db.prepare(`UPDATE aliases SET ${updates.join(',')} WHERE address=?`).run(...values);res.json(getAliasByAddress(req.params.address,req.tgId));});
 router.delete('/:address',async(req,res)=>{if(!deleteAlias(req.params.address,req.tgId))return res.status(404).json({error:'Alias not found'});dispatchWebhooks(req.tgId,'alias.deleted',{alias:req.params.address}).catch(()=>{});res.json({status:'deleted'});});
-router.get('/:address/qr',async(req,res)=>{const a=getAliasByAddress(req.params.address,req.tgId);if(!a)return res.status(404).json({error:'Alias not found'});try{const buf=await generateQRBuffer(a.address);res.setHeader('Content-Type','image/png');res.setHeader('Content-Disposition',`inline; filename="${a.address}.png"`);res.send(buf);}catch{res.status(500).json({error:'QR generation failed'});}});
+router.get('/:address/qr', async (req, res) => {
+  let address = req.params.address;
+  try {
+    address = decodeURIComponent(address).trim();
+  } catch {
+    address = (req.params.address || '').trim();
+  }
+
+  const config = require('../../config/config');
+  const db = getDb();
+  let a = getAliasByAddress(address, req.tgId);
+  if (!a) {
+    const isAdmin = (req.user?.role === 'admin') || (config.telegram?.adminId && String(req.tgId) === String(config.telegram.adminId));
+    if (isAdmin) {
+      a = db.prepare('SELECT * FROM aliases WHERE address=? COLLATE NOCASE').get(address);
+    }
+  }
+  if (!a) return res.status(404).json({ error: 'Alias not found' });
+
+  try {
+    const format = req.query.format || (req.query.plain === '1' ? 'plain' : 'mailto');
+    const qrData = format === 'plain' ? a.address : `mailto:${a.address}`;
+    const buf = await generateQRBuffer(qrData, { width: parseInt(req.query.width, 10) || 300 });
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', `inline; filename="${a.address}-qr.png"`);
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(buf);
+  } catch (err) {
+    return res.status(500).json({ error: 'QR generation failed' });
+  }
+});
 router.post('/:address/renew',async(req,res)=>{try{const{minutes}=req.body||{};const renewed=renewAlias(req.params.address,req.tgId,parseInt(minutes,10)||60);res.json(renewed);}catch(err){res.status(400).json({error:err.message});}});
 module.exports=router;
