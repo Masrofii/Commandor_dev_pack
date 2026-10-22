@@ -447,6 +447,25 @@ export default function AliasesPage() {
 
                 {/* Right Action Icons */}
                 <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0 pt-2 sm:pt-0">
+                  {/* Renew Expiry button for Burners */}
+                  {isBurner && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await api.renewAlias(a.address, 60);
+                          toast.success(`Burner renewed for +1 hour!`);
+                          mutate();
+                        } catch (err) {
+                          toast.error(err.message || 'Failed to renew');
+                        }
+                      }}
+                      className="btn-secondary py-1 px-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-900/50"
+                      title="Extend self-destruct countdown by 1 hour"
+                    >
+                      <span>⏳ +1h</span>
+                    </button>
+                  )}
+
                   {/* View Inbox Link */}
                   <Link
                     href={`/inbox?alias=${encodeURIComponent(a.address)}`}

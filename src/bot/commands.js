@@ -28,7 +28,9 @@ const {
   hostingSiteActionsKeyboard,
   hostingNodesKeyboard,
   hostingNodeActionsKeyboard,
-  broadcastConfirmKeyboard
+  broadcastConfirmKeyboard,
+  infraHubKeyboard,
+  utilitiesHubKeyboard
 } = require('./keyboards');
 const {
   logChange,
@@ -67,7 +69,7 @@ const {
   deleteNode: deleteHostingNode
 } = require('../services/nodeManagerService');
 const { getDb } = require('../../database/database');
-const { truncate, formatBytes, escapeHtml, extractVerificationCode } = require('../utils/helpers');
+const { truncate, formatBytes, escapeHtml, extractVerificationCode, formatTelegramEntitiesToHtml } = require('../utils/helpers');
 const { parseSearchQuery } = require('../utils/validation');
 const { createLoginToken } = require('../auth/loginToken');
 const {
@@ -325,6 +327,45 @@ Automate inbox monitoring, alias generation, and subdomain management with our f
 <i>Select an action below:</i>`;
 
   return send(ctx, text, apiHubKeyboard(keyCount));
+}
+
+async function showInfraHub(ctx) {
+  const db = getDb();
+  const tgId = ctx.from.id;
+  const subCount = db.prepare('SELECT COUNT(*) as c FROM subdomains WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
+  const siteCount = db.prepare('SELECT COUNT(*) as c FROM hosting_sites WHERE tg_id=?').get(tgId)?.c || 0;
+
+  const text = `🌐 <b>DOMAINS & INFRASTRUCTURE HUB</b>
+──────────────────────────────
+Orchestrate high-speed email routing, custom subdomains, and multi-node cloud hosting.
+
+⚡ <b>Available Capabilities:</b>
+• <b>Subdomains:</b> Claim custom subdomains with catch-all routing & reverse proxy.
+• <b>Cloud Hosting:</b> Deploy static HTML or full ZIP websites directly onto edge nodes.
+• <b>Server Nodes:</b> (Admins) Provision and monitor multi-node SSH server clusters.
+
+📊 <b>Active:</b> <code>${subCount} Subdomains</code> • <code>${siteCount} Hosted Sites</code>
+──────────────────────────────
+<i>Select an infrastructure action below:</i>`;
+
+  return send(ctx, text, infraHubKeyboard(subCount, siteCount));
+}
+
+async function showUtilitiesHub(ctx) {
+  const text = `⚙️ <b>UTILITIES & SYSTEM TOOLS</b>
+──────────────────────────────
+Fast access to temporary email burners, full-text message search, account statistics, and platform configuration.
+
+⚡ <b>Available Tools:</b>
+• <b>1-Hour Burner:</b> Instant self-destructing throwaway inbox.
+• <b>Search:</b> Scan incoming messages, sender addresses, and subjects.
+• <b>Interface Language:</b> Select from 12 natively translated languages.
+• <b>Usage Stats:</b> Storage, quota limits, and activity metrics.
+• <b>Help Reference:</b> Complete command list and usage guidelines.
+──────────────────────────────
+<i>Select a tool below:</i>`;
+
+  return send(ctx, text, utilitiesHubKeyboard());
 }
 
 async function showChangeLog(ctx) {
@@ -891,7 +932,7 @@ async function promptBroadcastPreview(ctx, payload) {
     if (!text) {
       return replyHtml(ctx, t('broadcast.empty', getLang(ctx)));
     }
-    broadcastData = { type: 'text', text };
+    broadcastData = { type: 'text', text, entities: ctx.message?.entities };
   } else if (payload && typeof payload === 'object') {
     broadcastData = payload;
   }
@@ -901,14 +942,15 @@ async function promptBroadcastPreview(ctx, payload) {
   }
 
   const db = getDb();
-  const userCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_banned=0').get()?.c || 0;
+  const userCount = db.prepare('SELECT COUNT(DISTINCT tg_id) as c FROM users WHERE is_banned=0 AND tg_id IS NOT NULL').get()?.c || 0;
 
   setBroadcastConfirm(ctx.from.id, broadcastData);
 
   const textPreview = broadcastData.text || broadcastData.caption || '';
+  const formattedContent = formatTelegramEntitiesToHtml(textPreview, broadcastData.entities);
   const mediaNote = broadcastData.type !== 'text' ? `\n📎 <b>Media:</b> <code>${broadcastData.type.toUpperCase()}</code>` : '';
 
-  const previewMsg = `📢 <b>Commandor Mail — Broadcast Announcement Preview</b>\n──────────────────────────────${mediaNote}\n<b>Message Content:</b>\n${escapeHtml(textPreview)}\n──────────────────────────────\n👥 <b>Target Audience:</b> <b>${userCount}</b> registered users\n🛡️ <b>Engine:</b> Safe rate-limited delivery (~30 msg/sec)\n\n⚠️ <i>Please review the announcement above. Tap confirm to broadcast to all users.</i>`;
+  const previewMsg = `📢 <b>Commandor Mail — Broadcast Announcement Preview</b>\n──────────────────────────────${mediaNote}\n<b>Message Content:</b>\n${formattedContent}\n──────────────────────────────\n👥 <b>Target Audience:</b> <b>${userCount}</b> registered users\n🛡️ <b>Engine:</b> Safe rate-limited delivery (~30 msg/sec)\n\n⚠️ <i>Please review the announcement above. Tap confirm to broadcast to all users.</i>`;
 
   if (broadcastData.type === 'photo' && broadcastData.fileId) {
     return ctx.replyWithPhoto(broadcastData.fileId, {
@@ -947,11 +989,14 @@ async function handleConfirmedBroadcast(ctx) {
   isBroadcastSending = true;
   try {
     const db = getDb();
-    const users = db.prepare('SELECT tg_id FROM users WHERE is_banned=0').all();
+    const users = db.prepare('SELECT DISTINCT tg_id FROM users WHERE is_banned=0 AND tg_id IS NOT NULL').all();
     let delivered = 0;
     let blocked = 0;
     let failed = 0;
     const startTime = Date.now();
+
+    const formattedText = formatTelegramEntitiesToHtml(state.text || '', state.entities);
+    const formattedCaption = formatTelegramEntitiesToHtml(state.caption || '', state.entities);
 
     const statusMsg = await ctx.reply(`⏳ <b>Broadcasting announcement...</b>\nProgress: 0 / ${users.length}`, { parse_mode: 'HTML' });
 
@@ -960,35 +1005,36 @@ async function handleConfirmedBroadcast(ctx) {
       try {
         if (state.type === 'photo' && state.fileId) {
           await ctx.telegram.sendPhoto(u.tg_id, state.fileId, {
-            caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+            caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
             parse_mode: 'HTML'
           });
         } else if (state.type === 'video' && state.fileId) {
           await ctx.telegram.sendVideo(u.tg_id, state.fileId, {
-            caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+            caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
             parse_mode: 'HTML'
           });
         } else if (state.type === 'document' && state.fileId) {
           await ctx.telegram.sendDocument(u.tg_id, state.fileId, {
-            caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+            caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
             parse_mode: 'HTML'
           });
         } else {
-          await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.text}`, { parse_mode: 'HTML' });
+          await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedText}`, { parse_mode: 'HTML' });
         }
         delivered++;
       } catch (err) {
-        if (err.response?.parameters?.retry_after) {
-          const waitSec = err.response.parameters.retry_after;
+        const retryAfter = err.parameters?.retry_after || err.response?.parameters?.retry_after;
+        if (retryAfter) {
+          const waitSec = Math.min(retryAfter, 10);
           await new Promise(r => setTimeout(r, waitSec * 1000));
           try {
             if (state.type === 'photo' && state.fileId) {
               await ctx.telegram.sendPhoto(u.tg_id, state.fileId, {
-                caption: state.caption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.caption}` : undefined,
+                caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
                 parse_mode: 'HTML'
               });
             } else {
-              await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${state.text}`, { parse_mode: 'HTML' });
+              await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedText}`, { parse_mode: 'HTML' });
             }
             delivered++;
           } catch {
@@ -996,7 +1042,7 @@ async function handleConfirmedBroadcast(ctx) {
           }
         } else {
           const errMsg = (err?.message || '').toLowerCase();
-          if (errMsg.includes('blocked') || errMsg.includes('chat not found') || errMsg.includes('deactivated') || err?.code === 403) {
+          if (errMsg.includes('blocked') || errMsg.includes('chat not found') || errMsg.includes('deactivated') || err?.code === 403 || err?.response?.error_code === 403) {
             blocked++;
           } else {
             failed++;
@@ -1400,8 +1446,9 @@ function setupCommands(bot) {
       return replyHtml(ctx, err.message);
     }
   }));
-  bot.hears(['🔑 API Keys', 'API Keys', '🔑 API & Devs'], wrap(ctx => showApiHub(ctx)));
-  bot.hears(['🌐 Domains & Subdomains', '🌐 Subdomains', 'Subdomains', 'Domains'], wrap(ctx => showSubdomainHub(ctx)));
+  bot.hears(['🌐 Domains & Hosting', 'Domains & Hosting', '🌐 Domains & Subdomains', '🌐 Subdomains', 'Subdomains', 'Domains'], wrap(ctx => showInfraHub(ctx)));
+  bot.hears(['🛠️ Developer Tools', 'Developer Tools', '🔑 API Keys', 'API Keys', '🔑 API & Devs'], wrap(ctx => showApiHub(ctx)));
+  bot.hears(['⚙️ Utilities', 'Utilities', '⚙️ Tools', 'Tools'], wrap(ctx => showUtilitiesHub(ctx)));
   bot.hears(['☁️ Cloud Hosting', '🖥️ Cloud Hosting', 'Cloud Hosting', 'Hosting'], wrap(async ctx => showHostingMenu(ctx)));
   bot.hears(['🔎 Search', 'Search', '🔎 Search Messages'], wrap(async ctx => {
     setSearch(ctx.from.id, {});
@@ -1431,13 +1478,13 @@ function setupCommands(bot) {
       let payload = null;
       if (ctx.message.photo) {
         const p = ctx.message.photo;
-        payload = { type: 'photo', fileId: p[p.length - 1].file_id, caption: ctx.message.caption || '' };
+        payload = { type: 'photo', fileId: p[p.length - 1].file_id, caption: ctx.message.caption || '', entities: ctx.message.caption_entities };
       } else if (ctx.message.video) {
-        payload = { type: 'video', fileId: ctx.message.video.file_id, caption: ctx.message.caption || '' };
+        payload = { type: 'video', fileId: ctx.message.video.file_id, caption: ctx.message.caption || '', entities: ctx.message.caption_entities };
       } else if (ctx.message.document) {
-        payload = { type: 'document', fileId: ctx.message.document.file_id, caption: ctx.message.caption || '' };
+        payload = { type: 'document', fileId: ctx.message.document.file_id, caption: ctx.message.caption || '', entities: ctx.message.caption_entities };
       } else if (ctx.message.animation) {
-        payload = { type: 'animation', fileId: ctx.message.animation.file_id, caption: ctx.message.caption || '' };
+        payload = { type: 'animation', fileId: ctx.message.animation.file_id, caption: ctx.message.caption || '', entities: ctx.message.caption_entities };
       }
       if (payload) {
         return promptBroadcastPreview(ctx, payload);
@@ -1451,6 +1498,20 @@ function setupCommands(bot) {
       return handleCancel(ctx);
     }
     if (rawText.startsWith('/')) return;
+
+    // Check broadcast state
+    const broadcastState = peekBroadcast(ctx.from.id);
+    if (broadcastState) {
+      takeBroadcast(ctx.from.id);
+      if (ctx.message.text.trim().toLowerCase() === '/cancel') {
+        return replyHtml(ctx, '❌ Broadcast cancelled.');
+      }
+      return promptBroadcastPreview(ctx, {
+        type: 'text',
+        text: ctx.message.text.trim(),
+        entities: ctx.message.entities
+      });
+    }
 
     // Check custom alias creation state
     const customState = peekCustomAlias(ctx.from.id);
@@ -1499,11 +1560,6 @@ function setupCommands(bot) {
       return handleAddNodeConnection(ctx, ctx.message.text.trim());
     }
 
-    // Direct match: if admin inputs connection string host:port:user:pass or multiline SSH list
-    if (isOwnerOrAdmin(ctx.from.id) && ctx.message.text.includes(':') && (ctx.message.text.split(':').length >= 3 || ctx.message.text.includes('\n'))) {
-      return handleAddNodeConnection(ctx, ctx.message.text.trim());
-    }
-
     // Check deploy site name state
     const deployState = peekDeploySite(ctx.from.id);
     if (deployState) {
@@ -1524,14 +1580,9 @@ function setupCommands(bot) {
       return handleDeploySiteContent(ctx, htmlState.siteName, ctx.message.text);
     }
 
-    // Check broadcast state
-    const broadcastState = peekBroadcast(ctx.from.id);
-    if (broadcastState) {
-      takeBroadcast(ctx.from.id);
-      if (ctx.message.text.trim().toLowerCase() === '/cancel') {
-        return replyHtml(ctx, '❌ Broadcast cancelled.');
-      }
-      return promptBroadcastPreview(ctx, ctx.message.text.trim());
+    // Direct match: if admin inputs connection string host:port:user:pass or multiline SSH list
+    if (isOwnerOrAdmin(ctx.from.id) && ctx.message.text.includes(':') && (ctx.message.text.split(':').length >= 3 || ctx.message.text.includes('\n'))) {
+      return handleAddNodeConnection(ctx, ctx.message.text.trim());
     }
 
     // Check email reply state
@@ -2115,6 +2166,8 @@ module.exports = {
   handleTosAccept,
   showMainDashboard,
   showEmailSuiteHub,
+  showInfraHub,
+  showUtilitiesHub,
   showSubdomainHub,
   showApiHub,
   showChangeLog,

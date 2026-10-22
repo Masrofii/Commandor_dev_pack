@@ -2,7 +2,7 @@
 const express=require('express');
 const router=express.Router();
 const{requireAuthOrApiKey}=require('../middleware/auth');
-const{getUserAliases,getAliasByAddress,createAlias,deleteAlias,deactivateAlias,getAllowedDomains}=require('../services/aliasService');
+const{getUserAliases,getAliasByAddress,createAlias,deleteAlias,deactivateAlias,activateAlias,renewAlias,getAllowedDomains}=require('../services/aliasService');
 const{generateQRBuffer}=require('../utils/qr');
 const{dispatchWebhooks}=require('../services/webhookService');
 const{getDb}=require('../../database/database');
@@ -16,4 +16,5 @@ router.get('/:address',(req,res)=>{const a=getAliasByAddress(req.params.address,
 router.patch('/:address',async(req,res)=>{const db=getDb();const a=getAliasByAddress(req.params.address,req.tgId);if(!a)return res.status(404).json({error:'Alias not found'});const allowed=['label','auto_reply_enabled','auto_reply_subject','auto_reply_body','auto_reply_cooldown_hours','notes','tag_ids'];const updates=[],values=[];for(const k of allowed)if(req.body[k]!==undefined){updates.push(`${k}=?`);values.push(typeof req.body[k]==='object'?JSON.stringify(req.body[k]):req.body[k]);}if(!updates.length)return res.status(400).json({error:'Nothing to update'});values.push(req.params.address);db.prepare(`UPDATE aliases SET ${updates.join(',')} WHERE address=?`).run(...values);res.json(getAliasByAddress(req.params.address,req.tgId));});
 router.delete('/:address',async(req,res)=>{if(!deleteAlias(req.params.address,req.tgId))return res.status(404).json({error:'Alias not found'});dispatchWebhooks(req.tgId,'alias.deleted',{alias:req.params.address}).catch(()=>{});res.json({status:'deleted'});});
 router.get('/:address/qr',async(req,res)=>{const a=getAliasByAddress(req.params.address,req.tgId);if(!a)return res.status(404).json({error:'Alias not found'});try{const buf=await generateQRBuffer(a.address);res.setHeader('Content-Type','image/png');res.setHeader('Content-Disposition',`inline; filename="${a.address}.png"`);res.send(buf);}catch{res.status(500).json({error:'QR generation failed'});}});
+router.post('/:address/renew',async(req,res)=>{try{const{minutes}=req.body||{};const renewed=renewAlias(req.params.address,req.tgId,parseInt(minutes,10)||60);res.json(renewed);}catch(err){res.status(400).json({error:err.message});}});
 module.exports=router;

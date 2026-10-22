@@ -72,4 +72,36 @@ function deleteAlias(address,tgId){
 }
 function deactivateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=0 WHERE address=? AND tg_id=?').run(address,tgId).changes>0;}
 function activateAlias(address,tgId){return getDb().prepare('UPDATE aliases SET active=1 WHERE address=? AND tg_id=?').run(address,tgId).changes>0;}
-module.exports={getUserAliases,getAliasByAddress,createAlias,deleteAlias,deactivateAlias,activateAlias,getAllowedDomains};
+
+function renewAlias(address, tgId, additionalMinutes = 60) {
+  const db = getDb();
+  const alias = db.prepare('SELECT * FROM aliases WHERE address=? AND tg_id=?').get(address, tgId);
+  if (!alias) throw new Error('Alias not found');
+
+  const currentExpiry = alias.burner_expires_at || alias.expires_at;
+  const baseTime = currentExpiry && new Date(currentExpiry).getTime() > Date.now()
+    ? new Date(currentExpiry).getTime()
+    : Date.now();
+
+  const newExpiry = new Date(baseTime + additionalMinutes * 60000).toISOString();
+
+  if (alias.burner) {
+    db.prepare('UPDATE aliases SET burner_expires_at=?, active=1 WHERE address=? AND tg_id=?')
+      .run(newExpiry, address, tgId);
+  } else {
+    db.prepare('UPDATE aliases SET expires_at=?, active=1 WHERE address=? AND tg_id=?')
+      .run(newExpiry, address, tgId);
+  }
+
+  logChange({
+    tgId,
+    category: 'email',
+    action: 'alias_renewed',
+    details: `Renewed alias ${address} for +${additionalMinutes}m (expires: ${newExpiry})`,
+    metadata: { address, newExpiry }
+  }).catch(() => {});
+
+  return db.prepare('SELECT * FROM aliases WHERE address=?').get(address);
+}
+
+module.exports={getUserAliases,getAliasByAddress,createAlias,deleteAlias,deactivateAlias,activateAlias,renewAlias,getAllowedDomains};

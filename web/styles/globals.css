@@ -3,3 +3,20 @@
 @tailwind utilities;
 @layer base{:root{--color-bg:255 255 255;--color-surface:249 250 251;--color-border:229 231 235;--color-text:17 24 39;--color-brand:99 102 241;}.dark{--color-bg:15 23 42;--color-surface:30 41 59;--color-border:51 65 85;--color-text:241 245 249;--color-brand:129 140 248;}html{@apply antialiased;}body{@apply bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100;}}
 @layer components{.btn{@apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;}.btn-primary{@apply btn bg-brand-600 hover:bg-brand-700 text-white focus:ring-brand-500 dark:bg-brand-500 dark:hover:bg-brand-600;}.btn-secondary{@apply btn bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-brand-500;}.btn-danger{@apply btn bg-red-600 hover:bg-red-700 text-white focus:ring-red-500;}.card{@apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm;}.input{@apply w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors duration-150;}.badge{@apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;}.badge-green{@apply badge bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;}.badge-red{@apply badge bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;}.badge-yellow{@apply badge bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;}.badge-gray{@apply badge bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300;}.skeleton{@apply animate-pulse bg-slate-200 dark:bg-slate-700 rounded;}}
+
+/* RTL Direction & Code Isolation Rules */
+[dir="rtl"] code,
+[dir="rtl"] pre,
+[dir="rtl"] input[type="email"],
+[dir="rtl"] input[type="password"],
+[dir="rtl"] input[type="url"],
+[dir="rtl"] .font-mono,
+[dir="rtl"] .ltr-force {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate;
+}
+
+[dir="rtl"] .text-right-rtl {
+  text-align: right;
+}

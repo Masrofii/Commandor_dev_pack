@@ -30,6 +30,7 @@ export const api = {
   createAlias: (d) => apiFetch('/api/aliases', { method: 'POST', body: JSON.stringify(d) }),
   createBurner: (domain) => apiFetch('/api/aliases/burner', { method: 'POST', body: JSON.stringify({ domain }) }),
   deleteAlias: (a) => apiFetch(`/api/aliases/${encodeURIComponent(a)}`, { method: 'DELETE' }),
+  renewAlias: (a, minutes = 60) => apiFetch(`/api/aliases/${encodeURIComponent(a)}/renew`, { method: 'POST', body: JSON.stringify({ minutes }) }),
   updateAlias: (a, d) => apiFetch(`/api/aliases/${encodeURIComponent(a)}`, { method: 'PATCH', body: JSON.stringify(d) }),
   getAliasQr: (a) => `${API_URL}/api/aliases/${encodeURIComponent(a)}/qr`,
   bulkAliasAction: (addresses, action) => apiFetch('/api/aliases/bulk', { method: 'POST', body: JSON.stringify({ addresses, action }) }),

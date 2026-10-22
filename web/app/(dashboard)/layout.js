@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { isAuthenticated, getUser, clearToken } from '../../lib/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { api } from '../../lib/api';
-import { applyLanguage, getSavedLanguage } from '../../lib/i18n';
+import { useTranslation } from '../../lib/i18n';
 import {
   Squares2X2Icon,
   InboxIcon,
@@ -25,19 +25,20 @@ import {
   MoonIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
-  FireIcon
+  FireIcon,
+  LanguageIcon
 } from '@heroicons/react/24/outline';
 
-const NAV = [
-  { href: '/', label: 'Overview', icon: Squares2X2Icon, exact: true },
-  { href: '/inbox', label: 'Inbox', icon: InboxIcon },
-  { href: '/aliases', label: 'Email Aliases', icon: AtSymbolIcon },
-  { href: '/subdomains', label: 'Domains & Subdomains', icon: GlobeAltIcon },
-  { href: '/hosting', label: 'Cloud Hosting', icon: ServerStackIcon },
-  { href: '/api-keys', label: 'API Keys', icon: KeyIcon },
-  { href: '/webhooks', label: 'Webhooks', icon: LinkIcon },
-  { href: '/sessions', label: 'Sessions & Auth', icon: ComputerDesktopIcon },
-  { href: '/settings', label: 'Settings', icon: Cog6ToothIcon },
+const NAV_ITEMS = [
+  { href: '/', key: 'nav.overview', defaultLabel: 'Overview', icon: Squares2X2Icon, exact: true },
+  { href: '/inbox', key: 'nav.inbox', defaultLabel: 'Inbox', icon: InboxIcon },
+  { href: '/aliases', key: 'nav.aliases', defaultLabel: 'Email Aliases', icon: AtSymbolIcon },
+  { href: '/subdomains', key: 'nav.subdomains', defaultLabel: 'Domains & Subdomains', icon: GlobeAltIcon },
+  { href: '/hosting', key: 'nav.hosting', defaultLabel: 'Cloud Hosting', icon: ServerStackIcon },
+  { href: '/api-keys', key: 'nav.api_keys', defaultLabel: 'API Keys', icon: KeyIcon },
+  { href: '/webhooks', key: 'nav.webhooks', defaultLabel: 'Webhooks', icon: LinkIcon },
+  { href: '/sessions', key: 'nav.sessions', defaultLabel: 'Sessions & Auth', icon: ComputerDesktopIcon },
+  { href: '/settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Cog6ToothIcon },
 ];
 
 export default function DashboardLayout({ children }) {
@@ -47,6 +48,9 @@ export default function DashboardLayout({ children }) {
   const [open, setOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [quickCreating, setQuickCreating] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
+
+  const { t, lang, setLanguage, isRtl, meta, languages } = useTranslation();
 
   // Unread emails count
   const { data: unreadData, mutate: mutateUnread } = useSWR(
@@ -213,11 +217,12 @@ export default function DashboardLayout({ children }) {
 
         {/* Navigation Items */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {NAV.map((i) => {
+          {NAV_ITEMS.map((i) => {
             const Icon = i.icon;
             const active = i.exact ? pathname === i.href : pathname.startsWith(i.href);
             const isInbox = i.href === '/inbox';
             const unreadCount = unreadData || 0;
+            const label = t(i.key) || i.defaultLabel;
 
             return (
               <Link
@@ -232,7 +237,7 @@ export default function DashboardLayout({ children }) {
               >
                 <div className="flex items-center gap-3">
                   <Icon className={`w-5 h-5 ${active ? 'text-indigo-600 dark:text-cyan-400' : 'text-slate-400'}`} />
-                  <span>{i.label}</span>
+                  <span>{label}</span>
                 </div>
                 {isInbox && unreadCount > 0 && (
                   <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-600 dark:bg-cyan-600 text-white shadow-sm">
@@ -254,7 +259,7 @@ export default function DashboardLayout({ children }) {
               onClick={() => setOpen(false)}
             >
               <ShieldCheckIcon className="w-5 h-5 text-rose-500" />
-              <span>Admin Center</span>
+              <span>{t('nav.admin') || 'Admin Center'}</span>
             </Link>
           )}
         </nav>
@@ -362,6 +367,50 @@ export default function DashboardLayout({ children }) {
               <PlusIcon className="w-4 h-4" />
               <span className="hidden sm:inline">New Alias</span>
             </Link>
+
+            {/* Language Selector Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-cyber-850 transition-colors border border-slate-200 dark:border-cyber-800 flex items-center gap-1.5 text-xs font-medium"
+                title={t('settings.language')}
+              >
+                <span className="text-sm">{meta.flag}</span>
+                <span className="hidden sm:inline font-semibold">{meta.native}</span>
+              </button>
+              {showLangMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowLangMenu(false)} />
+                  <div className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-48 bg-white dark:bg-cyber-900 rounded-xl shadow-xl border border-slate-200 dark:border-cyber-800 py-1.5 z-50 max-h-80 overflow-y-auto">
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-cyber-800">
+                      {t('settings.language')}
+                    </div>
+                    {languages.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => {
+                          setLanguage(l.id);
+                          setShowLangMenu(false);
+                          api.updateProfile({ language: l.id }).catch(() => {});
+                          toast.success(`${l.flag} ${l.native}`);
+                        }}
+                        className={`w-full px-3 py-2 text-xs flex items-center justify-between text-left rtl:text-right hover:bg-slate-50 dark:hover:bg-cyber-850 transition-colors ${
+                          lang === l.id
+                            ? 'font-bold text-indigo-600 dark:text-cyan-400 bg-indigo-50/50 dark:bg-cyber-800/50'
+                            : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span>{l.flag}</span>
+                          <span>{l.native}</span>
+                        </span>
+                        {lang === l.id && <span className="text-xs">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Theme Toggle Button */}
             <button

@@ -1,7 +1,7 @@
 'use strict';
 const { getDb } = require('../../database/database');
 const { getEmailById, markRead, markStarred, softDeleteEmail } = require('../services/emailService');
-const { deleteAlias, deactivateAlias, activateAlias } = require('../services/aliasService');
+const { deleteAlias, deactivateAlias, activateAlias, renewAlias } = require('../services/aliasService');
 const { createApiKey, revokeApiKey, VALID_SCOPES } = require('../services/apiKeyService');
 const {
   showInbox,
@@ -47,6 +47,8 @@ const {
   handleTosAccept,
   showMainDashboard,
   showEmailSuiteHub,
+  showInfraHub,
+  showUtilitiesHub,
   showSubdomainHub,
   showApiHub,
   showChangeLog,
@@ -149,6 +151,12 @@ function setupCallbacks(bot) {
             await showMainDashboard(ctx);
           } else if (param === 'email_suite') {
             await showEmailSuiteHub(ctx);
+          } else if (param === 'infra_hub') {
+            await showInfraHub(ctx);
+          } else if (param === 'utilities') {
+            await showUtilitiesHub(ctx);
+          } else if (param === 'help') {
+            await ctx.reply(t('help.text', lang), { parse_mode: 'HTML' });
           } else if (param === 'changelog') {
             await showChangeLog(ctx);
           } else if (param === 'new') {
@@ -401,6 +409,9 @@ function setupCallbacks(bot) {
 
         case 'admin': {
           await ctx.answerCbQuery().catch(() => {});
+          if (!isOwnerOrAdmin(ctx.from.id)) {
+            return ctx.answerCbQuery('⛔ Access denied: Administrator only.', { show_alert: true }).catch(() => {});
+          }
           const parts = param.split(':');
           const sub = parts[0];
           const subParam = parts[1];
@@ -429,9 +440,20 @@ function setupCallbacks(bot) {
             });
           } else if (sub === 'broadcast_confirm') {
             await handleConfirmedBroadcast(ctx);
+          } else if (sub === 'broadcast_edit') {
+            takeBroadcastConfirm(ctx.from.id);
+            setBroadcast(ctx.from.id, true);
+            await ctx.answerCbQuery('✏️ Send your revised message below').catch(() => {});
+            await ctx.reply('✏️ <b>Commandor Mail — Edit Announcement</b>\n──────────────────────────────\nPlease reply with your revised announcement message below (text or media, or /cancel to abort):', {
+              parse_mode: 'HTML'
+            });
           } else if (sub === 'broadcast_cancel') {
             takeBroadcastConfirm(ctx.from.id);
+            takeBroadcast(ctx.from.id);
             await ctx.answerCbQuery('❌ Broadcast cancelled.').catch(() => {});
+            await ctx.reply('❌ <b>Broadcast cancelled.</b> Pending announcement has been discarded.', {
+              parse_mode: 'HTML'
+            });
             await showAdminDashboard(ctx);
           }
           break;
@@ -547,8 +569,31 @@ function setupCallbacks(bot) {
 
           await ctx.editMessageText(text, {
             parse_mode: 'HTML',
-            ...aliasActionsKeyboard(a.address, Boolean(a.active))
+            ...aliasActionsKeyboard(a.address, Boolean(a.active), Boolean(a.burner))
           });
+          break;
+        }
+
+        case 'renew_alias': {
+          await ctx.answerCbQuery().catch(() => {});
+          try {
+            const renewed = renewAlias(param, ctx.from.id, 60);
+            await ctx.answerCbQuery('⏳ Alias renewed for +1 hour!', { show_alert: true }).catch(() => {});
+            const statusStr = renewed.active ? '🟢 Active' : '🔴 Inactive (Paused)';
+            const typeStr = renewed.burner ? '🔥 1-Hour Burner' : (renewed.alias_type === 'custom' || renewed.address.includes('-ca@') ? '🛡 Custom Protected' : (renewed.alias_type || 'Throwaway'));
+            const createdStr = new Date(renewed.created_at).toLocaleString();
+            const expStr = renewed.burner_expires_at
+              ? new Date(renewed.burner_expires_at).toLocaleString()
+              : (renewed.expires_at ? new Date(renewed.expires_at).toLocaleDateString() : 'Permanent (Unlimited)');
+            const emailCount = getDb().prepare('SELECT COUNT(*) as c FROM emails WHERE alias_address=? AND is_deleted=0').get(renewed.address)?.c || 0;
+            const text = `📧 <b>Alias Management</b>\n──────────────────\n📬 <code>${escapeHtml(renewed.address)}</code>\n<i>(Tap above to copy)</i>\n\n📊 <b>Status:</b> ${statusStr}\n🏷 <b>Type:</b> ${typeStr}\n📨 <b>Emails Received:</b> ${emailCount}\n🕒 <b>Created:</b> ${createdStr}\n⏳ <b>Expires:</b> ${expStr}\n──────────────────`;
+            await ctx.editMessageText(text, {
+              parse_mode: 'HTML',
+              ...aliasActionsKeyboard(renewed.address, Boolean(renewed.active), Boolean(renewed.burner))
+            }).catch(() => {});
+          } catch (err) {
+            await ctx.answerCbQuery(`❌ ${err.message}`, { show_alert: true }).catch(() => {});
+          }
           break;
         }
 

@@ -84,6 +84,62 @@ function formatCustomAliasLocalPart(rawName, isAdmin = false) {
   return clean;
 }
 
+function formatTelegramEntitiesToHtml(text, entities) {
+  if (!text) return '';
+  if (!entities || !Array.isArray(entities) || entities.length === 0) {
+    return escapeHtml(text);
+  }
+
+  const sorted = [...entities].sort((a, b) => a.offset - b.offset || b.length - a.length);
+  let result = '';
+  let cursor = 0;
+
+  for (const entity of sorted) {
+    const { offset, length, type } = entity;
+    if (offset < cursor) continue;
+    if (offset > cursor) {
+      result += escapeHtml(text.slice(cursor, offset));
+    }
+    const rawSpan = text.slice(offset, offset + length);
+    const escapedSpan = escapeHtml(rawSpan);
+
+    switch (type) {
+      case 'bold':
+        result += `<b>${escapedSpan}</b>`;
+        break;
+      case 'italic':
+        result += `<i>${escapedSpan}</i>`;
+        break;
+      case 'underline':
+        result += `<u>${escapedSpan}</u>`;
+        break;
+      case 'strikethrough':
+        result += `<s>${escapedSpan}</s>`;
+        break;
+      case 'code':
+        result += `<code>${escapedSpan}</code>`;
+        break;
+      case 'pre':
+        result += `<pre>${escapedSpan}</pre>`;
+        break;
+      case 'spoiler':
+        result += `<tg-spoiler>${escapedSpan}</tg-spoiler>`;
+        break;
+      case 'text_link':
+        result += `<a href="${escapeHtml(entity.url || '')}">${escapedSpan}</a>`;
+        break;
+      default:
+        result += escapedSpan;
+    }
+    cursor = offset + length;
+  }
+
+  if (cursor < text.length) {
+    result += escapeHtml(text.slice(cursor));
+  }
+  return result;
+}
+
 module.exports={
   generateAliasLocalPart,
   formatBytes,
@@ -94,6 +150,7 @@ module.exports={
   maskEmail,
   isSystemAddress,
   escapeHtml,
+  formatTelegramEntitiesToHtml,
   extractVerificationCode,
   formatCustomAliasLocalPart,
   RESERVED_ALIAS_WORDS

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { api } from '../../../lib/api';
 import {
   SunIcon,
   MoonIcon,
@@ -13,25 +14,23 @@ import {
   KeyIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
-import { SUPPORTED_LANGUAGES, applyLanguage, getSavedLanguage } from '../../../lib/i18n';
+import { SUPPORTED_LANGUAGES, applyLanguage, getSavedLanguage, useTranslation } from '../../../lib/i18n';
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState('system');
-  const [lang, setLang] = useState('en');
+  const { t, lang, setLanguage, languages } = useTranslation();
 
   useEffect(() => {
     setTheme(localStorage.getItem('theme') || 'system');
-    const saved = getSavedLanguage();
-    setLang(saved);
   }, []);
 
-  function changeTheme(t) {
-    setTheme(t);
-    localStorage.setItem('theme', t);
+  function changeTheme(tMode) {
+    setTheme(tMode);
+    localStorage.setItem('theme', tMode);
     const r = document.documentElement;
-    if (t === 'dark') {
+    if (tMode === 'dark') {
       r.classList.add('dark');
-    } else if (t === 'light') {
+    } else if (tMode === 'light') {
       r.classList.remove('dark');
     } else {
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -40,12 +39,11 @@ export default function SettingsPage() {
         r.classList.remove('dark');
       }
     }
-    toast.success(`Theme updated to ${t}`);
+    toast.success(`Theme updated to ${tMode}`);
   }
 
   function changeLanguage(item) {
-    setLang(item.id);
-    applyLanguage(item.id);
+    setLanguage(item.id);
     api.updateProfile({ language: item.id }).catch(() => {});
     toast.success(`Language set to ${item.flag} ${item.native}`);
   }

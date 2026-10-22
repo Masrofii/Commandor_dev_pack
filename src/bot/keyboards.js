@@ -23,7 +23,7 @@ function startInlineKeyboard(webUrl = null, isAdmin = false, unreadCount = 0) {
   const unreadBadge = unreadCount > 0 ? ` (${unreadCount})` : '';
   const rows = [
     [
-      { text: '📬 Email Suite', callback_data: 'menu:email_suite' },
+      { text: `📬 Email Suite${unreadBadge}`, callback_data: 'menu:email_suite' },
       { text: '🌐 Subdomains', callback_data: 'subdomain:hub' }
     ],
     [
@@ -89,16 +89,56 @@ function emailSuiteKeyboard(aliasCount = 0, unreadCount = 0) {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '➕ Quick Disposable', callback_data: 'menu:new' },
-          { text: '✏️ Custom Alias (-ca)', callback_data: 'menu:custom_alias' }
-        ],
-        [
-          { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' },
+          { text: `📥 Inbox${unreadBadge}`, callback_data: 'inbox:1' },
           { text: `📧 My Aliases (${aliasCount})`, callback_data: 'aliases:1' }
         ],
         [
-          { text: `📨 Open Inbox${unreadBadge}`, callback_data: 'inbox:1' },
-          { text: '🔎 Search Messages', callback_data: 'menu:search' }
+          { text: '➕ New Alias', callback_data: 'menu:new' },
+          { text: '🎨 Custom Alias (-ca)', callback_data: 'menu:custom_alias' }
+        ],
+        [
+          { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' },
+          { text: '🔎 Search Emails', callback_data: 'menu:search' }
+        ],
+        [
+          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+        ]
+      ]
+    }
+  };
+}
+
+function infraHubKeyboard(subCount = 0, siteCount = 0) {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: `🌐 Subdomains (${subCount})`, callback_data: 'subdomain:hub' },
+          { text: `🖥️ Cloud Hosting (${siteCount})`, callback_data: 'hosting:menu' }
+        ],
+        [
+          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+        ]
+      ]
+    }
+  };
+}
+
+function utilitiesHubKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' },
+          { text: '🔎 Search Emails', callback_data: 'menu:search' }
+        ],
+        [
+          { text: '⚙️ Settings', callback_data: 'menu:settings' },
+          { text: '🌐 Language', callback_data: 'menu:language' }
+        ],
+        [
+          { text: '📊 Account Stats', callback_data: 'stats:1' },
+          { text: '📖 Help Guide', callback_data: 'menu:help' }
         ],
         [
           { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
@@ -260,24 +300,24 @@ function emailActionsKeyboard(emailId, isStarred = false, hasAttachments = false
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function aliasActionsKeyboard(address, isActive = true) {
-  return {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📨 View Inbox', callback_data: `alias_inbox:${address}:1` },
-          { text: '📱 QR Code', callback_data: `qr_alias:${address}` }
-        ],
-        [
-          { text: isActive ? '⏸ Deactivate' : '▶️ Activate', callback_data: `toggle_alias:${address}` },
-          { text: '🗑 Delete', callback_data: `delete_alias:${address}` }
-        ],
-        [
-          { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' }
-        ]
-      ]
-    }
-  };
+function aliasActionsKeyboard(address, isActive = true, isBurner = false) {
+  const rows = [
+    [
+      { text: '📨 View Inbox', callback_data: `alias_inbox:${address}:1` },
+      { text: '📱 QR Code', callback_data: `qr_alias:${address}` }
+    ]
+  ];
+  if (isBurner) {
+    rows.push([{ text: '⏳ Renew Expiry (+1 Hour)', callback_data: `renew_alias:${address}` }]);
+  }
+  rows.push([
+    { text: isActive ? '⏸ Deactivate' : '▶️ Activate', callback_data: `toggle_alias:${address}` },
+    { text: '🗑 Delete', callback_data: `delete_alias:${address}` }
+  ]);
+  rows.push([
+    { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' }
+  ]);
+  return { reply_markup: { inline_keyboard: rows } };
 }
 
 function subdomainListKeyboard(subdomains = [], page = 1, total = 0) {
@@ -454,7 +494,10 @@ function broadcastConfirmKeyboard() {
     reply_markup: {
       inline_keyboard: [
         [{ text: '🚀 Confirm & Send Announcement', callback_data: 'admin:broadcast_confirm' }],
-        [{ text: '❌ Cancel Announcement', callback_data: 'admin:broadcast_cancel' }]
+        [
+          { text: '✏️ Edit Content', callback_data: 'admin:broadcast_edit' },
+          { text: '❌ Cancel Announcement', callback_data: 'admin:broadcast_cancel' }
+        ]
       ]
     }
   };
@@ -483,5 +526,7 @@ module.exports = {
   hostingSiteActionsKeyboard,
   hostingNodesKeyboard,
   hostingNodeActionsKeyboard,
-  broadcastConfirmKeyboard
+  broadcastConfirmKeyboard,
+  infraHubKeyboard,
+  utilitiesHubKeyboard
 };
