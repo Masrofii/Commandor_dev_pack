@@ -55,7 +55,13 @@ function parseNodeConnectionString(input) {
     throw new Error('Connection string is required');
   }
 
-  const str = input.trim();
+  let str = input.trim();
+  let label = null;
+  const hashIdx = str.indexOf('#');
+  if (hashIdx > -1) {
+    label = str.substring(hashIdx + 1).trim();
+    str = str.substring(0, hashIdx).trim();
+  }
 
   // Format: user:pass@host:port
   if (str.includes('@')) {
@@ -63,10 +69,11 @@ function parseNodeConnectionString(input) {
     const userPass = atParts[0].split(':');
     const hostPort = atParts[1].split(':');
     return {
-      username: userPass[0] || 'root',
-      password: userPass[1] || '',
-      host: hostPort[0],
-      port: parseInt(hostPort[1], 10) || 22
+      username: (userPass[0] || 'root').trim(),
+      password: userPass[1] ? userPass[1].trim() : '',
+      host: hostPort[0].trim(),
+      port: parseInt(hostPort[1], 10) || 22,
+      name: label || null
     };
   }
 
@@ -74,17 +81,19 @@ function parseNodeConnectionString(input) {
   const parts = str.split(':');
   if (parts.length >= 4) {
     return {
-      host: parts[0],
+      host: parts[0].trim(),
       port: parseInt(parts[1], 10) || 22,
-      username: parts[2] || 'root',
-      password: parts.slice(3).join(':')
+      username: parts[2].trim() || 'root',
+      password: parts.slice(3).join(':').trim(),
+      name: label || null
     };
   } else if (parts.length === 3) {
     return {
-      host: parts[0],
+      host: parts[0].trim(),
       port: 22,
-      username: parts[1] || 'root',
-      password: parts[2]
+      username: parts[1].trim() || 'root',
+      password: parts[2].trim(),
+      name: label || null
     };
   }
 
@@ -332,10 +341,174 @@ function safeJsonParse(v) {
   try { return JSON.parse(v); } catch { return v; }
 }
 
+function parseBulkConnectionStrings(input) {
+  if (!input) return [];
+  let rawEntries = [];
+
+  if (Array.isArray(input)) {
+    for (const item of input) {
+      if (typeof item === 'string') {
+        rawEntries.push(...item.split(/[\r\n]+/));
+      } else if (item && typeof item === 'object') {
+        rawEntries.push(item);
+      }
+    }
+  } else if (typeof input === 'string') {
+    rawEntries = input.split(/[\r\n]+/);
+  } else if (typeof input === 'object') {
+    rawEntries = [input];
+  }
+
+  const results = [];
+  for (const raw of rawEntries) {
+    if (!raw) continue;
+
+    if (typeof raw === 'object') {
+      if (raw.host && (raw.username || raw.user)) {
+        results.push({
+          raw: raw.connection_string || `${raw.host}:${raw.port || 22}`,
+          host: String(raw.host).trim(),
+          port: parseInt(raw.port, 10) || 22,
+          username: String(raw.username || raw.user || 'root').trim(),
+          password: raw.password ? String(raw.password) : null,
+          privateKey: raw.private_key || raw.privateKey || null,
+          name: raw.name ? String(raw.name).trim() : null,
+          httpPort: parseInt(raw.http_port || raw.httpPort, 10) || 8080,
+          publicUrl: raw.public_url || raw.publicUrl || null
+        });
+        continue;
+      }
+      if (raw.connection_string && typeof raw.connection_string === 'string') {
+        const sub = parseBulkConnectionStrings(raw.connection_string);
+        results.push(...sub);
+        continue;
+      }
+      continue;
+    }
+
+    if (typeof raw !== 'string') continue;
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || line.startsWith('//')) {
+      continue;
+    }
+
+    try {
+      const parsed = parseNodeConnectionString(line);
+      results.push({
+        raw: line,
+        host: parsed.host,
+        port: parsed.port,
+        username: parsed.username,
+        password: parsed.password,
+        name: parsed.name,
+        httpPort: 8080,
+        publicUrl: null
+      });
+    } catch (err) {
+      results.push({
+        raw: line,
+        error: err.message,
+        status: 'error'
+      });
+    }
+  }
+
+  return results;
+}
+
+async function provisionNodesBulk(input, options = {}) {
+  const items = parseBulkConnectionStrings(input);
+  if (items.length === 0) {
+    return {
+      total: 0,
+      successful: 0,
+      failed: 0,
+      results: []
+    };
+  }
+
+  const concurrency = Math.min(Math.max(parseInt(options.concurrency, 10) || 3, 1), 5);
+  const results = new Array(items.length);
+  let currentIndex = 0;
+
+  async function worker() {
+    while (currentIndex < items.length) {
+      const idx = currentIndex++;
+      const item = items[idx];
+
+      if (item.error) {
+        results[idx] = {
+          input: item.raw,
+          status: 'error',
+          error: item.error
+        };
+        continue;
+      }
+
+      try {
+        const node = await testAndProvisionNode({
+          host: item.host,
+          port: item.port,
+          username: item.username,
+          password: item.password,
+          privateKey: item.privateKey,
+          name: item.name,
+          httpPort: item.httpPort || options.defaultHttpPort || 8080,
+          publicUrl: item.publicUrl
+        });
+
+        results[idx] = {
+          input: item.raw,
+          host: item.host,
+          port: item.port,
+          name: node.name,
+          status: 'success',
+          node
+        };
+      } catch (err) {
+        results[idx] = {
+          input: item.raw,
+          host: item.host,
+          port: item.port,
+          name: item.name || item.host,
+          status: 'error',
+          error: err.message
+        };
+      }
+    }
+  }
+
+  const workerCount = Math.min(concurrency, items.length);
+  const workers = [];
+  for (let i = 0; i < workerCount; i++) {
+    workers.push(worker());
+  }
+  await Promise.all(workers);
+
+  const successful = results.filter(r => r.status === 'success').length;
+  const failed = results.filter(r => r.status === 'error').length;
+
+  logChange({
+    category: 'hosting',
+    action: 'bulk_nodes_provisioned',
+    details: `Bulk SSH provisioned ${successful} nodes successfully (${failed} failed) out of ${items.length} total.`,
+    metadata: { total: items.length, successful, failed }
+  }).catch(() => {});
+
+  return {
+    total: items.length,
+    successful,
+    failed,
+    results
+  };
+}
+
 module.exports = {
   parseNodeConnectionString,
+  parseBulkConnectionStrings,
   connectSsh,
   testAndProvisionNode,
+  provisionNodesBulk,
   getNodeById,
   listNodes,
   deleteNode,

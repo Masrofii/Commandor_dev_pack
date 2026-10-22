@@ -6,7 +6,7 @@ const { getDb } = require('../../database/database');
 const { getDatabaseStats, getProcessStats, getCounters } = require('../monitoring/metrics');
 const { getAllSubdomainsAdmin, updateSubdomain, deleteSubdomain, getSubdomainById } = require('../services/subdomainService');
 const { getAllSitesAdmin, deleteSite, getSecurityLogs } = require('../services/hostingService');
-const { listNodes, testAndProvisionNode, deleteNode, parseNodeConnectionString } = require('../services/nodeManagerService');
+const { listNodes, testAndProvisionNode, provisionNodesBulk, deleteNode, parseNodeConnectionString } = require('../services/nodeManagerService');
 
 router.use(requireAdmin);
 
@@ -268,6 +268,20 @@ router.post('/nodes', async (req, res) => {
     res.status(201).json(node);
   } catch (err) {
     res.status(400).json({ error: `Node setup failed: ${err.message}` });
+  }
+});
+
+router.post('/nodes/bulk', async (req, res) => {
+  try {
+    const { connection_strings, nodes } = req.body;
+    const input = connection_strings || nodes;
+    if (!input || (Array.isArray(input) && input.length === 0)) {
+      return res.status(400).json({ error: 'Connection strings or nodes array is required' });
+    }
+    const result = await provisionNodesBulk(input);
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Bulk node provisioning failed: ${err.message}` });
   }
 });
 

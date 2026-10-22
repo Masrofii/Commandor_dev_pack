@@ -78,6 +78,7 @@ export const api = {
   deleteAdminSite: (id) => apiFetch(`/api/admin/sites/${id}`, { method: 'DELETE' }),
   getAdminNodes: () => apiFetch('/api/admin/nodes'),
   addAdminNode: (d) => apiFetch('/api/admin/nodes', { method: 'POST', body: JSON.stringify(d) }),
+  addAdminNodesBulk: (d) => apiFetch('/api/admin/nodes/bulk', { method: 'POST', body: JSON.stringify(d) }),
   deleteAdminNode: (id) => apiFetch(`/api/admin/nodes/${id}`, { method: 'DELETE' }),
   getAdminSecurityLogs: (p = {}) => apiFetch('/api/admin/security-logs?' + new URLSearchParams(p)),
   sendAdminBroadcast: (d) => apiFetch('/api/admin/broadcast', { method: 'POST', body: JSON.stringify(d) }),
@@ -101,6 +102,7 @@ export const api = {
   deleteHostingSite: (id) => apiFetch(`/api/hosting/sites/${id}`, { method: 'DELETE' }),
   getHostingNodes: () => apiFetch('/api/hosting/nodes'),
   addHostingNode: (data) => apiFetch('/api/hosting/nodes', { method: 'POST', body: JSON.stringify(data) }),
+  addHostingNodesBulk: (data) => apiFetch('/api/hosting/nodes/bulk', { method: 'POST', body: JSON.stringify(data) }),
   deleteHostingNode: (id) => apiFetch(`/api/hosting/nodes/${id}`, { method: 'DELETE' }),
   getHostingSecurityLogs: (p = {}) => apiFetch('/api/hosting/security-logs?' + new URLSearchParams(p))
 };

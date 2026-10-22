@@ -8,7 +8,7 @@ process.env.JWT_SECRET = 'test';
 
 const { initDatabase, runMigrations, closeDatabase, getDb } = require('../../database/database');
 const { scanFiles, scanZipBuffer } = require('../../src/services/fileScannerService');
-const { parseNodeConnectionString } = require('../../src/services/nodeManagerService');
+const { parseNodeConnectionString, parseBulkConnectionStrings, provisionNodesBulk } = require('../../src/services/nodeManagerService');
 const { getTOS, getPlan, checkUserLimits } = require('../../src/services/hostingService');
 
 beforeAll(() => {
@@ -96,6 +96,41 @@ describe('Node Connection Parser', () => {
 
   test('rejects invalid connection strings', () => {
     expect(() => parseNodeConnectionString('invalid')).toThrow(/Invalid connection format/i);
+  });
+
+  test('parses bulk connection strings from multiline text and comments', () => {
+    const multiline = `
+      # Edge cluster nodes
+      192.168.1.10:22:root:pass1 # Node Alpha
+      user2:pass2@192.168.1.20:2222
+      10.0.0.5:admin:secretPass
+      // comment line
+      bad-string
+    `;
+    const parsed = parseBulkConnectionStrings(multiline);
+    expect(parsed.length).toBe(4);
+    expect(parsed[0].host).toBe('192.168.1.10');
+    expect(parsed[0].port).toBe(22);
+    expect(parsed[0].username).toBe('root');
+    expect(parsed[0].password).toBe('pass1');
+    expect(parsed[0].name).toBe('Node Alpha');
+
+    expect(parsed[1].host).toBe('192.168.1.20');
+    expect(parsed[1].port).toBe(2222);
+    expect(parsed[1].username).toBe('user2');
+
+    expect(parsed[2].host).toBe('10.0.0.5');
+    expect(parsed[2].port).toBe(22);
+    expect(parsed[2].username).toBe('admin');
+
+    expect(parsed[3].status).toBe('error');
+  });
+
+  test('handles empty and invalid bulk input safely', async () => {
+    const emptyResult = await provisionNodesBulk('');
+    expect(emptyResult.total).toBe(0);
+    expect(emptyResult.successful).toBe(0);
+    expect(emptyResult.failed).toBe(0);
   });
 });
 

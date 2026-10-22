@@ -59,7 +59,9 @@ const {
 } = require('../services/hostingService');
 const {
   parseNodeConnectionString,
+  parseBulkConnectionStrings,
   testAndProvisionNode,
+  provisionNodesBulk,
   listNodes,
   getNodeById,
   deleteNode: deleteHostingNode
@@ -1309,7 +1311,7 @@ function setupCommands(bot) {
     if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
     return showHostingNodes(ctx);
   }));
-  bot.command('addnode', wrap(async ctx => {
+  bot.command(['addnode', 'addnodes', 'bulknodes', 'addssh'], wrap(async ctx => {
     if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
     return showAddNodePrompt(ctx);
   }));
@@ -1497,8 +1499,8 @@ function setupCommands(bot) {
       return handleAddNodeConnection(ctx, ctx.message.text.trim());
     }
 
-    // Direct match: if admin inputs connection string host:port:user:pass
-    if (isOwnerOrAdmin(ctx.from.id) && ctx.message.text.includes(':') && ctx.message.text.split(':').length >= 3) {
+    // Direct match: if admin inputs connection string host:port:user:pass or multiline SSH list
+    if (isOwnerOrAdmin(ctx.from.id) && ctx.message.text.includes(':') && (ctx.message.text.split(':').length >= 3 || ctx.message.text.includes('\n'))) {
       return handleAddNodeConnection(ctx, ctx.message.text.trim());
     }
 
@@ -1792,19 +1794,25 @@ async function showDeploySitePrompt(ctx) {
 async function showAddNodePrompt(ctx) {
   if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
   setAddNode(ctx.from.id, { step: 'connect' });
-  let text = `🖥️ <b>Add a Cloud Server Node (Ubuntu VPS):</b>\n\n`;
-  text += `Simply reply with your connection string in the format:\n`;
-  text += `<code>host:port:user:pass</code>\n`;
-  text += `or\n`;
-  text += `<code>host:user:pass</code> (default port 22)\n\n`;
-  text += `<i>Example:</i>\n<code>198.51.100.25:22:root:mypassword</code>\n\n`;
+  let text = `🖥️ <b>Add Cloud Server Nodes (Single or Bulk SSH):</b>\n\n`;
+  text += `Reply with your SSH connection string, or <b>paste multiple nodes (one per line)</b> to bulk import!\n\n`;
+  text += `<b>Supported Formats:</b>\n`;
+  text += `• <code>host:port:user:pass</code>\n`;
+  text += `• <code>host:user:pass</code> (default port 22)\n`;
+  text += `• <code>user:pass@host:port</code>\n`;
+  text += `• <code>host:port:user:pass # Node Name</code>\n\n`;
+  text += `<i>Example Single:</i>\n<code>198.51.100.25:22:root:mypassword</code>\n\n`;
+  text += `<i>Example Bulk Import:</i>\n`;
+  text += `<code>198.51.100.25:22:root:pass1 # Node-US-1\n`;
+  text += `198.51.100.26:22:root:pass2 # Node-EU-1\n`;
+  text += `user:pass3@198.51.100.27:2222</code>\n\n`;
   text += `⚡ <b>The system will automatically:</b>\n`;
-  text += `1. Connect via SSH into the container\n`;
+  text += `1. Test SSH connectivity\n`;
   text += `2. Detect CPU, RAM, and Disk specifications\n`;
-  text += `3. Set up directory <code>/var/www/nodesites</code>\n`;
+  text += `3. Configure remote <code>/var/www/nodesites</code> directory\n`;
   text += `4. Start the multi-site web runner daemon\n`;
-  text += `5. Connect the node into the hosting pool!\n\n`;
-  text += `<i>Send the connection string below (or /cancel):</i>`;
+  text += `5. Connect all nodes into the hosting pool!\n\n`;
+  text += `<i>Send your connection strings below (or /cancel):</i>`;
   return replyHtml(ctx, text);
 }
 
@@ -1898,37 +1906,87 @@ async function showHostingPlans(ctx) {
 
 async function handleAddNodeConnection(ctx, connectionText) {
   if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
-  await replyHtml(ctx, '⏳ <b>Connecting to Server Node via SSH...</b>\n• Verifying credentials\n• Probing system specs\n• Installing site runner...');
+
+  const parsedList = parseBulkConnectionStrings(connectionText);
+  if (parsedList.length === 0) {
+    return replyHtml(ctx, `❌ <b>Invalid format:</b>\nExpected <code>host:port:user:pass</code> (or one per line for bulk add).\n\nPlease try again or send /cancel.`);
+  }
+
+  // If single node
+  if (parsedList.length === 1 && !parsedList[0].error) {
+    const item = parsedList[0];
+    await replyHtml(ctx, `⏳ <b>Connecting to Server Node via SSH...</b>\n• Host: <code>${escapeHtml(item.host)}:${item.port}</code>\n• Verifying credentials\n• Probing system specs\n• Installing site runner...`);
+    try {
+      const node = await testAndProvisionNode({
+        host: item.host,
+        port: item.port,
+        username: item.username,
+        password: item.password,
+        privateKey: item.privateKey,
+        name: item.name
+      });
+
+      const cpus = node.system_info?.cpus || 1;
+      const ram = node.system_info?.ramMb ? `${node.system_info.ramMb}MB` : '512MB';
+
+      let text = `🎉 <b>Server Node Connected!</b>\n\n`;
+      text += `• <b>Node Name:</b> <code>${escapeHtml(node.name)}</code>\n`;
+      text += `• <b>Host:</b> <code>${escapeHtml(node.host)}:${node.port}</code>\n`;
+      text += `• <b>Status:</b> 🟢 Online\n`;
+      text += `• <b>Hardware:</b> ${cpus} vCPU | ${ram} RAM | Free: ${node.system_info?.freeDisk || 'OK'}\n`;
+      text += `• <b>Sites Capacity:</b> Up to ${node.max_sites} sites\n\n`;
+      text += `<i>The server node is active and ready in the hosting cluster!</i>`;
+
+      return replyHtml(ctx, text, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🖥️ View All Nodes', callback_data: 'hosting:nodes' }],
+            [{ text: '➕ Deploy Site Now', callback_data: 'hosting:deploy_prompt' }]
+          ]
+        }
+      });
+    } catch (err) {
+      return replyHtml(ctx, `❌ <b>Connection / Setup Failed:</b>\n<code>${escapeHtml(err.message)}</code>\n\nPlease double check your server's host, port, username, and password.`);
+    }
+  }
+
+  // Bulk nodes handling
+  const validCount = parsedList.filter(p => !p.error).length;
+  await replyHtml(ctx, `⏳ <b>Bulk Provisioning ${parsedList.length} Server Node(s)...</b>\n• Detected ${validCount} valid SSH entries\n• Connecting in parallel (concurrency: 3)\n• Testing specs and configuring site runners...`);
+
   try {
-    const parsed = parseNodeConnectionString(connectionText);
-    const node = await testAndProvisionNode({
-      host: parsed.host,
-      port: parsed.port,
-      username: parsed.username,
-      password: parsed.password
-    });
+    const summary = await provisionNodesBulk(parsedList, { concurrency: 3 });
 
-    const cpus = node.system_info?.cpus || 1;
-    const ram = node.system_info?.ramMb ? `${node.system_info.ramMb}MB` : '512MB';
+    let text = `🚀 <b>Bulk SSH Provisioning Complete!</b>\n`;
+    text += `──────────────────────────────\n`;
+    text += `• <b>Total Nodes:</b> ${summary.total}\n`;
+    text += `• <b>Online & Ready:</b> 🟢 <b>${summary.successful}</b>\n`;
+    text += `• <b>Failed:</b> 🔴 <b>${summary.failed}</b>\n`;
+    text += `──────────────────────────────\n\n`;
 
-    let text = `🎉 <b>Server Node Connected!</b>\n\n`;
-    text += `• <b>Node Name:</b> <code>${escapeHtml(node.name)}</code>\n`;
-    text += `• <b>Host:</b> <code>${escapeHtml(node.host)}:${node.port}</code>\n`;
-    text += `• <b>Status:</b> 🟢 Online\n`;
-    text += `• <b>Hardware:</b> ${cpus} vCPU | ${ram} RAM | Free: ${node.system_info?.freeDisk || 'OK'}\n`;
-    text += `• <b>Sites Capacity:</b> Up to ${node.max_sites} sites\n\n`;
-    text += `<i>The server node is active and ready in the hosting cluster!</i>`;
+    for (const r of summary.results) {
+      const hostLabel = r.host ? `${escapeHtml(r.host)}:${r.port || 22}` : escapeHtml(r.input);
+      if (r.status === 'success') {
+        const cpus = r.node?.system_info?.cpus || 1;
+        const ram = r.node?.system_info?.ramMb ? `${r.node.system_info.ramMb}MB` : '512MB';
+        text += `🟢 <b>${hostLabel}</b> — <code>${escapeHtml(r.name || r.node?.name)}</code> (${cpus} vCPU, ${ram})\n`;
+      } else {
+        text += `🔴 <b>${hostLabel}</b> — <i>${escapeHtml(r.error || 'Failed')}</i>\n`;
+      }
+    }
+
+    text += `\n<i>Cluster inventory updated automatically.</i>`;
 
     return replyHtml(ctx, text, {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🖥️ View All Nodes', callback_data: 'hosting:nodes' }],
-          [{ text: '➕ Deploy Site Now', callback_data: 'hosting:deploy_prompt' }]
+          [{ text: '🖥️ View Cluster Nodes', callback_data: 'hosting:nodes' }],
+          [{ text: '➕ Add More Nodes', callback_data: 'admin:add_node' }]
         ]
       }
     });
   } catch (err) {
-    return replyHtml(ctx, `❌ <b>Connection / Setup Failed:</b>\n${escapeHtml(err.message)}\n\nPlease double check your server's host, port, username, and password.`);
+    return replyHtml(ctx, `❌ <b>Bulk Provisioning Error:</b>\n<code>${escapeHtml(err.message)}</code>`);
   }
 }
 

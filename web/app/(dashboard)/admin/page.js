@@ -1,4 +1,3 @@
-'use strict';
 'use client';
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
@@ -25,7 +24,9 @@ import {
   ArrowTopRightOnSquareIcon,
   KeyIcon,
   AdjustmentsHorizontalIcon,
-  WrenchScrewdriverIcon
+  WrenchScrewdriverIcon,
+  ListBulletIcon,
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
 
 export default function AdminPage() {
@@ -51,8 +52,12 @@ export default function AdminPage() {
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcasting, setBroadcasting] = useState(false);
   const [showAddNode, setShowAddNode] = useState(false);
+  const [nodeModalTab, setNodeModalTab] = useState('single'); // 'single' | 'bulk'
   const [addingNode, setAddingNode] = useState(false);
   const [nodeForm, setNodeForm] = useState({ connection_string: '', name: '' });
+  const [bulkNodesText, setBulkNodesText] = useState('');
+  const [bulkProvisioning, setBulkProvisioning] = useState(false);
+  const [bulkResults, setBulkResults] = useState(null);
   const [cleaningDb, setCleaningDb] = useState(false);
 
   // SWR Data Fetching (Enabled only if authorized)
@@ -193,6 +198,31 @@ export default function AdminPage() {
       toast.error(err.message || 'Node connection failed');
     } finally {
       setAddingNode(false);
+    }
+  }
+
+  async function handleBulkAddNodes(e) {
+    e.preventDefault();
+    if (!bulkNodesText.trim()) {
+      toast.error('Please enter at least one SSH connection string');
+      return;
+    }
+    setBulkProvisioning(true);
+    setBulkResults(null);
+    try {
+      const res = await api.addAdminNodesBulk({ connection_strings: bulkNodesText });
+      setBulkResults(res);
+      mutateNodes();
+      mutateStats();
+      if (res.successful > 0) {
+        toast.success(`Successfully provisioned ${res.successful} server node(s)!`);
+      } else {
+        toast.error('Failed to connect to any server nodes.');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Bulk node provisioning failed');
+    } finally {
+      setBulkProvisioning(false);
     }
   }
 
@@ -743,25 +773,42 @@ export default function AdminPage() {
                   Ubuntu VPS containers provisioned to run websites via multi-tenant proxy.
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddNode(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm"
-              >
-                <PlusIcon className="h-4 w-4" />
-                Add Server Node
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); setShowAddNode(true); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-semibold border border-gray-200 dark:border-gray-600 shadow-sm"
+                >
+                  <ListBulletIcon className="h-4 w-4 text-indigo-500" />
+                  Bulk Add SSH
+                </button>
+                <button
+                  onClick={() => { setNodeModalTab('single'); setBulkResults(null); setShowAddNode(true); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  Add Server Node
+                </button>
+              </div>
             </div>
 
             {nodesList.length === 0 ? (
               <div className="p-8 text-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
                 <ServerStackIcon className="h-10 w-10 text-gray-400 mx-auto" />
                 <p className="mt-2 text-sm text-gray-500">No server nodes added yet.</p>
-                <button
-                  onClick={() => setShowAddNode(true)}
-                  className="mt-3 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg"
-                >
-                  Connect First Node
-                </button>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); setShowAddNode(true); }}
+                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600"
+                  >
+                    Bulk Add SSH Nodes
+                  </button>
+                  <button
+                    onClick={() => { setNodeModalTab('single'); setBulkResults(null); setShowAddNode(true); }}
+                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg shadow-sm"
+                  >
+                    Connect Single Node
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1074,70 +1121,227 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {showAddNode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <ServerStackIcon className="h-5 w-5 text-indigo-500" />
                 Add Cloud Server Node (Ubuntu VPS)
               </h2>
-              <button onClick={() => setShowAddNode(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setShowAddNode(false); setBulkResults(null); }} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddNode} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Connection String (host:port:user:pass)
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="198.51.100.25:22:root:password"
-                  value={nodeForm.connection_string}
-                  onChange={e => setNodeForm({ ...nodeForm, connection_string: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white outline-none font-mono"
-                />
-                <p className="mt-1 text-[11px] text-gray-400">
-                  Provide your Ubuntu container SSH host, port, username, and password.
-                </p>
-              </div>
+            {/* Modal Tabs: Single vs Bulk */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700 mt-3">
+              <button
+                type="button"
+                onClick={() => { setNodeModalTab('single'); setBulkResults(null); }}
+                className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors ${
+                  nodeModalTab === 'single'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                Single Node
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); }}
+                className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+                  nodeModalTab === 'bulk'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                <ListBulletIcon className="h-3.5 w-3.5" />
+                Bulk SSH Import
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Node Friendly Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="edge-node-01"
-                  value={nodeForm.name}
-                  onChange={e => setNodeForm({ ...nodeForm, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm outline-none"
-                />
-              </div>
+            {nodeModalTab === 'single' ? (
+              <form onSubmit={handleAddNode} className="space-y-4 mt-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Connection String (host:port:user:pass)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="198.51.100.25:22:root:password"
+                    value={nodeForm.connection_string}
+                    onChange={e => setNodeForm({ ...nodeForm, connection_string: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white outline-none font-mono"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Provide your Ubuntu container SSH host, port, username, and password.
+                  </p>
+                </div>
 
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
-                <p className="font-semibold">⚡ Automated Provisioning:</p>
-                <p>The system will automatically SSH into this container, set up directories, launch the multi-site web runner, and connect it to the hosting cluster.</p>
-              </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Node Friendly Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="edge-node-01"
+                    value={nodeForm.name}
+                    onChange={e => setNodeForm({ ...nodeForm, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm outline-none"
+                  />
+                </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => setShowAddNode(false)}
-                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addingNode}
-                  className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
-                >
-                  {addingNode ? 'Connecting & Provisioning...' : 'Connect Server Node'}
-                </button>
+                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+                  <p className="font-semibold">⚡ Automated Provisioning:</p>
+                  <p>The system will automatically SSH into this container, set up directories, launch the multi-site web runner, and connect it to the hosting cluster.</p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddNode(false)}
+                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingNode}
+                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
+                  >
+                    {addingNode ? 'Connecting & Provisioning...' : 'Connect Server Node'}
+                  </button>
+                </div>
+              </form>
+            ) : bulkResults ? (
+              <div className="space-y-4 mt-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Bulk Provisioning Complete</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {bulkResults.total} node(s) processed
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300">
+                        {bulkResults.successful} Online
+                      </span>
+                      {bulkResults.failed > 0 && (
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
+                          {bulkResults.failed} Failed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                  {bulkResults.results.map((r, i) => (
+                    <div
+                      key={i}
+                      className={`p-3 rounded-lg text-xs border ${
+                        r.status === 'success'
+                          ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+                          : 'bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-1.5 font-mono font-medium text-gray-900 dark:text-white">
+                          {r.status === 'success' ? (
+                            <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
+                          ) : (
+                            <ExclamationCircleIcon className="h-4 w-4 text-red-500 shrink-0" />
+                          )}
+                          <span>{r.host ? `${r.host}:${r.port}` : r.input}</span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                            r.status === 'success'
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                      </div>
+                      {r.status === 'success' ? (
+                        <div className="mt-1 text-gray-600 dark:text-gray-300 pl-5">
+                          Node: <span className="font-semibold">{r.node?.name || r.name}</span> • {r.node?.system_info?.cpus || 1} vCPU • {r.node?.system_info?.ramMb || 512}MB RAM
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-red-600 dark:text-red-400 pl-5 font-sans">
+                          {r.error || 'Connection failed'}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => { setBulkResults(null); setBulkNodesText(''); }}
+                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                  >
+                    Import More
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddNode(false); setBulkResults(null); }}
+                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
+                  >
+                    Done &amp; Close
+                  </button>
+                </div>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleBulkAddNodes} className="space-y-4 mt-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                      SSH Connection Strings (One per line)
+                    </label>
+                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
+                      {bulkNodesText.split('\n').filter(l => l.trim() && !l.trim().startsWith('#') && l.includes(':')).length} nodes detected
+                    </span>
+                  </div>
+                  <textarea
+                    rows={6}
+                    required
+                    placeholder={`198.51.100.25:22:root:password123 # US-Edge-1\n198.51.100.26:22:root:password456 # US-Edge-2\nubuntu:mypass@198.51.100.27:2222\n10.0.0.15:22:root:secret`}
+                    value={bulkNodesText}
+                    onChange={e => setBulkNodesText(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Format: <code>host:port:user:pass</code> or <code>user:pass@host:port</code>. Append <code># Custom Name</code> to name each node.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+                  <p className="font-semibold">⚡ Parallel Provisioning (Pool size 3):</p>
+                  <p>All nodes will be contacted simultaneously via SSH, verified, hardware specs collected, and integrated into the cluster.</p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddNode(false)}
+                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={bulkProvisioning}
+                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
+                  >
+                    {bulkProvisioning ? 'Provisioning In Bulk...' : 'Connect & Provision Bulk'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
