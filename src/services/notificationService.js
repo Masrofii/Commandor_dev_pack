@@ -1,6 +1,6 @@
 'use strict';
 const logger = require('../monitoring/logger');
-const { truncate, escapeHtml, extractVerificationCode } = require('../utils/helpers');
+const { truncate, escapeHtml, extractVerificationCode, detectServiceAndCategory } = require('../utils/helpers');
 const { t } = require('../bot/i18n');
 const { getDb } = require('../../database/database');
 const config = require('../../config/config');
@@ -20,9 +20,11 @@ async function notifyTelegram(tgId, email, alias) {
   if (!botInstance) return;
   try {
     let lang = 'en';
+    let userSettings = {};
     try {
-      const u = getDb().prepare('SELECT language FROM users WHERE tg_id=?').get(tgId);
+      const u = getDb().prepare('SELECT language, settings_json FROM users WHERE tg_id=?').get(tgId);
       if (u?.language) lang = u.language;
+      if (u?.settings_json) userSettings = JSON.parse(u.settings_json);
     } catch {}
 
     const subject = email.subject || '(no subject)';
@@ -30,10 +32,17 @@ async function notifyTelegram(tgId, email, alias) {
     const preview = truncate(email.text_body || 'No preview available', 220);
     const spam = email.spam_classification !== 'ham' ? `\n⚠️ <i>Spam score: ${email.spam_score}</i>` : '';
 
-    const otp = extractVerificationCode(email.subject, email.text_body);
+    const { service, category, otp, expiresEstimate } = detectServiceAndCategory(email.sender, email.subject, email.text_body);
+
+    // Notification filtering preferences
+    if (userSettings.mute_notifications) return;
+    if (userSettings.notify_otp_only && !otp) return;
+
     let otpBlock = '';
     if (otp) {
-      otpBlock = `\n🔑 <b>Verification Code:</b> <code>${escapeHtml(otp)}</code> <i>(Tap to copy)</i>\n`;
+      const srvStr = service ? ` (${escapeHtml(service)})` : '';
+      const expStr = expiresEstimate ? ` • <i>${expiresEstimate}</i>` : '';
+      otpBlock = `\n🔑 <b>Verification Code${srvStr}:</b> <code>${escapeHtml(otp)}</code>${expStr}\n`;
     }
 
     const text = t('notifications.new_email', lang, {
@@ -46,11 +55,13 @@ async function notifyTelegram(tgId, email, alias) {
     });
 
     const webUrl = config.server.webUrl ? `${config.server.webUrl}/inbox/${email.id}` : null;
-    const actionRow = [
-      { text: '📖 Read', callback_data: `read_email:${email.id}` },
-      { text: '⭐ Star', callback_data: `star:${email.id}` },
-      { text: '🗑 Delete', callback_data: `delete_email:${email.id}` }
-    ];
+    const actionRow = [];
+    if (otp) {
+      actionRow.push({ text: `📋 Copy Code: ${otp}`, callback_data: `copy_code:${email.id}` });
+    }
+    actionRow.push({ text: '📖 Read', callback_data: `read_email:${email.id}` });
+    actionRow.push({ text: '⭐ Star', callback_data: `star:${email.id}` });
+    actionRow.push({ text: '🗑 Delete', callback_data: `delete_email:${email.id}` });
 
     const navRow = [
       { text: '📨 Go to Inbox', callback_data: 'inbox:1' }
@@ -59,10 +70,12 @@ async function notifyTelegram(tgId, email, alias) {
       navRow.push({ text: '🌐 Open Web', url: webUrl });
     }
 
+    const keyboard = otp ? [actionRow.slice(0, 1), actionRow.slice(1), navRow] : [actionRow, navRow];
+
     await botInstance.telegram.sendMessage(tgId, text, {
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [actionRow, navRow]
+        inline_keyboard: keyboard
       }
     });
   } catch (err) {
@@ -76,7 +89,7 @@ function notifyWebSocket(tgId, event, data) {
 }
 
 function sanitizeForWs(email) {
-  const code = extractVerificationCode(email.subject, email.text_body);
+  const { service, category, otp, expiresEstimate } = detectServiceAndCategory(email.sender, email.subject, email.text_body);
   return {
     id: email.id,
     alias_address: email.alias_address,
@@ -84,7 +97,10 @@ function sanitizeForWs(email) {
     sender_name: email.sender_name,
     subject: email.subject,
     preview: truncate(email.text_body || '', 150),
-    verification_code: code,
+    verification_code: otp,
+    service,
+    category,
+    expires_estimate: expiresEstimate,
     is_read: email.is_read,
     is_starred: email.is_starred,
     has_attachments: email.has_attachments,

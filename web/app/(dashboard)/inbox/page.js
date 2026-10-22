@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useInbox } from '../../../hooks/useInbox';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import { api } from '../../../lib/api';
-import { extractVerificationCode, formatBytes, formatTimeAgo } from '../../../lib/helpers';
+import { extractVerificationCode, formatBytes, formatTimeAgo, detectServiceAndCategory, summarizeEmail } from '../../../lib/helpers';
 import {
   MagnifyingGlassIcon,
   XMarkIcon,
@@ -217,6 +217,8 @@ export default function InboxPage() {
   };
 
   const activeOtp = activeEmailData ? extractVerificationCode(activeEmailData.subject, activeEmailData.text_body) : null;
+  const activeInfo = activeEmailData ? detectServiceAndCategory(activeEmailData.sender, activeEmailData.subject, activeEmailData.text_body) : null;
+  const activeSummary = activeEmailData ? summarizeEmail(activeEmailData.subject, activeEmailData.text_body) : '';
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row overflow-hidden bg-slate-50 dark:bg-cyber-950 font-sans">
@@ -374,7 +376,7 @@ export default function InboxPage() {
             </div>
           ) : (
             emails.map((e) => {
-              const otp = extractVerificationCode(e.subject, e.text_body);
+              const { service, category, otp } = detectServiceAndCategory(e.sender, e.subject, e.text_body);
               const isSelected = selectedIds.has(e.id);
               const isActive = activeEmailId === e.id;
               const senderInitial = (e.sender_name || e.sender || '?')[0].toUpperCase();
@@ -424,14 +426,32 @@ export default function InboxPage() {
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-slate-400 truncate max-w-[130px]">
+                      <span className="text-[10px] text-slate-400 truncate max-w-[110px]">
                         to {e.alias_address}
                       </span>
+
+                      {service && (
+                        <span className="badge-indigo text-[10px] py-0 px-1.5 font-semibold">
+                          {service}
+                        </span>
+                      )}
 
                       {otp && (
                         <span className="badge-cyan text-[10px] py-0 px-1.5 font-mono font-bold">
                           OTP: {otp}
                         </span>
+                      )}
+
+                      {category === 'security' && (
+                        <span className="badge-red text-[9px] py-0 px-1 font-semibold">Security</span>
+                      )}
+
+                      {category === 'receipt' && (
+                        <span className="badge-green text-[9px] py-0 px-1 font-semibold">Receipt</span>
+                      )}
+
+                      {category === 'newsletter' && (
+                        <span className="badge-gray text-[9px] py-0 px-1 font-semibold">Newsletter</span>
                       )}
 
                       {e.spam_classification === 'spam' && (
@@ -618,6 +638,39 @@ export default function InboxPage() {
                       </>
                     )}
                   </button>
+                </div>
+              )}
+
+              {/* Smart Summary Card */}
+              {activeSummary && (
+                <div className="p-3.5 rounded-xl bg-indigo-50/80 dark:bg-cyber-900 border border-indigo-100 dark:border-cyber-800 text-xs space-y-1 shadow-sm">
+                  <div className="flex items-center gap-2 font-bold text-indigo-700 dark:text-cyan-400">
+                    <span>✨ Smart Summary</span>
+                    {activeInfo?.service && (
+                      <span className="text-[10px] px-2 py-0.5 bg-indigo-100 dark:bg-cyber-800 text-indigo-800 dark:text-cyan-300 rounded-md font-semibold">
+                        Service: {activeInfo.service}
+                      </span>
+                    )}
+                    {activeInfo?.expiresEstimate && (
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        Valid: {activeInfo.expiresEstimate}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                    {activeSummary}
+                  </p>
+                </div>
+              )}
+
+              {/* Suspicious Message Risk Banner */}
+              {activeEmailData.spam_classification === 'spam' && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-2.5">
+                  <ShieldExclamationIcon className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Suspicious Message Warning (Spam Score: {activeEmailData.spam_score || 'High'}):</span>
+                    <span className="ml-1">This email failed sender reputation checks or contains atypical authentication headers. Do not click unrecognized links or provide sensitive credentials.</span>
+                  </div>
                 </div>
               )}
 

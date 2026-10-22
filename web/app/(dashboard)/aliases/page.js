@@ -29,6 +29,7 @@ export default function AliasesPage() {
   const [selDomain, setSelDomain] = useState('');
   const [customLabel, setCustomLabel] = useState('');
   const [customName, setCustomName] = useState('');
+  const [createCount, setCreateCount] = useState(1);
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [search, setSearch] = useState('');
@@ -47,6 +48,14 @@ export default function AliasesPage() {
       if (isBurner) {
         const b = await api.createBurner(domain);
         toast.success(`1-Hour Burner created:\n${b.address}`, { duration: 5000 });
+      } else if (createCount > 1) {
+        let createdNum = 0;
+        for (let i = 0; i < createCount; i++) {
+          const lbl = customLabel.trim() ? `${customLabel.trim()} #${i + 1}` : undefined;
+          await api.createAlias({ domain, label: lbl });
+          createdNum++;
+        }
+        toast.success(`Successfully generated ${createdNum} aliases!`, { duration: 5000 });
       } else {
         const a = await api.createAlias({
           domain,
@@ -59,6 +68,7 @@ export default function AliasesPage() {
       setShowCreate(false);
       setCustomLabel('');
       setCustomName('');
+      setCreateCount(1);
     } catch (err) {
       toast.error(err.message || 'Failed to create alias');
     } finally {
@@ -223,7 +233,7 @@ export default function AliasesPage() {
           </div>
 
           {/* Quick preset tags */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
             <span className="text-[11px] text-slate-400">Quick Tags:</span>
             {['Personal', 'Work', 'Newsletter', 'Trial', 'Shopping'].map((tag) => (
               <button
@@ -233,6 +243,25 @@ export default function AliasesPage() {
                 className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-cyber-850 hover:bg-slate-200 dark:hover:bg-cyber-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
               >
                 +{tag}
+              </button>
+            ))}
+          </div>
+
+          {/* Batch / Quantity selector */}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[11px] text-slate-400 font-semibold">Quantity:</span>
+            {[1, 5, 10, 20].map((num) => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => setCreateCount(num)}
+                className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-colors ${
+                  createCount === num
+                    ? 'border-indigo-600 dark:border-cyan-500 bg-indigo-50 dark:bg-cyan-950/60 text-indigo-700 dark:text-cyan-300'
+                    : 'border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-cyber-800'
+                }`}
+              >
+                {num === 1 ? 'Single (1)' : `Bulk (${num}x)`}
               </button>
             ))}
           </div>
@@ -249,7 +278,7 @@ export default function AliasesPage() {
               disabled={creating}
               className="btn-primary py-1.5 px-4 text-xs font-semibold"
             >
-              {creating ? 'Generating...' : 'Create Alias'}
+              {creating ? 'Generating...' : createCount > 1 ? `Generate ${createCount} Aliases` : 'Generate Alias'}
             </button>
           </div>
         </div>

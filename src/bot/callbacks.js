@@ -513,6 +513,21 @@ function setupCallbacks(bot) {
           break;
         }
 
+        case 'copy_code': {
+          const emailId = parseInt(param, 10);
+          const e = getEmailById(emailId, ctx.from.id);
+          if (e) {
+            const { extractVerificationCode } = require('../utils/helpers');
+            const code = extractVerificationCode(e.subject, e.text_body);
+            if (code) {
+              await ctx.answerCbQuery(`🔑 Verification Code: ${code}\n(Ready to paste)`, { show_alert: true }).catch(() => {});
+              break;
+            }
+          }
+          await ctx.answerCbQuery('No code detected.').catch(() => {});
+          break;
+        }
+
         case 'delete_email': {
           const emailId = parseInt(param, 10);
           softDeleteEmail(emailId, ctx.from.id);

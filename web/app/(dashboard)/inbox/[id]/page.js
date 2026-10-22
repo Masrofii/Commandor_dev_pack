@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { api } from '../../../../lib/api';
-import { extractVerificationCode, formatBytes, formatTimeAgo } from '../../../../lib/helpers';
+import { extractVerificationCode, formatBytes, formatTimeAgo, detectServiceAndCategory, summarizeEmail } from '../../../../lib/helpers';
 import {
   ArrowLeftIcon,
   StarIcon as StarIconSolid,
@@ -44,6 +44,8 @@ export default function EmailDetailPage({ params }) {
   }, [params.id, router]);
 
   const otpCode = email ? extractVerificationCode(email.subject, email.text_body) : null;
+  const info = email ? detectServiceAndCategory(email.sender, email.subject, email.text_body) : null;
+  const summary = email ? summarizeEmail(email.subject, email.text_body) : '';
 
   const copyToClipboard = async (text, label) => {
     try {
@@ -203,6 +205,28 @@ export default function EmailDetailPage({ params }) {
               </>
             )}
           </button>
+        </div>
+      )}
+
+      {/* Smart Summary Card */}
+      {summary && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/70 dark:bg-cyber-900 border border-indigo-100 dark:border-cyber-800 text-xs space-y-1.5 shadow-sm">
+          <div className="flex items-center gap-2 font-bold text-indigo-700 dark:text-cyan-400">
+            <span>✨ AI & Smart Digest</span>
+            {info?.service && (
+              <span className="text-[10px] px-2 py-0.5 bg-indigo-100 dark:bg-cyber-800 text-indigo-800 dark:text-cyan-300 rounded-md font-semibold">
+                Service: {info.service}
+              </span>
+            )}
+            {info?.expiresEstimate && (
+              <span className="text-[10px] text-slate-400 font-normal">
+                Valid: {info.expiresEstimate}
+              </span>
+            )}
+          </div>
+          <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans text-sm">
+            {summary}
+          </p>
         </div>
       )}
 

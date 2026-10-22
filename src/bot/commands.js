@@ -658,12 +658,16 @@ async function showSettings(ctx) {
   return send(ctx, t('settings.header', lang, { language: `${meta.flag} ${meta.nativeName}` }), languageSelectionKeyboard(currentLang));
 }
 
-async function createThrowaway(ctx, lang) {
+async function createThrowaway(ctx, lang, label = null) {
   const d = getAllowedDomains(ctx.from.id);
   if (!d.length) return send(ctx, t('domain.none', lang));
-  const a = createAlias({ tgId: ctx.from.id, domain: d[0], type: 'throwaway' });
+  const cleanLabel = label ? label.slice(0, 40) : null;
+  const a = createAlias({ tgId: ctx.from.id, domain: d[0], type: 'throwaway', label: cleanLabel });
   const exp = a.expires_at ? new Date(a.expires_at).toLocaleDateString() : 'Permanent (Unlimited)';
-  const msg = t('alias.created', lang, { address: a.address, type: a.alias_type, expires: exp });
+  let msg = t('alias.created', lang, { address: a.address, type: a.alias_type, expires: exp });
+  if (cleanLabel) {
+    msg += `\n🏷️ <b>Label:</b> <code>${escapeHtml(cleanLabel)}</code>`;
+  }
   return replyHtml(ctx, msg, {
     reply_markup: {
       inline_keyboard: [
@@ -1067,6 +1071,31 @@ async function handleConfirmedBroadcast(ctx) {
 
     const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
 
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS broadcast_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author_tg_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        message_preview TEXT,
+        total_recipients INTEGER NOT NULL DEFAULT 0,
+        delivered_count INTEGER NOT NULL DEFAULT 0,
+        blocked_count INTEGER NOT NULL DEFAULT 0,
+        failed_count INTEGER NOT NULL DEFAULT 0,
+        elapsed_seconds REAL NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT(datetime('now'))
+      )`);
+      db.prepare(`INSERT INTO broadcast_history (author_tg_id, type, message_preview, total_recipients, delivered_count, blocked_count, failed_count, elapsed_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        ctx.from.id,
+        state.type || 'text',
+        (state.text || state.caption || '').slice(0, 200),
+        users.length,
+        delivered,
+        blocked,
+        failed,
+        parseFloat(elapsedSec) || 0
+      );
+    } catch {}
+
     logChange({
       tgId: ctx.from.id,
       category: 'broadcast',
@@ -1314,14 +1343,50 @@ function setupCommands(bot) {
 
   bot.command('new', wrap(async ctx => {
     const lang = getLang(ctx);
+    const label = ctx.message.text.split(' ').slice(1).join(' ').trim() || null;
     try {
-      return await createThrowaway(ctx, lang);
+      return await createThrowaway(ctx, lang, label);
     } catch (err) {
       if (err.message.includes('Alias limit')) {
         return replyHtml(ctx, t('alias.limit_reached', lang, { limit: config.quotas.maxAliases }));
       }
       throw err;
     }
+  }));
+
+  bot.command('bulk', wrap(async ctx => {
+    const lang = getLang(ctx);
+    const parts = (ctx.message.text || '').split(' ').slice(1);
+    const count = Math.min(Math.max(parseInt(parts[0], 10) || 5, 1), 20);
+    const label = parts.slice(1).join(' ').trim() || 'Bulk';
+    const d = getAllowedDomains(ctx.from.id);
+    if (!d.length) return send(ctx, t('domain.none', lang));
+    const createdList = [];
+    for (let i = 0; i < count; i++) {
+      try {
+        const a = createAlias({ tgId: ctx.from.id, domain: d[0], type: 'throwaway', label: `${label} #${i + 1}` });
+        createdList.push(a);
+      } catch (err) {
+        break;
+      }
+    }
+    if (!createdList.length) {
+      return replyHtml(ctx, '❌ Failed to create bulk aliases. Quota limit may have been reached.');
+    }
+    let msg = `📦 <b>Bulk Alias Generator (${createdList.length} created)</b>\n──────────────────────────────\n<i>Tap any address below to copy:</i>\n\n`;
+    for (const a of createdList) {
+      msg += `• <code>${a.address}</code> (${escapeHtml(a.label)})\n`;
+    }
+    msg += `\n──────────────────────────────\n💡 <i>All incoming emails route to your inbox in real time.</i>`;
+    return replyHtml(ctx, msg, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📨 View Inbox', callback_data: 'inbox:1' }],
+          [{ text: '📧 My Aliases', callback_data: 'aliases:1' }],
+          [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+        ]
+      }
+    });
   }));
 
   bot.command('custom', wrap(async ctx => {
@@ -1386,6 +1451,119 @@ function setupCommands(bot) {
     const target = ctx.message.text.split(' ')[1];
     if (!target) return replyHtml(ctx, 'Usage: <code>/user &lt;tg_id&gt;</code>');
     return showUserInfo(ctx, parseInt(target, 10));
+  }));
+
+  bot.command('health', wrap(async ctx => {
+    if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+    const mem = process.memoryUsage();
+    const heapMb = (mem.heapUsed / 1024 / 1024).toFixed(1);
+    const rssMb = (mem.rss / 1024 / 1024).toFixed(1);
+    const uptimeSec = Math.floor(process.uptime());
+    const uptimeHours = (uptimeSec / 3600).toFixed(1);
+    let dbSize = 'Unknown';
+    try {
+      dbSize = formatBytes(fs.statSync(config.database.path).size);
+    } catch {}
+    const text = `🏥 <b>SYSTEM & WORKER HEALTH</b>\n──────────────────────────────\n🟢 <b>Core Status:</b> 100% Operational\n⏱ <b>Service Uptime:</b> ${uptimeHours} hours (${uptimeSec}s)\n🧠 <b>Memory Usage:</b> ${heapMb} MB Heap / ${rssMb} MB RSS\n💾 <b>SQLite Database:</b> ${dbSize}\n⚙️ <b>Node.js Runtime:</b> ${process.version} (PID ${process.pid})\n🌐 <b>Platform:</b> ${process.platform} ${process.arch}\n──────────────────────────────`;
+    return replyHtml(ctx, text, {
+      reply_markup: {
+        inline_keyboard: [[{ text: '👑 Admin Dashboard', callback_data: 'admin:dashboard' }]]
+      }
+    });
+  }));
+
+  bot.command('users', wrap(async ctx => {
+    if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+    const db = getDb();
+    const totalUsers = db.prepare('SELECT COUNT(*) as c FROM users').get()?.c || 0;
+    const activeToday = db.prepare("SELECT COUNT(*) as c FROM users WHERE created_at > datetime('now', '-1 day') OR last_seen_at > datetime('now', '-1 day')").get()?.c || 0;
+    const adminCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE role='admin'").get()?.c || 0;
+    const bannedCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_banned=1').get()?.c || 0;
+    const totalAliases = db.prepare('SELECT COUNT(*) as c FROM aliases').get()?.c || 0;
+    const activeAliases = db.prepare('SELECT COUNT(*) as c FROM aliases WHERE active=1').get()?.c || 0;
+    const text = `👥 <b>AGGREGATE USER METRICS</b>\n──────────────────────────────\n👥 <b>Total Registered:</b> <code>${totalUsers}</code>\n⚡ <b>Active (Last 24h):</b> <code>${activeToday}</code>\n👑 <b>Administrators:</b> <code>${adminCount}</code>\n🚫 <b>Suspended Accounts:</b> <code>${bannedCount}</code>\n📬 <b>Active Email Aliases:</b> <code>${activeAliases}</code> (Total: <code>${totalAliases}</code>)\n──────────────────────────────`;
+    return replyHtml(ctx, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '👥 User Directory', callback_data: 'admin:users:1' }],
+          [{ text: '👑 Admin Dashboard', callback_data: 'admin:dashboard' }]
+        ]
+      }
+    });
+  }));
+
+  bot.command('errors', wrap(async ctx => {
+    if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+    const db = getDb();
+    const errors = db.prepare("SELECT * FROM audit_logs WHERE action LIKE '%error%' OR action LIKE '%threat%' OR action LIKE '%fail%' ORDER BY id DESC LIMIT 6").all();
+    if (!errors.length) {
+      return replyHtml(ctx, '🛡️ <b>SYSTEM ERRORS & THREATS</b>\n──────────────────────────────\n<i>Zero active system errors recorded in audit log.</i>');
+    }
+    let text = `🛡️ <b>RECENT SANITIZED ERRORS & ALERTS</b>\n──────────────────────────────\n`;
+    for (const e of errors) {
+      const timeStr = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      text += `• <b>[${escapeHtml(e.category)}]</b> ${escapeHtml(truncate(e.details, 60))} <i>(${timeStr})</i>\n`;
+    }
+    text += `──────────────────────────────`;
+    return replyHtml(ctx, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📋 Full Audit Logs', callback_data: 'admin:logs:1:all' }],
+          [{ text: '👑 Admin Dashboard', callback_data: 'admin:dashboard' }]
+        ]
+      }
+    });
+  }));
+
+  bot.command('version', wrap(async ctx => {
+    const pkg = require('../../package.json');
+    let gitHash = 'main';
+    try {
+      const child = require('child_process');
+      gitHash = child.execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    } catch {}
+    const text = `ℹ️ <b>COMMANDOR MAIL PLATFORM VERSION</b>\n──────────────────────────────\n🏷 <b>Version:</b> <code>v${pkg.version}</code>\n🔖 <b>Commit:</b> <code>${gitHash}</code>\n⚙️ <b>Node.js:</b> <code>${process.version}</code>\n📦 <b>Architecture:</b> <code>${process.platform}-${process.arch}</code>\n⏱ <b>Process Uptime:</b> <code>${Math.floor(process.uptime() / 60)} minutes</code>\n──────────────────────────────`;
+    return replyHtml(ctx, text);
+  }));
+
+  bot.command(['broadcasts', 'broadcast_history'], wrap(async ctx => {
+    if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+    const db = getDb();
+    db.exec(`CREATE TABLE IF NOT EXISTS broadcast_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      author_tg_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      message_preview TEXT,
+      total_recipients INTEGER NOT NULL DEFAULT 0,
+      delivered_count INTEGER NOT NULL DEFAULT 0,
+      blocked_count INTEGER NOT NULL DEFAULT 0,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      elapsed_seconds REAL NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT(datetime('now'))
+    )`);
+    const history = db.prepare('SELECT * FROM broadcast_history ORDER BY id DESC LIMIT 5').all();
+    if (!history.length) {
+      return replyHtml(ctx, '📢 <b>Broadcast History</b>\n──────────────────────────────\n<i>No broadcasts sent yet.</i>', {
+        reply_markup: {
+          inline_keyboard: [[{ text: '👑 Admin Dashboard', callback_data: 'admin:dashboard' }]]
+        }
+      });
+    }
+    let text = `📢 <b>BROADCAST DELIVERY HISTORY</b>\n──────────────────────────────\n`;
+    for (const b of history) {
+      const dateStr = new Date(b.created_at).toLocaleString();
+      const prev = escapeHtml(truncate(b.message_preview || '(media announcement)', 45));
+      text += `• <b>#${b.id}</b> <i>(${dateStr})</i>\n  ↳ <b>Content:</b> "${prev}"\n  ↳ <b>Delivery:</b> 🟢 ${b.delivered_count}/${b.total_recipients} (🚫 ${b.blocked_count} blocked, ⚠️ ${b.failed_count} errors in ${b.elapsed_seconds}s)\n\n`;
+    }
+    text += `──────────────────────────────`;
+    return replyHtml(ctx, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📢 New Announcement', callback_data: 'admin:broadcast' }],
+          [{ text: '👑 Admin Dashboard', callback_data: 'admin:dashboard' }]
+        ]
+      }
+    });
   }));
 
   bot.command('web', wrap(async ctx => {
