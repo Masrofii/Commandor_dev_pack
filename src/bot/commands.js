@@ -1604,6 +1604,11 @@ function setupCommands(bot) {
     return runSearch(ctx, q, lang);
   }));
 
+  bot.command(['export', 'download'], wrap(async ctx => showExportMenu(ctx)));
+  bot.command(['privacy', 'gdpr'], wrap(async ctx => showPrivacyInfo(ctx), { allowWithoutTos: true }));
+  bot.command(['support', 'contact', 'helpdesk'], wrap(async ctx => showSupportInfo(ctx), { allowWithoutTos: true }));
+  bot.command(['notifications', 'notify', 'alerts'], wrap(async ctx => showNotificationPreferences(ctx)));
+
   // Persistent keyboard buttons
   bot.hears(['📬 Email Suite', 'Email Suite'], wrap(ctx => showEmailSuiteHub(ctx)));
   bot.hears(['📝 Change Log', 'Change Log', '📝 Changelog', 'Changelog'], wrap(ctx => showChangeLog(ctx)));
@@ -2287,11 +2292,119 @@ async function handleDeploySiteZip(ctx, siteName, zipBuffer) {
   }
 }
 
+async function showExportMenu(ctx) {
+  const tgId = ctx.from.id;
+  const db = getDb();
+  const emailCount = db.prepare('SELECT COUNT(*) as c FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE a.tg_id=? AND e.is_deleted=0').get(tgId)?.c || 0;
+  const aliasCount = db.prepare('SELECT COUNT(*) as c FROM aliases WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
+
+  let text = `📦 <b>Mailbox Data Export</b>\n\n`;
+  text += `You can generate and download a complete archive of your stored emails and aliases.\n\n`;
+  text += `📊 <b>Your Mailbox:</b>\n`;
+  text += `• Active Aliases: <b>${aliasCount}</b>\n`;
+  text += `• Stored Messages: <b>${emailCount}</b>\n\n`;
+  text += `Choose your preferred archive format below:`;
+
+  const kb = [
+    [
+      { text: '📥 Export as MBOX', callback_data: 'export:mbox' },
+      { text: '🗂️ Export as ZIP (EMLs)', callback_data: 'export:zip' }
+    ],
+    [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+  ];
+
+  return replyHtml(ctx, text, { reply_markup: { inline_keyboard: kb } });
+}
+
+async function showPrivacyInfo(ctx) {
+  let text = `🛡️ <b>Commandor Mail — Privacy & Security Architecture</b>\n\n`;
+  text += `Your privacy is our core engineering requirement:\n\n`;
+  text += `• <b>Zero Plaintext Logging:</b> Incoming messages are encrypted and isolated in storage, bound exclusively to your user identity.\n`;
+  text += `• <b>HTML Sanitization:</b> All incoming email HTML is aggressively sanitized. Tracker beacons, malicious scripts, and cross-site requests are stripped.\n`;
+  text += `• <b>1-Hour Burners:</b> Temporary aliases self-destruct automatically when their timer expires.\n`;
+  text += `• <b>Data Sovereignty:</b> You can export your data anytime via <code>/export</code> or delete your emails and aliases on demand.\n`;
+  text += `• <b>End-to-End Sessions:</b> Web sessions are hashed with SHA-256 and expire automatically.\n\n`;
+  text += `<i>Commandor Mail never sells, rents, or reads your personal communications.</i>`;
+
+  const kb = [
+    [
+      { text: '📦 Export Data', callback_data: 'export:menu' },
+      { text: '📜 Terms of Service', callback_data: 'tos:view' }
+    ],
+    [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+  ];
+
+  return replyHtml(ctx, text, { reply_markup: { inline_keyboard: kb } });
+}
+
+async function showSupportInfo(ctx) {
+  const tgId = ctx.from.id;
+  let text = `🎧 <b>Commandor Mail — Support & Helpdesk</b>\n\n`;
+  text += `Need assistance, want to report a bug, or request a feature?\n\n`;
+  text += `👤 <b>Your Diagnostic ID:</b> <code>User #${tgId}</code>\n`;
+  text += `🤖 <b>Bot Service:</b> @commandor_mail_bot\n`;
+  text += `💬 <b>Direct Support:</b> <a href="https://t.me/Masrofii">@Masrofii</a>\n\n`;
+  text += `💡 <b>Quick Tips:</b>\n`;
+  text += `• Generate aliases instantly: <code>/new [label]</code>\n`;
+  text += `• Search messages: <code>/search [query]</code>\n`;
+  text += `• Sign in to Web: <code>/login</code>\n`;
+  text += `• Change language: <code>/language</code>\n`;
+
+  const kb = [
+    [
+      { text: '💬 Contact Developer', url: 'https://t.me/Masrofii' },
+      { text: '📖 Commands Guide', callback_data: 'menu:help' }
+    ],
+    [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+  ];
+
+  return replyHtml(ctx, text, { reply_markup: { inline_keyboard: kb } });
+}
+
+async function showNotificationPreferences(ctx) {
+  const tgId = ctx.from.id;
+  const db = getDb();
+  let userSettings = {};
+  try {
+    const u = db.prepare('SELECT settings_json FROM users WHERE tg_id=?').get(tgId);
+    if (u?.settings_json) userSettings = JSON.parse(u.settings_json);
+  } catch {}
+
+  const muteAll = Boolean(userSettings.mute_notifications);
+  const otpOnly = Boolean(userSettings.notify_otp_only);
+  const silent = Boolean(userSettings.disable_notification_sound);
+
+  let text = `🔔 <b>Telegram Notification Preferences</b>\n\n`;
+  text += `Configure how and when you receive message alerts in Telegram:\n\n`;
+  text += `• <b>Incoming Alerts:</b> ${muteAll ? '🔕 Muted' : '🔔 Enabled'}\n`;
+  text += `• <b>Filter Mode:</b> ${otpOnly ? '🔑 OTP / Verification Codes Only' : '📬 All Incoming Emails'}\n`;
+  text += `• <b>Delivery Mode:</b> ${silent ? '🔇 Silent (No sound notification)' : '🔊 Standard Sound'}\n`;
+
+  const kb = [
+    [
+      { text: muteAll ? '🔔 Unmute Alerts' : '🔕 Mute All Alerts', callback_data: 'notify:toggle:mute' }
+    ],
+    [
+      { text: otpOnly ? '📬 Alert for All Emails' : '🔑 Alert for OTP Codes Only', callback_data: 'notify:toggle:otp' }
+    ],
+    [
+      { text: silent ? '🔊 Enable Sound' : '🔇 Silent Mode', callback_data: 'notify:toggle:silent' }
+    ],
+    [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+  ];
+
+  return replyHtml(ctx, text, { reply_markup: { inline_keyboard: kb } });
+}
+
 module.exports = {
   setupCommands,
   showInbox,
   showAliases,
   showSettings,
+  showExportMenu,
+  showPrivacyInfo,
+  showSupportInfo,
+  showNotificationPreferences,
   registerUser,
   getLang,
   send,

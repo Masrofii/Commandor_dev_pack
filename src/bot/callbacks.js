@@ -709,6 +709,72 @@ function setupCallbacks(bot) {
           break;
         }
 
+        case 'export': {
+          await ctx.answerCbQuery().catch(() => {});
+          if (param === 'menu') {
+            const { showExportMenu } = require('./commands');
+            await showExportMenu(ctx);
+            break;
+          }
+          const format = param === 'mbox' ? 'mbox' : 'zip';
+          const { startExportJob } = require('../services/exportService');
+          try {
+            await ctx.reply(`⏳ <b>Generating ${format.toUpperCase()} Export Archive...</b>\n\nYour emails are being packaged. Please wait a moment.`, { parse_mode: 'HTML' });
+            const jobId = await startExportJob(ctx.from.id, format);
+            let attempts = 0;
+            const checkInterval = setInterval(async () => {
+              attempts++;
+              const job = getDb().prepare('SELECT * FROM export_jobs WHERE id=?').get(jobId);
+              if (job && job.status === 'complete') {
+                clearInterval(checkInterval);
+                const fs = require('fs');
+                if (fs.existsSync(job.file_path)) {
+                  const stat = fs.statSync(job.file_path);
+                  if (stat.size < 45 * 1024 * 1024) {
+                    await ctx.replyWithDocument({ source: job.file_path, filename: `commandor_mail_export_${ctx.from.id}.${format}` }, {
+                      caption: `📦 <b>Your ${format.toUpperCase()} Mailbox Export is ready!</b>`,
+                      parse_mode: 'HTML'
+                    }).catch(() => {});
+                  } else {
+                    await ctx.reply(`✅ <b>Export Archive Created!</b>\n\nFile size: ${(stat.size / 1048576).toFixed(1)} MB.\nPlease download it from your Web Dashboard under Sessions & Exports.`, { parse_mode: 'HTML' });
+                  }
+                }
+              } else if (attempts > 15 || (job && job.status === 'failed')) {
+                clearInterval(checkInterval);
+              }
+            }, 1000);
+          } catch (err) {
+            await ctx.reply(`❌ Export error: ${escapeHtml(err.message)}`);
+          }
+          break;
+        }
+
+        case 'notify': {
+          const action = param;
+          const tgId = ctx.from.id;
+          const db = getDb();
+          let userSettings = {};
+          try {
+            const u = db.prepare('SELECT settings_json FROM users WHERE tg_id=?').get(tgId);
+            if (u?.settings_json) userSettings = JSON.parse(u.settings_json);
+          } catch {}
+
+          if (action === 'toggle:mute') {
+            userSettings.mute_notifications = !userSettings.mute_notifications;
+            await ctx.answerCbQuery(userSettings.mute_notifications ? '🔕 Notifications muted' : '🔔 Notifications enabled').catch(() => {});
+          } else if (action === 'toggle:otp') {
+            userSettings.notify_otp_only = !userSettings.notify_otp_only;
+            await ctx.answerCbQuery(userSettings.notify_otp_only ? '🔑 OTP-only mode active' : '📬 All email alerts active').catch(() => {});
+          } else if (action === 'toggle:silent') {
+            userSettings.disable_notification_sound = !userSettings.disable_notification_sound;
+            await ctx.answerCbQuery(userSettings.disable_notification_sound ? '🔇 Silent mode active' : '🔊 Sound enabled').catch(() => {});
+          }
+          db.prepare('UPDATE users SET settings_json=? WHERE tg_id=?').run(JSON.stringify(userSettings), tgId);
+          const { showNotificationPreferences } = require('./commands');
+          await showNotificationPreferences(ctx);
+          break;
+        }
+
         default:
           await ctx.answerCbQuery().catch(() => {});
       }

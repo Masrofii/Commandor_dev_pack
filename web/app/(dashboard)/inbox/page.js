@@ -621,6 +621,51 @@ export default function InboxPage() {
                     <div className="text-[11px] text-slate-400">{new Date(activeEmailData.received_at).toLocaleDateString()}</div>
                   </div>
                 </div>
+
+                {/* Authentication Results & Delivery Details */}
+                <div className="mt-2 px-1 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-slate-400 font-medium">Authentication:</span>
+                    <span className={`px-2 py-0.5 rounded-md font-mono font-bold text-[10px] ${
+                      activeEmailData.spf_result === 'pass'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                        : 'bg-slate-100 text-slate-600 dark:bg-cyber-850 dark:text-slate-400 border border-slate-200 dark:border-cyber-700'
+                    }`}>
+                      SPF: {activeEmailData.spf_result || 'none'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-md font-mono font-bold text-[10px] ${
+                      activeEmailData.dkim_result === 'pass'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                        : 'bg-slate-100 text-slate-600 dark:bg-cyber-850 dark:text-slate-400 border border-slate-200 dark:border-cyber-700'
+                    }`}>
+                      DKIM: {activeEmailData.dkim_result || 'none'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-md font-mono font-bold text-[10px] ${
+                      activeEmailData.dmarc_result === 'pass'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                        : 'bg-slate-100 text-slate-600 dark:bg-cyber-850 dark:text-slate-400 border border-slate-200 dark:border-cyber-700'
+                    }`}>
+                      DMARC: {activeEmailData.dmarc_result || 'none'}
+                    </span>
+                  </div>
+
+                  {activeEmailData.message_id && (
+                    <div className="text-slate-400 flex items-center gap-1 text-[10px] font-mono">
+                      <span>ID:</span>
+                      <span className="truncate max-w-[180px] sm:max-w-[240px]">{activeEmailData.message_id}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(activeEmailData.message_id);
+                          toast.success('Message-ID copied!');
+                        }}
+                        className="p-0.5 hover:text-indigo-500 text-slate-400"
+                        title="Copy Message-ID"
+                      >
+                        <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Detected Verification Code Banner */}

@@ -57,6 +57,8 @@ export default function SubdomainsAndDomainsPage() {
   const [addingDomain, setAddingDomain] = useState(false);
   const [domainInput, setDomainInput] = useState('');
   const [verifyingId, setVerifyingId] = useState(null);
+  const [checkingHealthId, setCheckingHealthId] = useState(null);
+  const [dnsHealthMap, setDnsHealthMap] = useState({});
 
   // Subdomain Edit & Inspector
   const [editingSub, setEditingSub] = useState(null);
@@ -118,6 +120,9 @@ export default function SubdomainsAndDomainsPage() {
       const res = await api.verifyDomain(id);
       if (res.verified) {
         toast.success('Domain verified successfully!');
+        if (res.health) {
+          setDnsHealthMap(prev => ({ ...prev, [id]: res.health }));
+        }
       } else {
         toast.error(res.message || 'TXT verification record not found. Please allow DNS to propagate.');
       }
@@ -126,6 +131,19 @@ export default function SubdomainsAndDomainsPage() {
       toast.error(err.message || 'DNS verification failed');
     } finally {
       setVerifyingId(null);
+    }
+  }
+
+  async function handleCheckHealth(id) {
+    setCheckingHealthId(id);
+    try {
+      const health = await api.getDomainHealth(id);
+      setDnsHealthMap(prev => ({ ...prev, [id]: health }));
+      toast.success('DNS Health check completed!');
+    } catch (err) {
+      toast.error(err.message || 'Health check failed');
+    } finally {
+      setCheckingHealthId(null);
     }
   }
 
@@ -562,6 +580,16 @@ export default function SubdomainsAndDomainsPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCheckHealth(d.id)}
+                        disabled={checkingHealthId === d.id}
+                        className="btn-secondary py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5"
+                        title="Run deep DNS health check (MX, SPF, DMARC)"
+                      >
+                        <ArrowPathIcon className={`w-3.5 h-3.5 text-cyan-500 ${checkingHealthId === d.id ? 'animate-spin' : ''}`} />
+                        <span>{checkingHealthId === d.id ? 'Diagnosing...' : 'DNS Health'}</span>
+                      </button>
+
                       {!d.verified && (
                         <button
                           onClick={() => handleVerifyDomain(d.id)}
@@ -581,6 +609,63 @@ export default function SubdomainsAndDomainsPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Live DNS Diagnostic Report */}
+                  {dnsHealthMap[d.id] && (
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-cyber-900 border border-slate-200 dark:border-cyber-700 text-xs space-y-2.5 animate-fade-in">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-2">
+                          <ShieldCheckIcon className="w-4 h-4 text-cyan-500" />
+                          <span>DNS Health & Routing Diagnostic</span>
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-mono font-bold ${
+                          dnsHealthMap[d.id].overallStatus === 'healthy'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200'
+                            : dnsHealthMap[d.id].overallStatus === 'warning'
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200'
+                        }`}>
+                          Status: {dnsHealthMap[d.id].overallStatus}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-cyber-950 border border-slate-200/80 dark:border-cyber-800 space-y-1">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span>MX Routing</span>
+                            <span className={dnsHealthMap[d.id].mx.status === 'valid' ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}>
+                              {dnsHealthMap[d.id].mx.status === 'valid' ? '✓ Configured' : '✗ Missing'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{dnsHealthMap[d.id].mx.message}</p>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-cyber-950 border border-slate-200/80 dark:border-cyber-800 space-y-1">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span>SPF Policy</span>
+                            <span className={dnsHealthMap[d.id].spf.status === 'valid' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
+                              {dnsHealthMap[d.id].spf.status === 'valid' ? '✓ Valid' : '⚠️ Missing'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate" title={dnsHealthMap[d.id].spf.message}>
+                            {dnsHealthMap[d.id].spf.record || dnsHealthMap[d.id].spf.message}
+                          </p>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-cyber-950 border border-slate-200/80 dark:border-cyber-800 space-y-1">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span>DMARC Protection</span>
+                            <span className={dnsHealthMap[d.id].dmarc.status === 'valid' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
+                              {dnsHealthMap[d.id].dmarc.status === 'valid' ? '✓ Protected' : '⚠️ Warning'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate" title={dnsHealthMap[d.id].dmarc.message}>
+                            {dnsHealthMap[d.id].dmarc.record || dnsHealthMap[d.id].dmarc.message}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* DNS Setup Guide Card */}
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-cyber-950 border border-slate-200/80 dark:border-cyber-800 space-y-3">

@@ -286,6 +286,48 @@ export default function EmailDetailPage({ params }) {
               <div className="text-[11px] text-slate-500">{formatTimeAgo(email.received_at)}</div>
             </div>
           </div>
+
+          {/* Authentication & Security Badges */}
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-slate-400 font-medium text-[11px]">Authentication:</span>
+              <span className={`px-2 py-0.5 rounded-md font-mono font-bold text-[10px] ${
+                email.spf_result === 'pass'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+              }`}>
+                SPF: {email.spf_result || 'none'}
+              </span>
+              <span className={`px-2 py-0.5 rounded-md font-mono font-bold text-[10px] ${
+                email.dkim_result === 'pass'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+              }`}>
+                DKIM: {email.dkim_result || 'none'}
+              </span>
+              <span className={`px-2 py-0.5 rounded-md font-mono font-bold text-[10px] ${
+                email.dmarc_result === 'pass'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+              }`}>
+                DMARC: {email.dmarc_result || 'none'}
+              </span>
+            </div>
+
+            {email.message_id && (
+              <div className="text-slate-400 flex items-center gap-1 text-[11px] font-mono">
+                <span>Message-ID:</span>
+                <span className="truncate max-w-[200px] sm:max-w-[300px]">{email.message_id}</span>
+                <button
+                  onClick={() => copyToClipboard(email.message_id, 'Message-ID')}
+                  className="p-0.5 hover:text-indigo-600 text-slate-400"
+                  title="Copy Message-ID"
+                >
+                  <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* View Mode Switcher (Formatted vs Plain text) */}

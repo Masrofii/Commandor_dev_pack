@@ -74,6 +74,7 @@ async function notifyTelegram(tgId, email, alias) {
 
     await botInstance.telegram.sendMessage(tgId, text, {
       parse_mode: 'HTML',
+      disable_notification: Boolean(userSettings.disable_notification_sound),
       reply_markup: {
         inline_keyboard: keyboard
       }

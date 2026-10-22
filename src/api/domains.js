@@ -2,11 +2,17 @@
 const express=require('express');
 const router=express.Router();
 const{requireAuth}=require('../middleware/auth');
-const{getUserDomains,addDomain,verifyDomain,deleteDomain}=require('../services/domainService');
+const{getUserDomains,addDomain,verifyDomain,deleteDomain,checkDomainDnsHealth}=require('../services/domainService');
 const{getDb}=require('../../database/database');
 const{body,validationResult}=require('express-validator');
 router.use(requireAuth);
 router.get('/',(req,res)=>res.json(getUserDomains(req.tgId)));
+router.get('/:id/health',async(req,res)=>{
+  const d=getDb().prepare('SELECT * FROM custom_domains WHERE id=? AND tg_id=?').get(parseInt(req.params.id),req.tgId);
+  if(!d)return res.status(404).json({error:'Domain not found'});
+  const health = await checkDomainDnsHealth(d.domain, d.verification_token);
+  res.json(health);
+});
 router.post('/',[body('domain').isString().isLength({min:3,max:253})],async(req,res)=>{const err=validationResult(req);if(!err.isEmpty())return res.status(400).json({errors:err.array()});try{const d=addDomain(req.tgId,req.body.domain.toLowerCase().trim());res.status(201).json({...d,instructions:{txt:`Add TXT record: ${d.verification_token}`,mx:'Set MX record to your mail server'}});}catch(e){res.status(400).json({error:e.message});}});
 router.post('/:id/verify',async(req,res)=>{const d=getDb().prepare('SELECT * FROM custom_domains WHERE id=? AND tg_id=?').get(parseInt(req.params.id),req.tgId);if(!d)return res.status(404).json({error:'Domain not found'});res.json(await verifyDomain(d));});
 router.delete('/:id',(req,res)=>{if(!deleteDomain(parseInt(req.params.id),req.tgId))return res.status(404).json({error:'Domain not found'});res.json({status:'deleted'});});

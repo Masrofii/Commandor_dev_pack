@@ -56,6 +56,7 @@ async function startServer(){
   app.use('/api/auth',require('./src/api/auth'));
   app.post('/api/auth/logout',require('./src/middleware/auth').requireAuth,(req,res)=>{require('./src/auth/sessions').revokeSession(req.user.id,req.tgId);res.json({status:'logged out'});});
   app.use('/',require('./src/api/health'));
+  app.use('/api',require('./src/api/health'));
   app.use(errorHandler);
   const server=http.createServer(app);
   wsManager.attach(server);

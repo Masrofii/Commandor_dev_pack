@@ -46,20 +46,34 @@ async function storeAttachment(att,emailId,tgId){
 }
 
 function getEmails(tgId,opts={}){
-  const db=getDb();const{alias,page=1,limit=20,unread,starred,search}=opts;const offset=(page-1)*limit;
-  // The same WHERE clause drives both the page query and the total, so
-  // counts and pagination stay correct when filters/search are applied.
-  let where='a.tg_id=? AND e.is_deleted=0';const p=[tgId];
-  if(alias){where+=' AND e.alias_address=?';p.push(alias);}
+  const db=getDb();
+  let{alias,page=1,limit=20,unread,starred,search}=opts;
+  // Sanitize alias and search to prevent string 'undefined' or 'null' from breaking historical queries
+  if(typeof alias==='string'&&(alias==='undefined'||alias==='null'||!alias.trim()))alias=undefined;
+  if(typeof search==='string'&&(search==='undefined'||search==='null'||!search.trim()))search=undefined;
+  const numPage=Math.max(1,parseInt(page)||1);
+  const numLimit=Math.min(100,Math.max(1,parseInt(limit)||20));
+  const offset=(numPage-1)*numLimit;
+
+  // Authoritative WHERE clause with case-insensitive alias join so historical mail is never missed
+  let where='a.tg_id=? AND e.is_deleted=0';
+  const p=[tgId];
+  if(alias){
+    where+=' AND e.alias_address=? COLLATE NOCASE';
+    p.push(alias.trim());
+  }
   if(unread===true){where+=' AND e.is_read=0';}
   if(starred===true){where+=' AND e.is_starred=1';}
-  if(search){where+=' AND e.id IN(SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)';p.push(search);}
-  const emails=db.prepare(`SELECT e.* FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE ${where} ORDER BY e.received_at DESC LIMIT ? OFFSET ?`).all(...p,limit,offset);
-  const total=db.prepare(`SELECT COUNT(*)as c FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE ${where}`).get(...p).c;
-  return{emails,total,page,limit};
+  if(search){
+    where+=' AND e.id IN(SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)';
+    p.push(search.trim());
+  }
+  const emails=db.prepare(`SELECT e.* FROM emails e JOIN aliases a ON e.alias_address=a.address COLLATE NOCASE WHERE ${where} ORDER BY e.received_at DESC LIMIT ? OFFSET ?`).all(...p,numLimit,offset);
+  const total=db.prepare(`SELECT COUNT(*)as c FROM emails e JOIN aliases a ON e.alias_address=a.address COLLATE NOCASE WHERE ${where}`).get(...p).c;
+  return{emails,total,page:numPage,limit:numLimit};
 }
-function getEmailById(id,tgId){return getDb().prepare('SELECT e.* FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE e.id=? AND a.tg_id=? AND e.is_deleted=0').get(id,tgId);}
-function getUnreadCount(tgId){return getDb().prepare('SELECT COUNT(*)as c FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE a.tg_id=? AND e.is_deleted=0 AND e.is_read=0').get(tgId).c;}
+function getEmailById(id,tgId){return getDb().prepare('SELECT e.* FROM emails e JOIN aliases a ON e.alias_address=a.address COLLATE NOCASE WHERE e.id=? AND a.tg_id=? AND e.is_deleted=0').get(id,tgId);}
+function getUnreadCount(tgId){return getDb().prepare('SELECT COUNT(*)as c FROM emails e JOIN aliases a ON e.alias_address=a.address COLLATE NOCASE WHERE a.tg_id=? AND e.is_deleted=0 AND e.is_read=0').get(tgId).c;}
 function markRead(id,tgId){return getDb().prepare('UPDATE emails SET is_read=1 WHERE id=? AND alias_address IN(SELECT address FROM aliases WHERE tg_id=?)').run(id,tgId).changes>0;}
 function markStarred(id,tgId,starred){return getDb().prepare('UPDATE emails SET is_starred=? WHERE id=? AND alias_address IN(SELECT address FROM aliases WHERE tg_id=?)').run(starred?1:0,id,tgId).changes>0;}
 function softDeleteEmail(id,tgId){return getDb().prepare('UPDATE emails SET is_deleted=1 WHERE id=? AND alias_address IN(SELECT address FROM aliases WHERE tg_id=?)').run(id,tgId).changes>0;}
