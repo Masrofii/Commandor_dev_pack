@@ -228,7 +228,7 @@ async function showMainDashboard(ctx) {
   const aliasCount = db.prepare('SELECT COUNT(*) as c FROM aliases WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
   const unreadCount = db.prepare('SELECT COUNT(*) as c FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE a.tg_id=? AND e.is_read=0 AND e.is_deleted=0').get(tgId)?.c || 0;
   const subCount = db.prepare('SELECT COUNT(*) as c FROM subdomains WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
-  const siteCount = db.prepare('SELECT COUNT(*) as c FROM hosting_sites WHERE tg_id=? AND status="active"').get(tgId)?.c || 0;
+  const siteCount = db.prepare("SELECT COUNT(*) as c FROM hosting_sites WHERE tg_id=? AND status='active'").get(tgId)?.c || 0;
 
   const roleBadge = admin ? '👑 Owner / Admin' : '💎 Unlimited Pro';
   const name = escapeHtml(ctx.from.first_name || ctx.from.username || 'Commander');
