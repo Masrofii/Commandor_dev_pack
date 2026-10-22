@@ -103,7 +103,47 @@ export const api = {
   getSubdomainRequests: (id) => apiFetch(`/api/subdomains/${id}/requests`),
   checkSubdomain: (name) => apiFetch(`/api/subdomains/check/${encodeURIComponent(name)}`),
   getSubdomainBases: () => apiFetch('/api/subdomains/bases'),
+  // Subdomain Guided Wizard
+  validateSubdomainWizard: (d) => apiFetch('/api/subdomains/wizard/validate', { method: 'POST', body: JSON.stringify(d) }),
+  previewSubdomainWizard: (d) => apiFetch('/api/subdomains/wizard/preview', { method: 'POST', body: JSON.stringify(d) }),
+  deploySubdomainWizard: (d) => apiFetch('/api/subdomains/wizard/deploy', { method: 'POST', body: JSON.stringify(d) }),
+  verifySubdomainRoute: (id) => apiFetch(`/api/subdomains/${id}/verify`, { method: 'POST' }),
+  repairSubdomainRoute: (id) => apiFetch(`/api/subdomains/${id}/repair-route`, { method: 'POST' }),
+  safeDeleteSubdomain: (id, options = {}) => apiFetch(`/api/subdomains/${id}`, { method: 'DELETE', body: JSON.stringify(options) }),
+
+  // Domain Inventory & DNS
+  addDomainInventory: (d) => apiFetch('/api/domains', { method: 'POST', body: JSON.stringify(d) }),
+  updateDomainInventory: (id, d) => apiFetch(`/api/domains/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
+  getDomainDnsRecords: (id, p = {}) => apiFetch(`/api/domains/${id}/records` + toQueryString(p)),
+  createDomainDnsRecord: (id, d) => apiFetch(`/api/domains/${id}/records`, { method: 'POST', body: JSON.stringify(d) }),
+
+  // Applications Platform
+  getApplications: (p = {}) => apiFetch('/api/applications' + toQueryString(p)),
+  getApplication: (id) => apiFetch(`/api/applications/${id}`),
+  createApplication: (d) => apiFetch('/api/applications', { method: 'POST', body: JSON.stringify(d) }),
+  updateApplication: (id, d) => apiFetch(`/api/applications/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
+  deployApplication: (id) => apiFetch(`/api/applications/${id}/deploy`, { method: 'POST' }),
+  rollbackApplication: (id, deploymentId) => apiFetch(`/api/applications/${id}/rollback`, { method: 'POST', body: JSON.stringify({ deployment_id: deploymentId }) }),
+  controlApplication: (id, action) => apiFetch(`/api/applications/${id}/control`, { method: 'POST', body: JSON.stringify({ action }) }),
+  getApplicationHealth: (id) => apiFetch(`/api/applications/${id}/health`),
+  deleteApplication: (id) => apiFetch(`/api/applications/${id}`, { method: 'DELETE' }),
+
+  // Monitoring & Overview
+  getSystemOverview: () => apiFetch('/api/monitoring/overview'),
+  getHostMetrics: () => apiFetch('/api/monitoring/host'),
+
+  // Backups
+  getBackups: (p = {}) => apiFetch('/api/backups' + toQueryString(p)),
+  createBackup: (d) => apiFetch('/api/backups', { method: 'POST', body: JSON.stringify(d) }),
+  restoreBackup: (id, confirmation_accepted = true) => apiFetch(`/api/backups/${id}/restore`, { method: 'POST', body: JSON.stringify({ confirmation_accepted }) }),
+  getBackupDownloadUrl: (id) => `${API_URL}/api/backups/${id}/download`,
+
   // Hosting & Nodes
+  testNodeConnection: (data) => apiFetch('/api/hosting/nodes/test', { method: 'POST', body: JSON.stringify(data) }),
+  updateHostingNode: (id, data) => apiFetch(`/api/hosting/nodes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  toggleNodeStatus: (id, isActive) => apiFetch(`/api/hosting/nodes/${id}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: isActive }) }),
+  provisionNodeServices: (id) => apiFetch(`/api/hosting/nodes/${id}/provision`, { method: 'POST' }),
+  validateBulkNodes: (data) => apiFetch('/api/hosting/nodes/bulk/validate', { method: 'POST', body: JSON.stringify(data) }),
   getHostingTOS: () => apiFetch('/api/hosting/tos'),
   getHostingPlans: () => apiFetch('/api/hosting/plans'),
   getHostingLimits: () => apiFetch('/api/hosting/limits'),

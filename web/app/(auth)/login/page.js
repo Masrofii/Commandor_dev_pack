@@ -19,7 +19,7 @@ function LoginForm() {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      router.replace('/inbox');
+      router.replace('/');
       return;
     }
 
@@ -44,7 +44,7 @@ function LoginForm() {
       saveToken(r.token);
       saveUser(r.user);
       setStatusMessage('Success! Redirecting...');
-      router.replace('/inbox');
+      router.replace('/');
     } catch (e) {
       setError(e.message || 'Login failed. The link or token may be invalid or expired.');
       setLoading(false);
@@ -68,7 +68,7 @@ function LoginForm() {
       saveToken(r.token);
       saveUser(r.user);
       setStatusMessage('Success! Redirecting...');
-      router.replace('/inbox');
+      router.replace('/');
     } catch (e) {
       setError(e.message || 'Telegram authentication failed.');
       setLoading(false);
@@ -79,13 +79,13 @@ function LoginForm() {
   return (
     <div className="card-cyber p-8 sm:p-10 text-center max-w-md w-full border-slate-200 dark:border-cyber-800 shadow-xl">
       <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/25">
-        CM
+        CD
       </div>
       <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
-        Commandor Mail
+        Commandor Dev Pack
       </h1>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
-        Sign in to your email infrastructure control panel
+        Sign in to your cloud infrastructure &amp; developer control panel
       </p>
 
       {error && (

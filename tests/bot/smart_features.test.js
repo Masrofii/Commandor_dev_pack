@@ -25,7 +25,7 @@ beforeAll(() => {
   const db = getDb();
   db.prepare('INSERT OR REPLACE INTO users (tg_id, username, role, language, tos_accepted) VALUES (?, ?, ?, ?, 1)')
     .run(ADMIN_ID, 'admin_user', 'admin', 'en');
-  db.prepare('INSERT OR REPLACE INTO users (tg_id, username, role, language, tos_accepted) VALUES (?, ?, ?, ?, 1)')
+  db.prepare('INSERT OR REPLACE INTO users (tg_id, username, role, language, tos_accepted, alias_limit) VALUES (?, ?, ?, ?, 1, 20)')
     .run(REGULAR_USER_ID, 'normal_user', 'user', 'en');
 });
 

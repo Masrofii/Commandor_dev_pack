@@ -17,6 +17,11 @@ const {
 const {
   parseNodeConnectionString,
   parseBulkConnectionStrings,
+  testNodeConnection,
+  enrollNode,
+  updateNode,
+  provisionNodeServices,
+  validateBulkNodes,
   testAndProvisionNode,
   provisionNodesBulk,
   listNodes,
@@ -155,22 +160,22 @@ router.get('/nodes', (req, res) => {
     if (!checkIsAdmin(req.tgId)) {
       return res.status(403).json({ error: 'Admin access required to view hosting nodes.' });
     }
-    const nodes = listNodes({ onlyActive: false });
+    const { search } = req.query;
+    const nodes = listNodes({ onlyActive: false, search });
     res.json({ nodes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Add / Provision a server node ("host:port:user:pass and does everything")
-router.post('/nodes', async (req, res) => {
+// Non-destructive SSH connection test (Admin Only)
+router.post('/nodes/test', async (req, res) => {
   try {
     if (!checkIsAdmin(req.tgId)) {
-      return res.status(403).json({ error: 'Admin access required to register hosting nodes.' });
+      return res.status(403).json({ error: 'Admin access required.' });
     }
 
-    let { connection_string, host, port, username, password, private_key, name, http_port, public_url } = req.body;
-
+    let { connection_string, host, port, username, password, private_key, host_key_fingerprint } = req.body;
     if (connection_string) {
       const parsed = parseNodeConnectionString(connection_string);
       host = parsed.host;
@@ -180,23 +185,127 @@ router.post('/nodes', async (req, res) => {
     }
 
     if (!host || !username) {
-      return res.status(400).json({ error: 'Host and username are required (or supply connection_string as host:port:user:pass)' });
+      return res.status(400).json({ error: 'Host and username are required.' });
     }
 
-    const node = await testAndProvisionNode({
+    const result = await testNodeConnection({
       host,
       port: port || 22,
       username,
       password,
       privateKey: private_key,
+      hostKeyFingerprint: host_key_fingerprint
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Add / Enroll a server node (Admin Only)
+router.post('/nodes', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required to register hosting nodes.' });
+    }
+
+    let { connection_string, host, port, username, password, private_key, auth_method, host_key_fingerprint, name, labels, groups, notes, http_port, public_url, test_connection } = req.body;
+
+    if (connection_string) {
+      const parsed = parseNodeConnectionString(connection_string);
+      host = parsed.host;
+      port = parsed.port;
+      username = parsed.username;
+      password = parsed.password;
+      if (parsed.name && !name) name = parsed.name;
+    }
+
+    if (!host || !username) {
+      return res.status(400).json({ error: 'Host and username are required (or supply connection_string as host:port:user:pass)' });
+    }
+
+    const node = await enrollNode({
+      host,
+      port: port || 22,
+      username,
+      password,
+      privateKey: private_key,
+      authMethod: auth_method,
+      hostKeyFingerprint: host_key_fingerprint,
       name,
+      labels,
+      groups,
+      notes,
       httpPort: http_port || 8080,
-      publicUrl: public_url
+      publicUrl: public_url,
+      testBeforeSave: test_connection !== false
     });
 
     res.status(201).json(node);
   } catch (err) {
-    res.status(400).json({ error: `Node setup failed: ${err.message}` });
+    res.status(400).json({ error: `Node enrollment failed: ${err.message}` });
+  }
+});
+
+// Update Node (Admin Only)
+router.put('/nodes/:id', (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const updated = updateNode(id, req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Toggle Node Status (Active/Disabled)
+router.patch('/nodes/:id/status', (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const { is_active } = req.body;
+    const updated = updateNode(id, { is_active: Boolean(is_active) });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Explicitly Provision Node Services (Admin Only)
+router.post('/nodes/:id/provision', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const result = await provisionNodeServices(id, req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: `Provisioning failed: ${err.message}` });
+  }
+});
+
+// Validate Bulk Import (Dry-Run / Preview)
+router.post('/nodes/bulk/validate', (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const { connection_strings, nodes } = req.body;
+    const input = connection_strings || nodes;
+    if (!input) {
+      return res.status(400).json({ error: 'connection_strings or nodes array is required' });
+    }
+    const preview = validateBulkNodes(input);
+    res.json(preview);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

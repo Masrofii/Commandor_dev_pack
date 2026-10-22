@@ -39,6 +39,9 @@ async function startServer(){
   app.use('/api/incoming',require('./src/api/incoming'));
   app.use('/api/subdomains',require('./src/api/subdomains'));
   app.use('/api/hosting',require('./src/api/hosting'));
+  app.use('/api/applications',require('./src/api/applications'));
+  app.use('/api/monitoring',require('./src/api/monitoring'));
+  app.use('/api/backups',require('./src/api/backups'));
   app.use('/api/aliases',require('./src/api/aliases'));
   app.use('/api/emails',require('./src/api/emails'));
   app.use('/api/attachments',require('./src/api/attachments'));

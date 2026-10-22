@@ -13,6 +13,14 @@ const {
   getAvailableBaseDomains,
   RESERVED_SUBDOMAINS
 } = require('../services/subdomainService');
+const {
+  validateSubdomainStep,
+  previewSubdomainWizard,
+  deploySubdomainWizard,
+  verifySubdomainRoute,
+  repairSubdomainRoute,
+  safeDeleteSubdomain
+} = require('../services/subdomainWizardService');
 const { createAlias, getUserAliases } = require('../services/aliasService');
 const { getDb } = require('../../database/database');
 
@@ -146,15 +154,127 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete / Release subdomain
+// --- Subdomain Guided Creation Wizard Endpoints ---
+
+// Step 2: Validate subdomain name and check conflicts
+router.post('/wizard/validate', (req, res) => {
+  try {
+    const { subdomain, base_domain } = req.body;
+    const result = validateSubdomainStep({
+      subdomain,
+      baseDomain: base_domain
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ valid: false, error: err.message });
+  }
+});
+
+// Steps 4-6: Preview planned DNS, proxy, and TLS changes
+router.post('/wizard/preview', async (req, res) => {
+  try {
+    const {
+      subdomain,
+      base_domain,
+      destination_type,
+      destination_target,
+      node_id,
+      application_id,
+      enable_dns,
+      record_type,
+      enable_proxy,
+      enable_https
+    } = req.body;
+
+    const preview = await previewSubdomainWizard({
+      subdomain,
+      baseDomain: base_domain,
+      destinationType: destination_type,
+      destinationTarget: destination_target,
+      nodeId: node_id,
+      applicationId: application_id,
+      enableDns: enable_dns !== false,
+      recordType: record_type || 'A',
+      enableProxy: enable_proxy !== false,
+      enableHttps: Boolean(enable_https)
+    });
+
+    res.json(preview);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Step 7: Review and atomic deploy of subdomain
+router.post('/wizard/deploy', async (req, res) => {
+  try {
+    const {
+      subdomain,
+      base_domain,
+      destination_type,
+      destination_target,
+      node_id,
+      application_id,
+      enable_dns,
+      record_type,
+      enable_proxy,
+      enable_https,
+      confirmation_accepted
+    } = req.body;
+
+    const result = await deploySubdomainWizard({
+      tgId: req.tgId,
+      subdomain,
+      baseDomain: base_domain,
+      destinationType: destination_type,
+      destinationTarget: destination_target,
+      nodeId: node_id,
+      applicationId: application_id,
+      enableDns: enable_dns !== false,
+      recordType: record_type || 'A',
+      enableProxy: enable_proxy !== false,
+      enableHttps: Boolean(enable_https),
+      confirmationAccepted: confirmation_accepted === true || confirmation_accepted === 'true'
+    });
+
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Step 8 / Recheck: Independent Multi-Stage Verification
+router.post('/:id/verify', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const verification = await verifySubdomainRoute(id);
+    res.json(verification);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Repair / Regenerate reverse proxy route
+router.post('/:id/repair-route', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const result = await repairSubdomainRoute(id, req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Delete / Release subdomain with granular DNS & Data options
 router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const success = deleteSubdomain(id, req.tgId);
-    if (!success) return res.status(404).json({ error: 'Subdomain not found or unauthorized' });
-    res.json({ status: 'deleted', id });
+    const { deleteDns, deleteSiteData } = req.body || {};
+    const isAdmin = req.user?.role === 'admin';
+    const result = await safeDeleteSubdomain(id, req.tgId, { deleteDns, deleteSiteData }, isAdmin);
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
