@@ -89,7 +89,7 @@ describe('Broadcast Announcement Bug Fix & Workflow', () => {
     // Verification:
     // It must NOT throw ReferenceError: broadcastConfirmKeyboard is not defined
     // It must have called ctx.reply with formatted preview text
-    expect(replyText).toContain('Commandor Mail — Broadcast Announcement Preview');
+    expect(replyText).toContain('Commandor Dev Pack — Broadcast Announcement Preview');
     expect(replyText).toContain('New update');
     expect(replyText).toContain('Target Audience');
 

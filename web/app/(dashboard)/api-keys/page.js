@@ -30,6 +30,8 @@ export default function ApiKeysPage() {
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
+  const availableScopes = data?.validScopes || SCOPES;
+
   async function create() {
     if (!name.trim()) return;
     setCreating(true);
@@ -137,7 +139,7 @@ export default function ApiKeysPage() {
               Permissions & Scopes
             </label>
             <div className="flex flex-wrap gap-2">
-              {SCOPES.map((s) => (
+              {availableScopes.map((s) => (
                 <button
                   key={s}
                   type="button"

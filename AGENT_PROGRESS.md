@@ -1,4 +1,4 @@
-# Commandor Mail — Agent Progress & Architecture Journal
+# Commandor Dev Pack — Agent Progress & Architecture Journal
 
 ## Phase A: Repository Audit & Technical Baseline
 
@@ -71,14 +71,38 @@
 
 ## Phase F: Admin Center & PWA
 - **Admin Center**: Real-time stats, user moderation, global emails feed, subdomain controls, node pool, threat logs, broadcast center, database VACUUM.
-- **PWA Branding**: Updated `web/public/manifest.json` with official Commandor Mail branding and metadata.
+- **PWA Branding**: Updated `web/public/manifest.json` with official Commandor Dev Pack branding and metadata.
+
+---
+
+## Phase J: Full Platform Transformation (Commandor Dev Pack)
+- **Product Rebranding**: Complete scrub of all residual "Commandor Mail" and temporary mail branding across the README, configs, bot strings, 15 locale packages, Next.js dashboard, service worker, and metadata.
+- **Admin Node Management**:
+  - Encrypted credential storage at rest using AES-256-GCM (`src/utils/encryption.js`).
+  - Strict host-key verification with SHA-256 fingerprinting.
+  - Non-destructive specifications probe (`uname -s`, `nproc`, `free -m`, `df -h`).
+  - Zero exposure of credentials in API payloads or client storage.
+  - Bulk node validation with syntax checking and duplicate IP detection.
+  - Interactive ping and remote diagnostic execution with audit logging.
+- **Domain & Subdomain Guided Engine**:
+  - Extensible DNS provider abstraction (`BaseDnsProvider`, `CloudflareDnsProvider`, `ManualDnsProvider`).
+  - 8-Step Subdomain Creation Wizard with RFC 1123 hostname validation and reserved route protection.
+  - Reverse proxy Nginx virtual host generator with syntax validation, config backup, graceful reload, and automatic rollback.
+  - Multi-stage route verification independently checking DNS resolution (`dns.promises`), HTTP reachability, and TLS handshake (`tls.connect`).
+  - Safe subdomain deletion protecting DNS records and server data with explicit opt-in confirmation.
+- **Applications Platform & Infrastructure Management**:
+  - Applications module (`/applications`) with Git repository deployment, PM2/process control, environment variable secrets management, node association, and rollback support.
+  - Monitoring & Telemetry module (`/monitoring`) with real-time host CPU load avg, memory percentage, disk usage, container health, cluster availability, and immutable event streaming.
+  - Disaster Recovery & Backups module (`/backups`) with SQLite WAL checkpointing, full configuration zip archives, SHA-256 integrity verification, authenticated downloads, and safe typed-confirmation restore workflow.
+  - Developer Tools (`/api-keys`) with granular permission scopes including `subdomains:manage`, `hosting:manage`, `webhooks:write`, and `emails:read`.
+  - Settings Audit Trail (`/settings`) with real-time change logs, filtering by category, search, and role-based scoping.
 
 ---
 
 ## Verification & Test Results
-- **Jest Test Suite**: 14 test suites, 118 tests passed (100%).
-- **Next.js Production Build**: 15/15 static and dynamic routes compiled cleanly.
-- **Translation Completeness**: 12 launch languages verified 100% complete (92/92 keys).
+- **Jest Test Suite**: 19 test suites, 157 tests passed (100% pass rate).
+- **Next.js Production Build**: 19/19 static and dynamic routes compiled cleanly with 0 errors.
+- **Translation Completeness**: 15 languages verified 100% complete.
 - **PM2 Production Status**:
   - `temp-mail-api` (Port 3000): Online, 0 errors.
   - `temp-mail-web` (Port 3001): Online, 0 errors.
@@ -95,3 +119,4 @@
 - [x] Phase G: Automation & Webhook Engine
 - [x] Phase H: AI Tools, PWA & Quota Engine
 - [x] Phase I: Verification & Production Deployment
+- [x] Phase J: Commandor Dev Pack Master Transformation (Nodes, Subdomains, Apps, Monitoring, Backups, Audit)

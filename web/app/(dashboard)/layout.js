@@ -279,7 +279,7 @@ export default function DashboardLayout({ children }) {
             </div>
             <p className="text-slate-500 dark:text-slate-400 mb-2">Sync emails directly with your Telegram client.</p>
             <a
-              href="https://t.me/commandor_mail_bot"
+              href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_dev_pack_bot'}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
@@ -292,7 +292,7 @@ export default function DashboardLayout({ children }) {
         {/* User Card in Footer */}
         <div className="px-4 py-3.5 border-t border-slate-100 dark:border-cyber-800 flex items-center gap-3">
           <div className="w-9 h-9 bg-indigo-100 dark:bg-cyber-800 rounded-xl flex items-center justify-center text-indigo-700 dark:text-cyan-300 text-xs font-bold ring-1 ring-indigo-200 dark:ring-cyber-700">
-            {user?.tgId ? String(user.tgId).slice(-2) : 'CM'}
+            {user?.tgId ? String(user.tgId).slice(-2) : 'CD'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
@@ -329,7 +329,7 @@ export default function DashboardLayout({ children }) {
               <Bars3Icon className="w-5 h-5" />
             </button>
             <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-400">Commandor Mail</span>
+              <span className="text-xs font-medium text-slate-400">Commandor Dev Pack</span>
               <span className="text-slate-300 dark:text-slate-600">/</span>
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 capitalize">
                 {pathname === '/' ? 'Overview' : pathname.replace('/', '')}

@@ -17,7 +17,7 @@ const nextConfig={
   env:{
     NEXT_PUBLIC_API_URL:process.env.NEXT_PUBLIC_API_URL||'',
     NEXT_PUBLIC_WS_URL:process.env.NEXT_PUBLIC_WS_URL||'',
-    NEXT_PUBLIC_BOT_USERNAME:process.env.NEXT_PUBLIC_BOT_USERNAME||'commandor_mail_bot'
+    NEXT_PUBLIC_BOT_USERNAME:process.env.NEXT_PUBLIC_BOT_USERNAME||'commandor_dev_pack_bot'
   }
 };
 module.exports=nextConfig;

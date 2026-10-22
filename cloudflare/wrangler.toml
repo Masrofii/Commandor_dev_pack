@@ -1,4 +1,4 @@
-name = "tempmail-email-worker"
+name = "commandor-dev-pack-worker"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 

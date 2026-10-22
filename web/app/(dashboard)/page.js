@@ -20,7 +20,9 @@ import {
   CheckCircleIcon,
   CommandLineIcon,
   CpuChipIcon,
-  SparklesIcon
+  SparklesIcon,
+  CircleStackIcon,
+  SignalIcon
 } from '@heroicons/react/24/outline';
 
 export default function OverviewDashboardPage() {
@@ -34,6 +36,8 @@ export default function OverviewDashboardPage() {
   const { data: hostingData } = useSWR('overview-hosting', () => api.getHostingSites());
   const { data: nodesData } = useSWR('overview-nodes', () => api.getHostingNodes());
   const { data: apiKeysData } = useSWR('overview-api-keys', () => api.getApiKeys());
+  const { data: appsData } = useSWR('overview-apps', () => api.getApplications());
+  const { data: backupsData } = useSWR('overview-backups', () => api.getBackups());
 
   const [quickCreating, setQuickCreating] = useState(false);
 
@@ -50,6 +54,8 @@ export default function OverviewDashboardPage() {
   const sites = hostingData?.sites || [];
   const nodes = nodesData?.nodes || [];
   const apiKeys = apiKeysData?.keys || [];
+  const apps = appsData?.applications || [];
+  const backups = backupsData?.backups || [];
 
   async function handleQuickInstantAlias() {
     setQuickCreating(true);
@@ -225,6 +231,66 @@ export default function OverviewDashboardPage() {
         </Link>
       </div>
 
+      {/* Platform Infrastructure & Developer Tools Banner */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Link
+          href="/applications"
+          className="card p-4 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-cyan-400 group-hover:scale-105 transition-transform">
+              <CommandLineIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span>Applications</span>
+                <span className="badge-cyan text-[10px] py-0 px-1.5">{apps.length}</span>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Git deployments &amp; PM2/Docker</div>
+            </div>
+          </div>
+          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-cyan-400 transition-colors" />
+        </Link>
+
+        <Link
+          href="/monitoring"
+          className="card p-4 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+              <SignalIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span>Telemetry</span>
+                <span className="badge-green text-[10px] py-0 px-1.5">Live</span>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">CPU, Memory, Logs &amp; Events</div>
+            </div>
+          </div>
+          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
+        </Link>
+
+        <Link
+          href="/backups"
+          className="card p-4 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
+              <CircleStackIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span>Disaster Recovery</span>
+                <span className="badge text-[10px] py-0 px-1.5 bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">{backups.length} Snapshots</span>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">SQLite WAL &amp; Full System Zip</div>
+            </div>
+          </div>
+          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" />
+        </Link>
+      </div>
+
       {/* Main Grid: Recent Activity Feed + System Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Left Column: Recent Inbox Messages (2 cols) */}
@@ -387,7 +453,7 @@ export default function OverviewDashboardPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-indigo-500 font-bold">•</span>
-                <span><b>Telegram Bot:</b> Connect via <code>@commandor_mail_bot</code> to receive instant push alerts and 1-tap OTP copy buttons.</span>
+                <span><b>Telegram Bot:</b> Connect via <code>@{process.env.NEXT_PUBLIC_BOT_USERNAME || 'commandor_dev_pack_bot'}</code> to receive instant push alerts and 1-tap OTP copy buttons.</span>
               </li>
             </ul>
           </div>

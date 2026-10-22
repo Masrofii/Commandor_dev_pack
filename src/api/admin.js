@@ -6,7 +6,7 @@ const { getDb } = require('../../database/database');
 const { getDatabaseStats, getProcessStats, getCounters } = require('../monitoring/metrics');
 const { getAllSubdomainsAdmin, updateSubdomain, deleteSubdomain, getSubdomainById } = require('../services/subdomainService');
 const { getAllSitesAdmin, deleteSite, getSecurityLogs } = require('../services/hostingService');
-const { listNodes, testAndProvisionNode, provisionNodesBulk, deleteNode, parseNodeConnectionString, pingNode, executeNodeCommand, getNodeWithSites } = require('../services/nodeManagerService');
+const { listNodes, enrollNode, updateNode, bulkAddNodes, validateBulkNodes, testNodeConnection, deleteNode, parseNodeConnectionString, pingNode, executeNodeCommand, getNodeWithSites } = require('../services/nodeManagerService');
 
 router.use(requireAdmin);
 
@@ -242,32 +242,37 @@ router.get('/nodes', (req, res) => {
   }
 });
 
+// Test SSH connection without enrolling
+router.post('/nodes/test', async (req, res) => {
+  try {
+    const result = await testNodeConnection(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Enroll node securely with encrypted credentials
 router.post('/nodes', async (req, res) => {
   try {
-    let { connection_string, host, port, username, password, private_key, name, http_port, public_url } = req.body;
-    if (connection_string) {
-      const parsed = parseNodeConnectionString(connection_string);
-      host = parsed.host;
-      port = parsed.port;
-      username = parsed.username;
-      password = parsed.password;
-    }
-    if (!host || !username) {
-      return res.status(400).json({ error: 'Host and username are required (or connection_string as host:port:user:pass)' });
-    }
-    const node = await testAndProvisionNode({
-      host,
-      port: port || 22,
-      username,
-      password,
-      privateKey: private_key,
-      name,
-      httpPort: http_port || 8080,
-      publicUrl: public_url
-    });
+    const node = await enrollNode(req.body);
     res.status(201).json(node);
   } catch (err) {
-    res.status(400).json({ error: `Node setup failed: ${err.message}` });
+    res.status(400).json({ error: `Node enrollment failed: ${err.message}` });
+  }
+});
+
+// Dry-run validate bulk connection strings
+router.post('/nodes/bulk/validate', (req, res) => {
+  try {
+    const { connection_strings } = req.body;
+    if (!connection_strings) {
+      return res.status(400).json({ error: 'connection_strings is required' });
+    }
+    const result = validateBulkNodes(connection_strings);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -278,10 +283,10 @@ router.post('/nodes/bulk', async (req, res) => {
     if (!input || (Array.isArray(input) && input.length === 0)) {
       return res.status(400).json({ error: 'Connection strings or nodes array is required' });
     }
-    const result = await provisionNodesBulk(input);
+    const result = await bulkAddNodes(input);
     res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: `Bulk node provisioning failed: ${err.message}` });
+    res.status(500).json({ error: `Bulk node enrollment failed: ${err.message}` });
   }
 });
 

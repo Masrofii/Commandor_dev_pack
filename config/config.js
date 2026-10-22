@@ -16,7 +16,7 @@ const config={
   smtp:{host:optional('SMTP_HOST'),port:optionalInt('SMTP_PORT',587),secure:optionalBool('SMTP_SECURE'),user:optional('SMTP_USER'),pass:optional('SMTP_PASS'),from:optional('SMTP_FROM','noreply@localhost')},
   session:{secret:optional('SESSION_SECRET','change-me-in-production'),ttlHours:optionalInt('SESSION_TTL_HOURS',168)},
   jwt:{secret:optional('JWT_SECRET','change-me-in-production')},
-  admin2fa:{issuer:optional('ADMIN_2FA_ISSUER','TempMailManager')},
+  admin2fa:{issuer:optional('ADMIN_2FA_ISSUER','CommandorDevPack')},
   geoip:{enabled:optionalBool('GEOIP_ENABLED'),dbPath:optional('GEOIP_DATABASE_PATH','./data/GeoLite2-City.mmdb')},
   webhooks:{retryLimit:optionalInt('WEBHOOK_RETRY_LIMIT',5),retryBaseDelayMs:optionalInt('WEBHOOK_RETRY_BASE_DELAY_MS',5000)},
   logging:{level:optional('LOG_LEVEL','info'),dir:optional('LOG_DIR','./logs')},

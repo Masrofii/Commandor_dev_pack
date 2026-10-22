@@ -79,7 +79,7 @@ export const api = {
   deleteAutomation: (id) => apiFetch(`/api/automations/${id}`, { method: 'DELETE' }),
   getAdminUsers: (p) => apiFetch('/api/admin/users' + toQueryString(p)),
   updateUser: (tgId, d) => apiFetch(`/api/admin/users/${tgId}`, { method: 'PATCH', body: JSON.stringify(d) }),
-  getAuditLogs: (p) => apiFetch('/api/admin/logs' + toQueryString(p)),
+  getAuditLogs: (p = {}) => apiFetch('/api/monitoring/logs' + toQueryString(p)).catch(() => apiFetch('/api/admin/logs' + toQueryString(p))),
   getAdminStats: () => apiFetch('/api/admin/stats'),
   getAdminEmails: (p = {}) => apiFetch('/api/admin/emails' + toQueryString(p)),
   deleteAdminEmail: (id) => apiFetch(`/api/admin/emails/${id}`, { method: 'DELETE' }),

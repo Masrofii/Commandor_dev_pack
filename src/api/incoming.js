@@ -71,7 +71,7 @@ router.post('/',incomingEmailLimiter,validateSecret,async(req,res)=>{
       if(matchedSubdomain?.email_webhook_url){
         fetch(matchedSubdomain.email_webhook_url,{
           method:'POST',
-          headers:{'Content-Type':'application/json','User-Agent':'TempMail-Subdomain/1.0'},
+          headers:{'Content-Type':'application/json','User-Agent':'CommandorDevPack-Subdomain/1.0'},
           body:JSON.stringify({event:'email.received',subdomain:matchedSubdomain.subdomain,fullDomain:matchedSubdomain.full_domain,recipient:dest,sender:emailRecord.sender,subject:emailRecord.subject,textBody:emailRecord.text_body,htmlBody:emailRecord.html_body,receivedAt:emailRecord.received_at}),
           signal:AbortSignal.timeout(5000)
         }).catch(e=>logger.warn({err:e.message},'Subdomain webhook failed'));

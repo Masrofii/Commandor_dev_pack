@@ -435,7 +435,7 @@ function setupCallbacks(bot) {
             await handleAdminVacuum(ctx);
           } else if (sub === 'broadcast') {
             setBroadcast(ctx.from.id, true);
-            await ctx.reply('📢 <b>Commandor Mail — Broadcast Announcement</b>\n──────────────────────────────\nPlease reply to this chat with your announcement message. A preview will be generated for confirmation before any message is sent.\n\n<i>Send your message below (or /cancel to abort):</i>', {
+            await ctx.reply('📢 <b>Commandor Dev Pack — Broadcast Announcement</b>\n──────────────────────────────\nPlease reply to this chat with your announcement message. A preview will be generated for confirmation before any message is sent.\n\n<i>Send your message below (or /cancel to abort):</i>', {
               parse_mode: 'HTML'
             });
           } else if (sub === 'broadcast_confirm') {
@@ -444,7 +444,7 @@ function setupCallbacks(bot) {
             takeBroadcastConfirm(ctx.from.id);
             setBroadcast(ctx.from.id, true);
             await ctx.answerCbQuery('✏️ Send your revised message below').catch(() => {});
-            await ctx.reply('✏️ <b>Commandor Mail — Edit Announcement</b>\n──────────────────────────────\nPlease reply with your revised announcement message below (text or media, or /cancel to abort):', {
+            await ctx.reply('✏️ <b>Commandor Dev Pack — Edit Announcement</b>\n──────────────────────────────\nPlease reply with your revised announcement message below (text or media, or /cancel to abort):', {
               parse_mode: 'HTML'
             });
           } else if (sub === 'broadcast_cancel') {
@@ -731,7 +731,7 @@ function setupCallbacks(bot) {
                 if (fs.existsSync(job.file_path)) {
                   const stat = fs.statSync(job.file_path);
                   if (stat.size < 45 * 1024 * 1024) {
-                    await ctx.replyWithDocument({ source: job.file_path, filename: `commandor_mail_export_${ctx.from.id}.${format}` }, {
+                    await ctx.replyWithDocument({ source: job.file_path, filename: `commandor_dev_pack_export_${ctx.from.id}.${format}` }, {
                       caption: `📦 <b>Your ${format.toUpperCase()} Mailbox Export is ready!</b>`,
                       parse_mode: 'HTML'
                     }).catch(() => {});

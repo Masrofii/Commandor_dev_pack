@@ -783,7 +783,7 @@ async function showApiKeys(ctx) {
 
 async function showApiDocs(ctx) {
   const baseUrl = config.server.webUrl || 'https://commandor.my.id';
-  const text = `📖 <b>TempMail REST API Documentation</b>\n─────────────────────────────\nAutomate TempMail from scripts, bots, or applications.\n\n🌐 <b>Base URL:</b> <code>${baseUrl}</code>\n🔐 <b>Header:</b> <code>Authorization: Bearer &lt;YOUR_API_KEY&gt;</code>\n\n📬 <b>Common Endpoints:</b>\n\n<b>1. List All Emails</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails</code>\n\n<b>2. Read Specific Email</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n\n<b>3. List Your Aliases</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/aliases</code>\n\n<b>4. Create Custom Alias</b>\n<code>curl -X POST -H "Authorization: Bearer &lt;KEY&gt;" -H "Content-Type: application/json" -d '{"domain":"commandor.my.id","customName":"mytest"}' ${baseUrl}/api/aliases</code>\n\n<b>5. Delete an Email</b>\n<code>curl -X DELETE -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n─────────────────────────────`;
+  const text = `📖 <b>Commandor Dev Pack REST API Documentation</b>\n─────────────────────────────\nAutomate Commandor Dev Pack from scripts, bots, or applications.\n\n🌐 <b>Base URL:</b> <code>${baseUrl}</code>\n🔐 <b>Header:</b> <code>Authorization: Bearer &lt;YOUR_API_KEY&gt;</code>\n\n📬 <b>Common Endpoints:</b>\n\n<b>1. List All Emails</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails</code>\n\n<b>2. Read Specific Email</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n\n<b>3. List Your Aliases</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/aliases</code>\n\n<b>4. Create Custom Alias</b>\n<code>curl -X POST -H "Authorization: Bearer &lt;KEY&gt;" -H "Content-Type: application/json" -d '{"domain":"commandor.my.id","customName":"mytest"}' ${baseUrl}/api/aliases</code>\n\n<b>5. Delete an Email</b>\n<code>curl -X DELETE -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n─────────────────────────────`;
 
   return send(ctx, text, {
     reply_markup: {
@@ -954,7 +954,7 @@ async function promptBroadcastPreview(ctx, payload) {
   const formattedContent = formatTelegramEntitiesToHtml(textPreview, broadcastData.entities);
   const mediaNote = broadcastData.type !== 'text' ? `\n📎 <b>Media:</b> <code>${broadcastData.type.toUpperCase()}</code>` : '';
 
-  const previewMsg = `📢 <b>Commandor Mail — Broadcast Announcement Preview</b>\n──────────────────────────────${mediaNote}\n<b>Message Content:</b>\n${formattedContent}\n──────────────────────────────\n👥 <b>Target Audience:</b> <b>${userCount}</b> registered users\n🛡️ <b>Engine:</b> Safe rate-limited delivery (~30 msg/sec)\n\n⚠️ <i>Please review the announcement above. Tap confirm to broadcast to all users.</i>`;
+  const previewMsg = `📢 <b>Commandor Dev Pack — Broadcast Announcement Preview</b>\n──────────────────────────────${mediaNote}\n<b>Message Content:</b>\n${formattedContent}\n──────────────────────────────\n👥 <b>Target Audience:</b> <b>${userCount}</b> registered users\n🛡️ <b>Engine:</b> Safe rate-limited delivery (~30 msg/sec)\n\n⚠️ <i>Please review the announcement above. Tap confirm to broadcast to all users.</i>`;
 
   if (broadcastData.type === 'photo' && broadcastData.fileId) {
     return ctx.replyWithPhoto(broadcastData.fileId, {
@@ -1009,21 +1009,21 @@ async function handleConfirmedBroadcast(ctx) {
       try {
         if (state.type === 'photo' && state.fileId) {
           await ctx.telegram.sendPhoto(u.tg_id, state.fileId, {
-            caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
+            caption: formattedCaption ? `📢 <b>Commandor Dev Pack — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Dev Pack — Platform Announcement</b>',
             parse_mode: 'HTML'
           });
         } else if (state.type === 'video' && state.fileId) {
           await ctx.telegram.sendVideo(u.tg_id, state.fileId, {
-            caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
+            caption: formattedCaption ? `📢 <b>Commandor Dev Pack — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Dev Pack — Platform Announcement</b>',
             parse_mode: 'HTML'
           });
         } else if (state.type === 'document' && state.fileId) {
           await ctx.telegram.sendDocument(u.tg_id, state.fileId, {
-            caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
+            caption: formattedCaption ? `📢 <b>Commandor Dev Pack — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Dev Pack — Platform Announcement</b>',
             parse_mode: 'HTML'
           });
         } else {
-          await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedText}`, { parse_mode: 'HTML' });
+          await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Dev Pack — Platform Announcement:</b>\n\n${formattedText}`, { parse_mode: 'HTML' });
         }
         delivered++;
       } catch (err) {
@@ -1034,11 +1034,11 @@ async function handleConfirmedBroadcast(ctx) {
           try {
             if (state.type === 'photo' && state.fileId) {
               await ctx.telegram.sendPhoto(u.tg_id, state.fileId, {
-                caption: formattedCaption ? `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Mail — Platform Announcement</b>',
+                caption: formattedCaption ? `📢 <b>Commandor Dev Pack — Platform Announcement:</b>\n\n${formattedCaption}` : '📢 <b>Commandor Dev Pack — Platform Announcement</b>',
                 parse_mode: 'HTML'
               });
             } else {
-              await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Mail — Platform Announcement:</b>\n\n${formattedText}`, { parse_mode: 'HTML' });
+              await ctx.telegram.sendMessage(u.tg_id, `📢 <b>Commandor Dev Pack — Platform Announcement:</b>\n\n${formattedText}`, { parse_mode: 'HTML' });
             }
             delivered++;
           } catch {
@@ -1441,7 +1441,7 @@ function setupCommands(bot) {
     const msg = ctx.message.text.split(' ').slice(1).join(' ').trim();
     if (!msg) {
       setBroadcast(ctx.from.id, true);
-      return replyHtml(ctx, '📢 <b>Commandor Mail — Broadcast Announcement</b>\n──────────────────────────────\nPlease reply with the text message you wish to broadcast to all registered users.\n\n<i>Reply with your message below (or /cancel to abort):</i>');
+      return replyHtml(ctx, '📢 <b>Commandor Dev Pack — Broadcast Announcement</b>\n──────────────────────────────\nPlease reply with the text message you wish to broadcast to all registered users.\n\n<i>Reply with your message below (or /cancel to abort):</i>');
     }
     return promptBroadcastPreview(ctx, msg);
   }));
@@ -1522,7 +1522,7 @@ function setupCommands(bot) {
       const child = require('child_process');
       gitHash = child.execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
     } catch {}
-    const text = `ℹ️ <b>COMMANDOR MAIL PLATFORM VERSION</b>\n──────────────────────────────\n🏷 <b>Version:</b> <code>v${pkg.version}</code>\n🔖 <b>Commit:</b> <code>${gitHash}</code>\n⚙️ <b>Node.js:</b> <code>${process.version}</code>\n📦 <b>Architecture:</b> <code>${process.platform}-${process.arch}</code>\n⏱ <b>Process Uptime:</b> <code>${Math.floor(process.uptime() / 60)} minutes</code>\n──────────────────────────────`;
+    const text = `ℹ️ <b>COMMANDOR DEV PACK PLATFORM VERSION</b>\n──────────────────────────────\n🏷 <b>Version:</b> <code>v${pkg.version}</code>\n🔖 <b>Commit:</b> <code>${gitHash}</code>\n⚙️ <b>Node.js:</b> <code>${process.version}</code>\n📦 <b>Architecture:</b> <code>${process.platform}-${process.arch}</code>\n⏱ <b>Process Uptime:</b> <code>${Math.floor(process.uptime() / 60)} minutes</code>\n──────────────────────────────`;
     return replyHtml(ctx, text);
   }));
 
@@ -2317,14 +2317,14 @@ async function showExportMenu(ctx) {
 }
 
 async function showPrivacyInfo(ctx) {
-  let text = `🛡️ <b>Commandor Mail — Privacy & Security Architecture</b>\n\n`;
+  let text = `🛡️ <b>Commandor Dev Pack — Privacy & Security Architecture</b>\n\n`;
   text += `Your privacy is our core engineering requirement:\n\n`;
   text += `• <b>Zero Plaintext Logging:</b> Incoming messages are encrypted and isolated in storage, bound exclusively to your user identity.\n`;
   text += `• <b>HTML Sanitization:</b> All incoming email HTML is aggressively sanitized. Tracker beacons, malicious scripts, and cross-site requests are stripped.\n`;
   text += `• <b>1-Hour Burners:</b> Temporary aliases self-destruct automatically when their timer expires.\n`;
   text += `• <b>Data Sovereignty:</b> You can export your data anytime via <code>/export</code> or delete your emails and aliases on demand.\n`;
   text += `• <b>End-to-End Sessions:</b> Web sessions are hashed with SHA-256 and expire automatically.\n\n`;
-  text += `<i>Commandor Mail never sells, rents, or reads your personal communications.</i>`;
+  text += `<i>Commandor Dev Pack never sells, rents, or reads your personal communications.</i>`;
 
   const kb = [
     [
@@ -2339,10 +2339,10 @@ async function showPrivacyInfo(ctx) {
 
 async function showSupportInfo(ctx) {
   const tgId = ctx.from.id;
-  let text = `🎧 <b>Commandor Mail — Support & Helpdesk</b>\n\n`;
+  let text = `🎧 <b>Commandor Dev Pack — Support & Helpdesk</b>\n\n`;
   text += `Need assistance, want to report a bug, or request a feature?\n\n`;
   text += `👤 <b>Your Diagnostic ID:</b> <code>User #${tgId}</code>\n`;
-  text += `🤖 <b>Bot Service:</b> @commandor_mail_bot\n`;
+  text += `🤖 <b>Bot Service:</b> @${ctx.botInfo?.username || 'commandor_dev_pack_bot'}\n`;
   text += `💬 <b>Direct Support:</b> <a href="https://t.me/Masrofii">@Masrofii</a>\n\n`;
   text += `💡 <b>Quick Tips:</b>\n`;
   text += `• Generate aliases instantly: <code>/new [label]</code>\n`;

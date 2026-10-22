@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TempMail Manager — Documentation</title>
+<title>Commandor Dev Pack — Documentation</title>
 <style>
   :root{--brand:#6366f1;--brand-dark:#4f46e5;--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#334155;--text:#f1f5f9;--muted:#94a3b8;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--cyan:#06b6d4;}
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -118,7 +118,7 @@
 <body>
 <nav class="top">
   <div class="inner">
-    <div class="logo">📧 TempMail Manager</div>
+    <div class="logo">📧 Commandor Dev Pack</div>
     <div class="links">
       <a href="#architecture">Architecture</a>
       <a href="#env">Environment</a>
@@ -133,8 +133,8 @@
 <!-- HERO -->
 <div class="hero">
   <div class="hero-badge">v1.0 · Production Ready · Self-Hosted</div>
-  <h1>TempMail Manager</h1>
-  <p>A complete self-hosted temporary email platform. Telegram bot + modern web dashboard + real-time WebSocket + PWA. Deploy on any Debian VPS in minutes.</p>
+  <h1>Commandor Dev Pack</h1>
+  <p>A complete self-hosted infrastructure and developer management platform. Telegram bot + modern web dashboard + real-time WebSocket + PWA. Deploy on any Debian VPS in minutes.</p>
   <div class="hero-chips">
     <span class="chip">Node.js 20+</span><span class="chip">SQLite FTS5</span><span class="chip">Telegraf</span>
     <span class="chip">Next.js 14</span><span class="chip">Tailwind CSS</span><span class="chip">WebSocket</span>
@@ -230,7 +230,7 @@
         </div>
 
         <h3 style="margin:24px 0 12px;font-size:1.1rem;">Project Structure</h3>
-        <pre>temp-mail-manager/
+        <pre>Commandor_dev_pack/
 ├── server.js               # Entry point
 ├── config/config.js         # All configuration
 ├── database/
@@ -275,7 +275,7 @@
 ├── cloudflare/
 │   ├── worker.js            # Email Worker code
 │   └── wrangler.toml        # Deployment config
-├── nginx/temp-mail.conf     # Nginx configuration
+├── nginx/commandor-dev-pack.conf     # Nginx configuration
 ├── web/                     # Next.js dashboard
 │   ├── app/                 # App Router pages
 │   ├── lib/                 # API client + auth helpers
@@ -316,7 +316,7 @@
           <ol>
             <li><strong>Open Telegram</strong> and search for <strong>@BotFather</strong></li>
             <li>Send <strong>/newbot</strong> and follow the prompts</li>
-            <li>Choose a name (e.g. "My TempMail") and a username ending in <strong>bot</strong></li>
+            <li>Choose a name (e.g. "Commandor Dev Pack") and a username ending in <strong>bot</strong></li>
             <li>BotFather replies with your token: <code>123456789:ABCdefGhIjKlmNoPQRsTUvwXyZ</code></li>
             <li>Set: <code>TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIjKlmNoPQRsTUvwXyZ</code></li>
           </ol>
@@ -423,8 +423,8 @@ npm install -g wrangler</pre>
 
         <h3 style="margin:28px 0 16px;font-size:1.1rem;" id="setup-app">2. Application Setup</h3>
         <pre># Clone / upload project
-git clone https://github.com/yourname/temp-mail-manager /opt/tempmail
-cd /opt/tempmail
+git clone https://github.com/yourname/Commandor_dev_pack /opt/commandor-dev-pack
+cd /opt/commandor-dev-pack
 
 # Install dependencies
 npm install
@@ -463,8 +463,8 @@ pm2 status
 # ┌────┬─────────────────┬──────────┬──────┬───────────┬────────┐
 # │ id │ name            │ mode     │ ↺    │ status    │ cpu    │
 # ├────┼─────────────────┼──────────┼──────┼───────────┼────────┤
-# │ 0  │ temp-mail-api   │ fork     │ 0    │ online    │ 0%     │
-# │ 1  │ temp-mail-web   │ fork     │ 0    │ online    │ 0%     │
+# │ 0  │ commandor-api   │ fork     │ 0    │ online    │ 0%     │
+# │ 1  │ commandor-web   │ fork     │ 0    │ online    │ 0%     │
 # └────┴─────────────────┴──────────┴──────┴───────────┴────────┘
 
 # Save PM2 process list
@@ -480,11 +480,11 @@ curl http://localhost:3000/health
 curl http://localhost:3000/ready
 
 # View logs
-pm2 logs temp-mail-api
-pm2 logs temp-mail-web
+pm2 logs commandor-api
+pm2 logs commandor-web
 
 # Set yourself as admin (replace with your Telegram ID)
-sqlite3 /opt/tempmail/data/app.db "UPDATE users SET role='admin' WHERE tg_id=YOUR_TG_ID;"</pre>
+sqlite3 /opt/commandor-dev-pack/data/app.db "UPDATE users SET role='admin' WHERE tg_id=YOUR_TG_ID;"</pre>
       </section>
 
       <!-- TELEGRAM SETUP -->
@@ -506,7 +506,7 @@ sqlite3 /opt/tempmail/data/app.db "UPDATE users SET role='admin' WHERE tg_id=YOU
         <div class="alert info">ℹ️ Cloudflare Email Routing is free and handles MX routing for you. The Worker forwards raw emails to your backend via HTTPS.</div>
         <div class="steps">
           <div class="step"><div class="step-num"></div><div class="step-body"><h3>Enable Email Routing in Cloudflare</h3><p>Cloudflare Dashboard → your domain → <strong>Email → Email Routing</strong> → Enable. Follow the MX record setup instructions.</p></div></div>
-          <div class="step"><div class="step-num"></div><div class="step-body"><h3>Deploy the Worker</h3><pre>cd /opt/tempmail/cloudflare
+          <div class="step"><div class="step-num"></div><div class="step-body"><h3>Deploy the Worker</h3><pre>cd /opt/commandor-dev-pack/cloudflare
 
 # Login to Cloudflare
 wrangler login
@@ -523,7 +523,7 @@ wrangler deploy</pre></div></div>
           <div class="step"><div class="step-num"></div><div class="step-body"><h3>Configure catch-all routing</h3><p>In Cloudflare Dashboard → Email Routing → Routing Rules → Add rule:<br>Type: <strong>Catch-all</strong> → Action: <strong>Send to Worker</strong> → select your deployed worker.</p></div></div>
           <div class="step"><div class="step-num"></div><div class="step-body"><h3>Test email ingestion</h3><pre># Send a test email to an alias you created
 # Then check backend logs
-pm2 logs temp-mail-api --lines 50
+pm2 logs commandor-api --lines 50
 
 # Or test directly
 curl -X POST https://api.mail.example.com/api/incoming \
@@ -657,15 +657,15 @@ function verify(secret, body, signature) {
       <section class="section" id="nginx-ssl">
         <h2 class="section-title">Nginx + Let's Encrypt</h2>
         <pre># Copy the nginx config
-cp /opt/tempmail/nginx/temp-mail.conf /etc/nginx/sites-available/temp-mail
+cp /opt/commandor-dev-pack/nginx/commandor-dev-pack.conf /etc/nginx/sites-available/commandor-dev-pack
 
 # Edit domain names in the config
-nano /etc/nginx/sites-available/temp-mail
+nano /etc/nginx/sites-available/commandor-dev-pack
 # Replace: mail.example.com → your actual domain
 #          api.mail.example.com → your actual API subdomain
 
 # Enable the site
-ln -s /etc/nginx/sites-available/temp-mail /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/commandor-dev-pack /etc/nginx/sites-enabled/
 
 # Test configuration
 nginx -t
@@ -789,8 +789,8 @@ systemctl reload nginx</pre>
       <section class="section" id="troubleshoot">
         <h2 class="section-title">Troubleshooting</h2>
         <pre># View application logs
-pm2 logs temp-mail-api --lines 100
-pm2 logs temp-mail-web --lines 50
+pm2 logs commandor-api --lines 100
+pm2 logs commandor-web --lines 50
 tail -f logs/error-$(date +%Y-%m-%d).log
 
 # Health endpoints
@@ -812,8 +812,8 @@ df -h
 free -h
 
 # Restart services
-pm2 restart temp-mail-api
-pm2 restart temp-mail-web
+pm2 restart commandor-api
+pm2 restart commandor-web
 systemctl reload nginx
 
 # Check webhook deliveries
@@ -834,7 +834,7 @@ sqlite3 data/app.db "SELECT address,burner_expires_at FROM aliases WHERE burner=
 </div>
 
 <footer style="background:var(--surface);border-top:1px solid var(--border);padding:40px 24px;text-align:center;color:var(--muted);font-size:13px;margin-top:40px;">
-  <p style="margin-bottom:8px;"><strong style="color:var(--text)">TempMail Manager</strong> — Self-hosted temporary email platform</p>
+  <p style="margin-bottom:8px;"><strong style="color:var(--text)">Commandor Dev Pack</strong> — Self-hosted infrastructure and developer management platform</p>
   <p>Node.js · SQLite · Telegraf · Next.js · Tailwind · WebSocket · Cloudflare · PM2 · Nginx</p>
 </footer>
 
