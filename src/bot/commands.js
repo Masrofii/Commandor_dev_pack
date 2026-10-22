@@ -326,7 +326,7 @@ Automate inbox monitoring, alias generation, and subdomain management with our f
 ──────────────────────────────
 <i>Select an action below:</i>`;
 
-  return send(ctx, text, apiHubKeyboard(keyCount));
+  return send(ctx, text, apiHubKeyboard(keyCount, config.server.webUrl));
 }
 
 async function showInfraHub(ctx) {

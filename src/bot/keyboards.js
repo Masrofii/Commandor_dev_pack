@@ -165,19 +165,23 @@ function subdomainHubKeyboard(subCount = 0) {
   };
 }
 
-function apiHubKeyboard(keyCount = 0) {
+function apiHubKeyboard(keyCount = 0, webUrl = null) {
+  const rows = [
+    [
+      { text: `🔑 My API Keys (${keyCount})`, callback_data: 'api_key:list' },
+      { text: '➕ Generate New Token', callback_data: 'api_key:new' }
+    ],
+    [
+      { text: '📖 API Documentation', callback_data: 'api_key:docs' },
+      { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+    ]
+  ];
+  if (webUrl) {
+    rows.push([{ text: '🌐 Launch Web Dashboard', url: `${webUrl}/api-keys` }]);
+  }
   return {
     reply_markup: {
-      inline_keyboard: [
-        [
-          { text: `🔑 My API Keys (${keyCount})`, callback_data: 'api_key:list' },
-          { text: '➕ Generate New Token', callback_data: 'api_key:new' }
-        ],
-        [
-          { text: '📖 API Documentation', callback_data: 'api_key:docs' },
-          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
-        ]
-      ]
+      inline_keyboard: rows
     }
   };
 }

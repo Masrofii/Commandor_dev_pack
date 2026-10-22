@@ -542,6 +542,16 @@ export default function InboxPage() {
                 >
                   <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                 </button>
+
+                <a
+                  href={`/api/emails/${activeEmailData.id}/eml`}
+                  download={`email-${activeEmailData.id}.eml`}
+                  className="btn-secondary py-1.5 px-2.5 text-xs flex items-center gap-1 text-slate-700 dark:text-slate-300"
+                  title="Download Raw EML"
+                >
+                  <DocumentArrowDownIcon className="w-4 h-4 text-cyan-500" />
+                  <span className="hidden md:inline font-mono">EML</span>
+                </a>
               </div>
             </div>
 

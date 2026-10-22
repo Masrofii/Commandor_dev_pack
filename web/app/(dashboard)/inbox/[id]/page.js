@@ -157,6 +157,16 @@ export default function EmailDetailPage({ params }) {
             <TrashIcon className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Delete</span>
           </button>
+
+          <a
+            href={`/api/emails/${email.id}/eml`}
+            download={`email-${email.id}.eml`}
+            className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 text-slate-700 dark:text-slate-300"
+            title="Download Raw EML"
+          >
+            <DocumentArrowDownIcon className="w-4 h-4 text-cyan-500" />
+            <span className="hidden sm:inline font-mono">EML</span>
+          </a>
         </div>
       </div>
 
