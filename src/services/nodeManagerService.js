@@ -928,9 +928,25 @@ async function pingNode(id) {
   }
 }
 
+const FORBIDDEN_NODE_COMMANDS = [
+  /rm\s+(-rf|-fr)\s+(\/|\/\*|~|\$HOME)/i,
+  /mkfs(\.[a-z0-9]+)?\s+/i,
+  /dd\s+if=.*of=\/dev\/(sd[a-z]|nvme|vd[a-z])/i,
+  /:\(\)\s*\{\s*:\|:&\s*\};:/, // fork bomb
+  />\s*\/dev\/(sd[a-z]|nvme|vd[a-z])/i,
+  /chmod\s+(-R\s+)?777\s+\//i
+];
+
 async function executeNodeCommand(id, command, userTgId = null) {
   if (!command || typeof command !== 'string' || !command.trim()) {
     throw new Error('Command string is required');
+  }
+
+  const cleanCmd = command.trim();
+  for (const forbidden of FORBIDDEN_NODE_COMMANDS) {
+    if (forbidden.test(cleanCmd)) {
+      throw new Error(`Command rejected: Unsafe or destructive pattern detected (${forbidden})`);
+    }
   }
 
   const db = getDb();
@@ -939,7 +955,6 @@ async function executeNodeCommand(id, command, userTgId = null) {
     throw new Error(`Node #${id} not found`);
   }
 
-  const cleanCmd = command.trim();
   const startTime = Date.now();
   let conn;
   try {

@@ -114,4 +114,17 @@ describe('Encryption & Secret Redaction', () => {
     const deleted = deleteNode(rawNode.id);
     expect(deleted).toBe(true);
   });
+
+  test('executeNodeCommand strictly rejects dangerous destructive command patterns', async () => {
+    const { executeNodeCommand } = require('../../src/services/nodeManagerService');
+
+    await expect(executeNodeCommand(999, 'rm -rf /', 1001))
+      .rejects.toThrow(/Unsafe or destructive pattern detected/);
+
+    await expect(executeNodeCommand(999, 'mkfs.ext4 /dev/sda1', 1001))
+      .rejects.toThrow(/Unsafe or destructive pattern detected/);
+
+    await expect(executeNodeCommand(999, ':(){ :|:& };:', 1001))
+      .rejects.toThrow(/Unsafe or destructive pattern detected/);
+  });
 });

@@ -17,13 +17,24 @@ const {
 } = require('../services/applicationService');
 const { body, validationResult } = require('express-validator');
 
+function checkAdmin(req) {
+  const config = require('../../config/config');
+  return (req.user?.role === 'admin') || (config.telegram?.adminId && (String(req.tgId) === String(config.telegram.adminId)));
+}
+
 router.use(requireAuthOrApiKey(['apps:manage']));
 
 // List applications
 router.get('/', (req, res) => {
   try {
     const { search, status, nodeId } = req.query;
-    const apps = listApplications({ search, status, nodeId: nodeId ? parseInt(nodeId, 10) : null });
+    const isAdmin = checkAdmin(req);
+    const apps = listApplications({
+      search,
+      status,
+      nodeId: nodeId ? parseInt(nodeId, 10) : null,
+      userTgId: isAdmin ? null : req.tgId
+    });
     res.json({ applications: apps, count: apps.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -34,7 +45,8 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const app = getApplicationById(id);
+    const isAdmin = checkAdmin(req);
+    const app = getApplicationById(id, req.tgId, isAdmin);
     if (!app) return res.status(404).json({ error: 'Application not found' });
     res.json(app);
   } catch (err) {
@@ -94,10 +106,12 @@ router.post(
 router.put('/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const updated = updateApplication(id, req.body, req.tgId);
+    const isAdmin = checkAdmin(req);
+    const updated = updateApplication(id, req.body, req.tgId, isAdmin);
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const status = err.message.includes('Unauthorized') ? 403 : 400;
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -105,10 +119,12 @@ router.put('/:id', (req, res) => {
 router.get('/:id/deployments', (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const deployments = getApplicationDeployments(id);
+    const isAdmin = checkAdmin(req);
+    const deployments = getApplicationDeployments(id, req.tgId, isAdmin);
     res.json({ deployments, count: deployments.length });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const status = err.message.includes('Unauthorized') ? 403 : (err.message.includes('not found') ? 404 : 500);
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -116,11 +132,13 @@ router.get('/:id/deployments', (req, res) => {
 router.get('/:id/deployments/:depId', (req, res) => {
   try {
     const depId = parseInt(req.params.depId, 10);
-    const dep = getDeploymentById(depId);
+    const isAdmin = checkAdmin(req);
+    const dep = getDeploymentById(depId, req.tgId, isAdmin);
     if (!dep) return res.status(404).json({ error: 'Deployment record not found' });
     res.json(dep);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const status = err.message.includes('Unauthorized') ? 403 : 500;
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -128,10 +146,12 @@ router.get('/:id/deployments/:depId', (req, res) => {
 router.post('/:id/deploy', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const result = await triggerApplicationDeploy(id, req.tgId);
+    const isAdmin = checkAdmin(req);
+    const result = await triggerApplicationDeploy(id, req.tgId, isAdmin);
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const status = err.message.includes('Unauthorized') ? 403 : 400;
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -142,10 +162,12 @@ router.post('/:id/rollback', async (req, res) => {
     const { deployment_id } = req.body;
     if (!deployment_id) return res.status(400).json({ error: 'deployment_id is required' });
 
-    const result = await rollbackApplication(id, parseInt(deployment_id, 10), req.tgId);
+    const isAdmin = checkAdmin(req);
+    const result = await rollbackApplication(id, parseInt(deployment_id, 10), req.tgId, isAdmin);
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const status = err.message.includes('Unauthorized') ? 403 : 400;
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -156,10 +178,12 @@ router.post('/:id/control', (req, res) => {
     const { action } = req.body;
     if (!action) return res.status(400).json({ error: 'action is required (start, stop, restart)' });
 
-    const result = controlApplication(id, action, req.tgId);
+    const isAdmin = checkAdmin(req);
+    const result = controlApplication(id, action, req.tgId, isAdmin);
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const status = err.message.includes('Unauthorized') ? 403 : 400;
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -167,6 +191,9 @@ router.post('/:id/control', (req, res) => {
 router.get('/:id/health', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
+    const isAdmin = checkAdmin(req);
+    const app = getApplicationById(id, req.tgId, isAdmin);
+    if (!app) return res.status(404).json({ error: 'Application not found' });
     const health = await checkApplicationHealth(id);
     res.json(health);
   } catch (err) {
@@ -178,11 +205,13 @@ router.get('/:id/health', async (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const deleted = deleteApplication(id, req.tgId);
+    const isAdmin = checkAdmin(req);
+    const deleted = deleteApplication(id, req.tgId, isAdmin);
     if (!deleted) return res.status(404).json({ error: 'Application not found' });
     res.json({ status: 'deleted', id });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const status = err.message.includes('Unauthorized') ? 403 : 400;
+    res.status(status).json({ error: err.message });
   }
 });
 

@@ -10,6 +10,7 @@ const {
   createApplication,
   getApplicationById,
   listApplications,
+  updateApplication,
   triggerApplicationDeploy,
   rollbackApplication,
   controlApplication,
@@ -94,6 +95,53 @@ describe('Developer Applications & Git Deployment Platform', () => {
 
     const started = controlApplication(app.id, 'start', 1001);
     expect(started.status).toBe('running');
+  });
+
+  test('enforces strict multi-tenant isolation: User B cannot access, deploy, or delete User A application', async () => {
+    const USER_A = 1001;
+    const USER_B = 2002;
+
+    // Create app owned by User A
+    const appA = createApplication({
+      name: 'tenant-isolated-app',
+      gitRepo: 'https://github.com/tenant-a/service.git',
+      userTgId: USER_A
+    });
+
+    // 1. User B should not see User A's app in listApplications
+    const appsForUserB = listApplications({ userTgId: USER_B });
+    expect(appsForUserB.some(a => a.id === appA.id)).toBe(false);
+
+    // 2. User B cannot fetch User A's app by ID
+    expect(getApplicationById(appA.id, USER_B, false)).toBeNull();
+
+    // 3. User B cannot modify User A's app
+    expect(() => updateApplication(appA.id, { description: 'Hacked' }, USER_B, false))
+      .toThrow(/Unauthorized/);
+
+    // 4. User B cannot deploy User A's app
+    await expect(triggerApplicationDeploy(appA.id, USER_B, false))
+      .rejects.toThrow(/Unauthorized/);
+
+    // 5. User B cannot rollback User A's app
+    await expect(rollbackApplication(appA.id, 999, USER_B, false))
+      .rejects.toThrow(/Unauthorized/);
+
+    // 6. User B cannot control User A's app
+    expect(() => controlApplication(appA.id, 'start', USER_B, false))
+      .toThrow(/Unauthorized/);
+
+    // 7. User B cannot delete User A's app
+    expect(() => deleteApplication(appA.id, USER_B, false))
+      .toThrow(/Unauthorized/);
+
+    // 8. Admin CAN access User A's app
+    const appForAdmin = getApplicationById(appA.id, USER_B, true);
+    expect(appForAdmin).toBeDefined();
+    expect(appForAdmin.id).toBe(appA.id);
+
+    // Clean up
+    deleteApplication(appA.id, USER_A, false);
   });
 });
 

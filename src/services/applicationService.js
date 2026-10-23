@@ -34,6 +34,14 @@ function maskEnvVars(envVarsJson) {
   }
 }
 
+function checkApplicationOwnership(app, userTgId, isAdmin = false) {
+  if (!app) return false;
+  if (isAdmin) return true;
+  if (!userTgId) return true; // system/internal tasks
+  if (app.user_tg_id === null || app.user_tg_id === undefined) return true; // legacy/unassigned apps
+  return String(app.user_tg_id) === String(userTgId);
+}
+
 function formatApplication(app) {
   if (!app) return null;
   const db = getDb();
@@ -100,15 +108,16 @@ function createApplication({
     INSERT INTO applications (
       name, description, node_id, subdomain_id,
       git_repo, git_branch, build_command, start_command,
-      env_vars, port, status, health_check_path, created_at
+      env_vars, port, status, health_check_path, user_tg_id, created_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'stopped', ?, datetime('now'))
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'stopped', ?, ?, datetime('now'))
   `).run(
     cleanName, description || null, nodeId || null, subdomainId || null,
     gitRepo.trim(), gitBranch ? gitBranch.trim() : 'main',
     buildCommand ? buildCommand.trim() : null,
     startCommand ? startCommand.trim() : null,
-    encryptedEnv, cleanPort, healthCheckPath || '/'
+    encryptedEnv, cleanPort, healthCheckPath || '/',
+    userTgId ? parseInt(userTgId, 10) : null
   );
 
   const appId = info.lastInsertRowid;
@@ -130,10 +139,13 @@ function createApplication({
   return getApplicationById(appId);
 }
 
-function updateApplication(id, updates = {}, userTgId = null) {
+function updateApplication(id, updates = {}, userTgId = null, isAdmin = false) {
   const db = getDb();
   const current = db.prepare('SELECT * FROM applications WHERE id=?').get(id);
   if (!current) throw new Error(`Application #${id} not found`);
+  if (!checkApplicationOwnership(current, userTgId, isAdmin)) {
+    throw new Error(`Unauthorized: You do not have permission to modify application #${id}`);
+  }
 
   const sets = [];
   const params = [];
@@ -199,8 +211,10 @@ function updateApplication(id, updates = {}, userTgId = null) {
   return getApplicationById(id);
 }
 
-function getApplicationById(id) {
+function getApplicationById(id, userTgId = null, isAdmin = false) {
   const row = getDb().prepare('SELECT * FROM applications WHERE id=?').get(id);
+  if (!row) return null;
+  if (!checkApplicationOwnership(row, userTgId, isAdmin)) return null;
   return formatApplication(row);
 }
 
@@ -209,6 +223,10 @@ function listApplications(opts = {}) {
   let q = 'SELECT * FROM applications WHERE 1=1';
   const params = [];
 
+  if (opts.userTgId) {
+    q += ' AND (user_tg_id = ? OR user_tg_id IS NULL)';
+    params.push(opts.userTgId);
+  }
   if (opts.search) {
     q += ' AND (name LIKE ? OR git_repo LIKE ?)';
     params.push(`%${opts.search}%`, `%${opts.search}%`);
@@ -230,10 +248,13 @@ function listApplications(opts = {}) {
 /**
  * Controlled deployment execution job
  */
-async function triggerApplicationDeploy(id, userTgId = null) {
+async function triggerApplicationDeploy(id, userTgId = null, isAdmin = false) {
   const db = getDb();
   const app = db.prepare('SELECT * FROM applications WHERE id=?').get(id);
   if (!app) throw new Error(`Application #${id} not found`);
+  if (!checkApplicationOwnership(app, userTgId, isAdmin)) {
+    throw new Error(`Unauthorized: You do not have permission to deploy application #${id}`);
+  }
 
   const startTime = Date.now();
   db.prepare("UPDATE applications SET status='deploying' WHERE id=?").run(id);
@@ -327,10 +348,13 @@ async function triggerApplicationDeploy(id, userTgId = null) {
 /**
  * Rollback application to a previous deployment with honest post-rollback health verification
  */
-async function rollbackApplication(id, targetDeploymentId, userTgId = null) {
+async function rollbackApplication(id, targetDeploymentId, userTgId = null, isAdmin = false) {
   const db = getDb();
   const app = db.prepare('SELECT * FROM applications WHERE id=?').get(id);
   if (!app) throw new Error(`Application #${id} not found`);
+  if (!checkApplicationOwnership(app, userTgId, isAdmin)) {
+    throw new Error(`Unauthorized: You do not have permission to rollback application #${id}`);
+  }
 
   const prevDep = db.prepare('SELECT * FROM application_deployments WHERE id=? AND application_id=?').get(targetDeploymentId, id);
   if (!prevDep) {
@@ -399,8 +423,14 @@ async function rollbackApplication(id, targetDeploymentId, userTgId = null) {
   };
 }
 
-function getApplicationDeployments(appId) {
+function getApplicationDeployments(appId, userTgId = null, isAdmin = false) {
   const db = getDb();
+  const app = db.prepare('SELECT * FROM applications WHERE id=?').get(appId);
+  if (!app) throw new Error(`Application #${appId} not found`);
+  if (!checkApplicationOwnership(app, userTgId, isAdmin)) {
+    throw new Error(`Unauthorized: You do not have permission to view deployments for application #${appId}`);
+  }
+
   const rows = db.prepare(`
     SELECT id, application_id, commit_hash, status, duration_ms, is_rollback, rollback_from_id, health_check_result, error_message, created_at, logs
     FROM application_deployments
@@ -414,10 +444,12 @@ function getApplicationDeployments(appId) {
   }));
 }
 
-function getDeploymentById(deploymentId) {
+function getDeploymentById(deploymentId, userTgId = null, isAdmin = false) {
   const db = getDb();
   const row = db.prepare('SELECT * FROM application_deployments WHERE id=?').get(deploymentId);
   if (!row) return null;
+  const app = db.prepare('SELECT * FROM applications WHERE id=?').get(row.application_id);
+  if (!app || !checkApplicationOwnership(app, userTgId, isAdmin)) return null;
   return {
     ...row,
     health_check_result: row.health_check_result ? JSON.parse(row.health_check_result) : null
@@ -427,10 +459,13 @@ function getDeploymentById(deploymentId) {
 /**
  * Control application lifecycle: start, stop, restart
  */
-function controlApplication(id, action, userTgId = null) {
+function controlApplication(id, action, userTgId = null, isAdmin = false) {
   const db = getDb();
   const app = db.prepare('SELECT * FROM applications WHERE id=?').get(id);
   if (!app) throw new Error(`Application #${id} not found`);
+  if (!checkApplicationOwnership(app, userTgId, isAdmin)) {
+    throw new Error(`Unauthorized: You do not have permission to control application #${id}`);
+  }
 
   let newStatus = app.status;
   if (action === 'start' || action === 'restart') {
@@ -504,10 +539,13 @@ async function checkApplicationHealth(id) {
   });
 }
 
-function deleteApplication(id, userTgId = null) {
+function deleteApplication(id, userTgId = null, isAdmin = false) {
   const db = getDb();
-  const app = db.prepare('SELECT name FROM applications WHERE id=?').get(id);
+  const app = db.prepare('SELECT * FROM applications WHERE id=?').get(id);
   if (!app) return false;
+  if (!checkApplicationOwnership(app, userTgId, isAdmin)) {
+    throw new Error(`Unauthorized: You do not have permission to delete application #${id}`);
+  }
 
   // Unlink subdomains
   db.prepare('UPDATE subdomains SET application_id=NULL WHERE application_id=?').run(id);

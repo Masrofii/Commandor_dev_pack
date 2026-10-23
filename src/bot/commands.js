@@ -348,13 +348,13 @@ async function showAdminAuditLogs(ctx, page = 1, category = 'all') {
 }
 
 function wrap(handler, opts = {}) {
-  return async ctx => {
+  return async (ctx, next) => {
     try {
       await registerUser(ctx);
       if (!opts.allowWithoutTos && ctx.from && !isTosAccepted(ctx.from.id)) {
         return showTosPrompt(ctx);
       }
-      await handler(ctx);
+      return await handler(ctx, next);
     } catch (err) {
       logger.error({ err: err.message, tgId: ctx.from?.id }, 'Bot handler failed');
       const txt = t('error.generic', getLang(ctx));
@@ -483,8 +483,7 @@ async function showInbox(ctx, page = 1, filter, aliasFilter = null) {
       ],
       [{ text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }]
     ];
-    if (ctx.callbackQuery) return send(ctx, emptyTxt, { reply_markup: { inline_keyboard: emptyKb } });
-    return ctx.reply(emptyTxt, { reply_markup: { inline_keyboard: emptyKb } });
+    return send(ctx, emptyTxt, { reply_markup: { inline_keyboard: emptyKb } });
   }
 
   const lines = emails.map(e => {
@@ -1679,7 +1678,7 @@ function setupCommands(bot) {
     });
   }));
 
-  bot.on(['photo', 'video', 'document', 'animation'], wrap(async ctx => {
+  bot.on(['photo', 'video', 'document', 'animation'], wrap(async (ctx, next) => {
     if (isOwnerOrAdmin(ctx.from.id) && peekBroadcast(ctx.from.id)) {
       takeBroadcast(ctx.from.id);
       let payload = null;
@@ -1696,6 +1695,9 @@ function setupCommands(bot) {
       if (payload) {
         return promptBroadcastPreview(ctx, payload);
       }
+    }
+    if (typeof next === 'function') {
+      return next();
     }
   }));
 

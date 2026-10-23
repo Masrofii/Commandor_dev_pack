@@ -99,9 +99,13 @@
 [dir="rtl"] pre,
 [dir="rtl"] code,
 [dir="rtl"] input[type="url"],
+[dir="rtl"] input[type="email"],
+[dir="rtl"] input[type="tel"],
 [dir="rtl"] input[type="password"],
 [dir="rtl"] input.font-mono,
-[dir="rtl"] .font-mono {
+[dir="rtl"] .font-mono,
+[dir="rtl"] .ltr-force,
+[dir="rtl"] .direction-ltr {
   direction: ltr;
   unicode-bidi: isolate;
   text-align: left;

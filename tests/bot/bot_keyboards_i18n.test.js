@@ -295,4 +295,50 @@ describe('Bot Multilingual Keyboards & Persistence Verification', () => {
       expect(t('apikeys.title', code)).not.toBe('apikeys.title');
     }
   });
+
+  test('showInbox enforces parse_mode: HTML on empty inbox so HTML tags are rendered, not shown raw', async () => {
+    const { showInbox } = require('../../src/bot/commands');
+    let sentText = null;
+    let sentOpts = null;
+    const ctx = {
+      from: { id: TEST_USER_ID, username: 'i18n_test_user' },
+      chat: { id: TEST_USER_ID },
+      callbackQuery: null, // Command or reply-keyboard invocation
+      reply: jest.fn().mockImplementation((text, opts) => {
+        sentText = text;
+        sentOpts = opts;
+        return Promise.resolve({ message_id: 301 });
+      }),
+      editMessageText: jest.fn().mockResolvedValue(true)
+    };
+
+    await showInbox(ctx, 1);
+
+    expect(sentText).toBeDefined();
+    expect(sentText).toContain('<b>');
+    expect(sentText).toContain('</b>');
+    expect(sentOpts).toBeDefined();
+    // parse_mode MUST be HTML to prevent raw literal <b> tag regression
+    expect(sentOpts.parse_mode).toBe('HTML');
+    expect(sentOpts.reply_markup).toBeDefined();
+    expect(sentOpts.reply_markup.inline_keyboard.length).toBeGreaterThan(0);
+  });
+
+  test('wrap middleware preserves and invokes next() callback when handler passes control', async () => {
+    const { wrap } = require('../../src/bot/commands');
+    const nextMock = jest.fn().mockResolvedValue('passed-through');
+    const dummyCtx = {
+      from: { id: TEST_USER_ID },
+      chat: { id: TEST_USER_ID }
+    };
+
+    const handler = wrap(async (ctx, next) => {
+      // simulate non-matching document handler delegating to next
+      return next();
+    });
+
+    const result = await handler(dummyCtx, nextMock);
+    expect(nextMock).toHaveBeenCalledTimes(1);
+    expect(result).toBe('passed-through');
+  });
 });
