@@ -3,6 +3,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import {
   Square3Stack3DIcon,
   RocketLaunchIcon,
@@ -27,6 +28,7 @@ const CATEGORY_ICONS = {
 };
 
 export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [previewModal, setPreviewModal] = useState(null);
   const [previewSubdomain, setPreviewSubdomain] = useState('demo-service');
@@ -88,11 +90,11 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
         {/* Category Pills */}
         <div className="flex flex-wrap rounded-lg bg-slate-100 dark:bg-cyber-850 p-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-400">
           {[
-            { id: 'all', label: 'All Templates' },
-            { id: 'application', label: 'Applications' },
-            { id: 'api', label: 'REST APIs' },
+            { id: 'all', label: t('common.all', 'All Templates') },
+            { id: 'application', label: t('nav.applications', 'Applications') },
+            { id: 'api', label: t('nav.api_keys', 'REST APIs') },
             { id: 'documentation', label: 'Docs' },
-            { id: 'static_site', label: 'Static' },
+            { id: 'static_site', label: t('hosting.title', 'Static') },
             { id: 'status_page', label: 'Status' }
           ].map(c => (
             <button
@@ -122,7 +124,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
         </div>
       ) : templates.length === 0 ? (
         <div className="p-8 text-center text-xs text-slate-400">
-          No templates found in this category.
+          {t('common.no_results', 'No templates found in this category.')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

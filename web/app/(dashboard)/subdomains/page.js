@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import SubdomainTemplates from '../../../components/SubdomainTemplates';
 import {
   GlobeAltIcon,
@@ -46,6 +47,7 @@ const WEB_MODES = [
 ];
 
 export default function SubdomainsAndDomainsPage() {
+  const { t } = useTranslation();
   const [section, setSection] = useState('subdomains'); // 'subdomains' | 'domains'
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -414,11 +416,11 @@ export default function SubdomainsAndDomainsPage() {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Domains &amp; Subdomains
+              {t('subdomains.title', 'Domains & Subdomains')}
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Guided 8-step subdomain creation wizard, automated Nginx reverse proxy routing, and multi-root DNS inventory.
+            {t('subdomains.subtitle', 'Guided 8-step subdomain creation wizard, automated Nginx reverse proxy routing, and multi-root DNS inventory.')}
           </p>
         </div>
 
@@ -433,7 +435,7 @@ export default function SubdomainsAndDomainsPage() {
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              Subdomains ({subdomains.length})
+              {t('subdomains.tab_subdomains', 'Subdomains')} ({subdomains.length})
             </button>
             <button
               onClick={() => setSection('domains')}
@@ -443,7 +445,7 @@ export default function SubdomainsAndDomainsPage() {
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              Domain Inventory ({customDomains.length})
+              {t('subdomains.tab_domains', 'Domain Inventory')} ({customDomains.length})
             </button>
             <button
               onClick={() => setSection('templates')}
@@ -453,7 +455,7 @@ export default function SubdomainsAndDomainsPage() {
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              Templates &amp; Blueprints
+              {t('subdomains.templates_title', 'Templates & Blueprints')}
             </button>
           </div>
 
@@ -469,7 +471,7 @@ export default function SubdomainsAndDomainsPage() {
               className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold flex items-center gap-1.5"
             >
               <SparklesIcon className="w-4 h-4" />
-              <span>Subdomain Wizard</span>
+              <span>{t('subdomains.wizard_btn', 'Subdomain Wizard')}</span>
             </button>
           ) : (
             <button
@@ -477,7 +479,7 @@ export default function SubdomainsAndDomainsPage() {
               className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold flex items-center gap-1.5"
             >
               <PlusIcon className="w-4 h-4" />
-              <span>Add Root Domain</span>
+              <span>{t('subdomains.add_domain_btn', 'Add Root Domain')}</span>
             </button>
           )}
         </div>
@@ -491,7 +493,7 @@ export default function SubdomainsAndDomainsPage() {
             <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 ml-1" />
             <input
               type="text"
-              placeholder="Search subdomains by hostname, root domain, or target..."
+              placeholder={t('subdomains.search_placeholder', 'Search subdomains by hostname, root domain, or target...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input pl-2 text-xs w-full border-none focus:ring-0 bg-transparent"
@@ -501,17 +503,17 @@ export default function SubdomainsAndDomainsPage() {
           {/* Subdomains Table */}
           <div className="card overflow-hidden border-slate-200 dark:border-cyber-800 shadow-xs">
             {loadingSubs ? (
-              <div className="p-8 text-center text-xs text-slate-400">Loading subdomains...</div>
+              <div className="p-8 text-center text-xs text-slate-400">{t('common.loading', 'Loading subdomains...')}</div>
             ) : filteredSubs.length === 0 ? (
               <div className="p-12 text-center space-y-3">
                 <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
                   🌐
                 </div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  {searchQuery ? 'No matching subdomains' : 'No subdomains provisioned yet'}
+                  {searchQuery ? t('common.no_results', 'No matching subdomains') : t('subdomains.empty_title', 'No subdomains provisioned yet')}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Use the Subdomain Wizard to set up reverse proxy routes, point DNS records, and automate TLS certificates.
+                  {t('subdomains.empty_desc', 'Use the Subdomain Wizard to set up reverse proxy routes, point DNS records, and automate TLS certificates.')}
                 </p>
                 {!searchQuery && (
                   <button
@@ -521,7 +523,7 @@ export default function SubdomainsAndDomainsPage() {
                     }}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold"
                   >
-                    Launch Subdomain Wizard
+                    {t('subdomains.launch_wizard', 'Launch Subdomain Wizard')}
                   </button>
                 )}
               </div>
@@ -530,13 +532,13 @@ export default function SubdomainsAndDomainsPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-cyber-900 border-b border-slate-200 dark:border-cyber-800 text-slate-500 font-semibold uppercase text-[10px]">
                     <tr>
-                      <th className="py-3 px-4">Hostname &amp; Root</th>
-                      <th className="py-3 px-4">Destination Target</th>
-                      <th className="py-3 px-3 text-center">DNS</th>
-                      <th className="py-3 px-3 text-center">Proxy</th>
-                      <th className="py-3 px-3 text-center">HTTPS</th>
-                      <th className="py-3 px-4">Last Verified</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+                      <th className="py-3 px-4">{t('subdomains.th_hostname', 'Hostname & Root')}</th>
+                      <th className="py-3 px-4">{t('subdomains.th_target', 'Destination Target')}</th>
+                      <th className="py-3 px-3 text-center">{t('subdomains.th_dns', 'DNS')}</th>
+                      <th className="py-3 px-3 text-center">{t('subdomains.th_proxy', 'Proxy')}</th>
+                      <th className="py-3 px-3 text-center">{t('subdomains.th_https', 'HTTPS')}</th>
+                      <th className="py-3 px-4">{t('subdomains.th_verified', 'Last Verified')}</th>
+                      <th className="py-3 px-4 text-right">{t('subdomains.th_actions', 'Actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-cyber-800">
@@ -907,18 +909,18 @@ export default function SubdomainsAndDomainsPage() {
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                   <SparklesIcon className="w-5 h-5 text-indigo-500" />
-                  Subdomain Guided Provisioning Wizard
+                  {t('subdomain_wizard.title', 'Subdomain Guided Provisioning Wizard')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Step {wizardStep} of 8 — {
-                    wizardStep === 1 ? 'Select Root Domain' :
-                    wizardStep === 2 ? 'Enter Subdomain & Validate Syntax' :
-                    wizardStep === 3 ? 'Choose Destination Target' :
-                    wizardStep === 4 ? 'Configure DNS & Conflict Check' :
-                    wizardStep === 5 ? 'Configure Reverse Proxy Route' :
-                    wizardStep === 6 ? 'Enable HTTPS & TLS Certificates' :
-                    wizardStep === 7 ? 'Review Summary & Deploy' :
-                    'Multi-Stage Route Verification'
+                  {t('subdomain_wizard.step_counter', 'Step {step} of 8', { step: wizardStep })} — {
+                    wizardStep === 1 ? t('subdomain_wizard.step1_title', 'Select Root Domain') :
+                    wizardStep === 2 ? t('subdomain_wizard.step2_title', 'Enter Subdomain & Validate Syntax') :
+                    wizardStep === 3 ? t('subdomain_wizard.step3_title', 'Choose Destination Target') :
+                    wizardStep === 4 ? t('subdomain_wizard.step4_title', 'Configure DNS & Conflict Check') :
+                    wizardStep === 5 ? t('subdomain_wizard.step5_title', 'Configure Reverse Proxy Route') :
+                    wizardStep === 6 ? t('subdomain_wizard.step6_title', 'Enable HTTPS & TLS Certificates') :
+                    wizardStep === 7 ? t('subdomain_wizard.step7_title', 'Review Summary & Deploy') :
+                    t('subdomain_wizard.step8_title', 'Multi-Stage Route Verification')
                   }
                 </p>
               </div>
@@ -957,7 +959,7 @@ export default function SubdomainsAndDomainsPage() {
               <div className="space-y-4 max-w-lg mx-auto py-2 text-xs">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Select Target Root Domain
+                    {t('subdomain_wizard.select_root_label', 'Select Target Root Domain')}
                   </label>
                   <select
                     value={wizardForm.root_domain}
@@ -969,13 +971,12 @@ export default function SubdomainsAndDomainsPage() {
                     ))}
                   </select>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Choose from default cluster domains or verified custom domains in your inventory.
+                    {t('subdomain_wizard.select_root_hint', 'Choose from default cluster domains or verified custom domains in your inventory.')}
                   </p>
                 </div>
 
                 <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 text-xs">
-                  <span className="font-bold text-slate-900 dark:text-white block mb-0.5">Need a different root domain?</span>
-                  Switch to the "Domain Inventory" tab to add and verify external root domains.
+                  <span className="font-bold text-slate-900 dark:text-white block mb-0.5">{t('subdomain_wizard.need_different_domain', 'Need a different root domain? Switch to the "Domain Inventory" tab to add and verify external root domains.')}</span>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -984,14 +985,14 @@ export default function SubdomainsAndDomainsPage() {
                     onClick={() => setShowWizard(false)}
                     className="btn-secondary py-1.5 px-3.5 text-xs"
                   >
-                    Cancel
+                    {t('common.cancel', 'Cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setWizardStep(2)}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
                   >
-                    <span>Next: Subdomain Name</span>
+                    <span>{t('subdomain_wizard.next_name', 'Next: Subdomain Name')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1003,7 +1004,7 @@ export default function SubdomainsAndDomainsPage() {
               <div className="space-y-4 max-w-lg mx-auto py-2 text-xs">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Subdomain Prefix
+                    {t('subdomain_wizard.subdomain_prefix', 'Subdomain Prefix')}
                   </label>
                   <div className="relative">
                     <input
@@ -1020,16 +1021,16 @@ export default function SubdomainsAndDomainsPage() {
                     <div className="absolute right-2.5 top-2 flex items-center">
                       {syntaxValidation.checking ? (
                         <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <ArrowPathIcon className="w-3 h-3 animate-spin" /> Checking
+                          <ArrowPathIcon className="w-3 h-3 animate-spin" /> {t('subdomain_wizard.checking', 'Checking...')}
                         </span>
                       ) : syntaxValidation.checked && wizardForm.subdomain ? (
                         syntaxValidation.valid ? (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded">
-                            <CheckCircleIcon className="w-3 h-3" /> Valid
+                            <CheckCircleIcon className="w-3 h-3" /> {t('subdomain_wizard.valid', 'Valid')}
                           </span>
                         ) : (
                           <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1 bg-rose-50 dark:bg-rose-950/80 px-2 py-0.5 rounded">
-                            <XMarkIcon className="w-3 h-3" /> Conflict
+                            <XMarkIcon className="w-3 h-3" /> {t('subdomain_wizard.conflict', 'Conflict')}
                           </span>
                         )
                       ) : null}
@@ -1044,7 +1045,7 @@ export default function SubdomainsAndDomainsPage() {
                 </div>
 
                 <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 text-xs">
-                  <span className="text-slate-400 block text-[11px]">Fully Qualified Domain Name (FQDN):</span>
+                  <span className="text-slate-400 block text-[11px]">{t('subdomain_wizard.fqdn_label', 'Fully Qualified Domain Name (FQDN):')}</span>
                   <span className="font-mono font-bold text-sm text-indigo-600 dark:text-cyan-400">
                     https://{wizardForm.subdomain || '[subdomain]'}.{wizardForm.root_domain}
                   </span>
@@ -1057,7 +1058,7 @@ export default function SubdomainsAndDomainsPage() {
                     className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
                   >
                     <ArrowLeftIcon className="w-3.5 h-3.5" />
-                    <span>Back</span>
+                    <span>{t('subdomain_wizard.back', 'Back')}</span>
                   </button>
                   <button
                     type="button"
@@ -1065,7 +1066,7 @@ export default function SubdomainsAndDomainsPage() {
                     onClick={() => setWizardStep(3)}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
                   >
-                    <span>Next: Choose Destination</span>
+                    <span>{t('subdomain_wizard.next_destination', 'Next: Choose Destination')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1076,39 +1077,39 @@ export default function SubdomainsAndDomainsPage() {
             {wizardStep === 3 && (
               <div className="space-y-4 max-w-lg mx-auto py-2 text-xs">
                 <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                  Select Destination Type
+                  {t('subdomain_wizard.dest_label', 'Select Destination Type')}
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {[
                     {
                       type: 'proxy',
-                      title: 'Reverse Proxy Upstream',
-                      desc: 'Forward traffic to any external URL or HTTP backend.',
+                      title: t('subdomain_wizard.dest_proxy_title', 'Reverse Proxy Upstream'),
+                      desc: t('subdomain_wizard.dest_proxy_desc', 'Forward traffic to any external URL or HTTP backend.'),
                       icon: RocketLaunchIcon
                     },
                     {
                       type: 'internal_port',
-                      title: 'Internal Service & Port',
-                      desc: 'Route to localhost:port (e.g. 127.0.0.1:3000).',
+                      title: t('subdomain_wizard.dest_port_title', 'Internal Service & Port'),
+                      desc: t('subdomain_wizard.dest_port_desc', 'Route to localhost:port (e.g. 127.0.0.1:3000).'),
                       icon: ServerStackIcon
                     },
                     {
                       type: 'node_app',
-                      title: 'Cluster Node Application',
-                      desc: 'Route to a service running on one of your enrolled nodes.',
+                      title: t('subdomain_wizard.dest_node_title', 'Cluster Node Application'),
+                      desc: t('subdomain_wizard.dest_node_desc', 'Route to a service running on one of your enrolled nodes.'),
                       icon: CpuChipIcon
                     },
                     {
                       type: 'static',
-                      title: 'Static Site / Edge Response',
-                      desc: 'Serve high-speed HTML, CSS, or custom JSON from edge.',
+                      title: t('subdomain_wizard.dest_static_title', 'Static Site / Edge Response'),
+                      desc: t('subdomain_wizard.dest_static_desc', 'Serve high-speed HTML, CSS, or custom JSON from edge.'),
                       icon: CodeBracketIcon
                     },
                     {
                       type: 'dns_only',
-                      title: 'DNS-Only Record',
-                      desc: 'Create an A or CNAME DNS record without local proxy.',
+                      title: t('subdomain_wizard.dest_dns_title', 'DNS-Only Record'),
+                      desc: t('subdomain_wizard.dest_dns_desc', 'Create an A or CNAME DNS record without local proxy.'),
                       icon: GlobeAltIcon
                     }
                   ].map((item) => (
@@ -1134,7 +1135,7 @@ export default function SubdomainsAndDomainsPage() {
                 {wizardForm.destination_type === 'proxy' && (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Upstream Target URL
+                      {t('subdomain_wizard.upstream_url', 'Upstream Target URL')}
                     </label>
                     <input
                       type="url"
@@ -1150,7 +1151,7 @@ export default function SubdomainsAndDomainsPage() {
                 {wizardForm.destination_type === 'internal_port' && (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Internal Port (127.0.0.1:port)
+                      {t('subdomain_wizard.internal_port', 'Internal Port (127.0.0.1:port)')}
                     </label>
                     <input
                       type="number"
@@ -1165,14 +1166,14 @@ export default function SubdomainsAndDomainsPage() {
                 {wizardForm.destination_type === 'node_app' && (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Target Cluster Node
+                      {t('subdomain_wizard.target_node', 'Target Cluster Node')}
                     </label>
                     <select
                       value={wizardForm.destination_node_id}
                       onChange={(e) => setWizardForm({ ...wizardForm, destination_node_id: e.target.value })}
                       className="input text-xs w-full"
                     >
-                      <option value="">Select a connected node...</option>
+                      <option value="">{t('subdomain_wizard.select_node', 'Select a connected node...')}</option>
                       {nodes.map(n => (
                         <option key={n.id} value={n.id}>{n.name} ({n.host})</option>
                       ))}
@@ -1183,7 +1184,7 @@ export default function SubdomainsAndDomainsPage() {
                 {wizardForm.destination_type === 'static' && (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Static HTML or JSON Payload
+                      {t('subdomain_wizard.static_payload', 'Static HTML or JSON Payload')}
                     </label>
                     <textarea
                       rows={3}
@@ -1201,14 +1202,14 @@ export default function SubdomainsAndDomainsPage() {
                     className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
                   >
                     <ArrowLeftIcon className="w-3.5 h-3.5" />
-                    <span>Back</span>
+                    <span>{t('subdomain_wizard.back', 'Back')}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setWizardStep(4)}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
                   >
-                    <span>Next: Configure DNS</span>
+                    <span>{t('subdomain_wizard.next_dns', 'Next: Configure DNS')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1221,7 +1222,7 @@ export default function SubdomainsAndDomainsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Record Type
+                      {t('subdomain_wizard.record_type', 'Record Type')}
                     </label>
                     <select
                       value={wizardForm.dns_record_type}
@@ -1235,7 +1236,7 @@ export default function SubdomainsAndDomainsPage() {
 
                   <div className="col-span-2">
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Target IP or Canonical Hostname
+                      {t('subdomain_wizard.target_ip_host', 'Target IP or Canonical Hostname')}
                     </label>
                     <input
                       type="text"
@@ -1251,17 +1252,17 @@ export default function SubdomainsAndDomainsPage() {
                   <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
                     <span className="flex items-center gap-1.5">
                       <ShieldCheckIcon className="w-4 h-4 text-indigo-500" />
-                      Proposed DNS Record
+                      {t('subdomain_wizard.proposed_record', 'Proposed DNS Record')}
                     </span>
                     <span className="font-mono text-indigo-600 dark:text-cyan-400 font-bold">{wizardForm.dns_record_type}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Record Name:</span>
+                      <span className="text-slate-400 block text-[10px]">{t('subdomain_wizard.record_name', 'Record Name:')}</span>
                       <span>{wizardForm.subdomain}.{wizardForm.root_domain}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Points To:</span>
+                      <span className="text-slate-400 block text-[10px]">{t('subdomain_wizard.points_to', 'Points To:')}</span>
                       <span className="truncate block">{wizardForm.dns_content}</span>
                     </div>
                   </div>
@@ -1274,14 +1275,14 @@ export default function SubdomainsAndDomainsPage() {
                     className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
                   >
                     <ArrowLeftIcon className="w-3.5 h-3.5" />
-                    <span>Back</span>
+                    <span>{t('subdomain_wizard.back', 'Back')}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setWizardStep(5)}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
                   >
-                    <span>Next: Reverse Proxy</span>
+                    <span>{t('subdomain_wizard.next_proxy', 'Next: Reverse Proxy')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1292,7 +1293,7 @@ export default function SubdomainsAndDomainsPage() {
             {wizardStep === 5 && (
               <div className="space-y-4 max-w-lg mx-auto py-2 text-xs">
                 <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                  Nginx Reverse Proxy Parameters
+                  {t('subdomain_wizard.proxy_params', 'Nginx Reverse Proxy Parameters')}
                 </label>
 
                 <div className="space-y-2.5">
@@ -1304,8 +1305,8 @@ export default function SubdomainsAndDomainsPage() {
                       className="rounded text-indigo-600 focus:ring-indigo-500"
                     />
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">Enable WebSocket Upgrades</span>
-                      <span className="text-[11px] text-slate-500">Injects Upgrade and Connection headers for Socket.IO / WS endpoints</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_ws', 'Enable WebSocket Upgrades')}</span>
+                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.enable_ws_desc', 'Injects Upgrade and Connection headers for Socket.IO / WS endpoints')}</span>
                     </div>
                   </label>
 
@@ -1317,8 +1318,8 @@ export default function SubdomainsAndDomainsPage() {
                       className="rounded text-indigo-600 focus:ring-indigo-500"
                     />
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">Security &amp; Privacy Headers</span>
-                      <span className="text-[11px] text-slate-500">Adds X-Frame-Options, X-Content-Type-Options, and Referrer-Policy</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.security_headers', 'Security & Privacy Headers')}</span>
+                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.security_headers_desc', 'Adds X-Frame-Options, X-Content-Type-Options, and Referrer-Policy')}</span>
                     </div>
                   </label>
                 </div>
@@ -1330,14 +1331,14 @@ export default function SubdomainsAndDomainsPage() {
                     className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
                   >
                     <ArrowLeftIcon className="w-3.5 h-3.5" />
-                    <span>Back</span>
+                    <span>{t('subdomain_wizard.back', 'Back')}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setWizardStep(6)}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
                   >
-                    <span>Next: HTTPS / TLS</span>
+                    <span>{t('subdomain_wizard.next_tls', 'Next: HTTPS / TLS')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1348,7 +1349,7 @@ export default function SubdomainsAndDomainsPage() {
             {wizardStep === 6 && (
               <div className="space-y-4 max-w-lg mx-auto py-2 text-xs">
                 <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                  TLS / SSL Security Settings
+                  {t('subdomain_wizard.tls_settings', 'TLS / SSL Security Settings')}
                 </label>
 
                 <div className="space-y-2.5">
@@ -1360,8 +1361,8 @@ export default function SubdomainsAndDomainsPage() {
                       className="rounded text-indigo-600 focus:ring-indigo-500"
                     />
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">Enable Automated TLS (HTTPS)</span>
-                      <span className="text-[11px] text-slate-500">Binds ACME TLS certificates and enables port 443 listeners</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_tls', 'Enable Automated TLS (HTTPS)')}</span>
+                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.enable_tls_desc', 'Binds ACME TLS certificates and enables port 443 listeners')}</span>
                     </div>
                   </label>
 
@@ -1373,8 +1374,8 @@ export default function SubdomainsAndDomainsPage() {
                       className="rounded text-indigo-600 focus:ring-indigo-500"
                     />
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">Force HTTP to HTTPS 301 Redirect</span>
-                      <span className="text-[11px] text-slate-500">Automatically redirect plaintext HTTP visitors to secure HTTPS</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.force_https', 'Force HTTP to HTTPS 301 Redirect')}</span>
+                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.force_https_desc', 'Automatically redirect plaintext HTTP visitors to secure HTTPS')}</span>
                     </div>
                   </label>
                 </div>
@@ -1386,7 +1387,7 @@ export default function SubdomainsAndDomainsPage() {
                     className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
                   >
                     <ArrowLeftIcon className="w-3.5 h-3.5" />
-                    <span>Back</span>
+                    <span>{t('subdomain_wizard.back', 'Back')}</span>
                   </button>
                   <button
                     type="button"
@@ -1396,7 +1397,7 @@ export default function SubdomainsAndDomainsPage() {
                     }}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
                   >
-                    <span>Next: Review &amp; Deploy</span>
+                    <span>{t('subdomain_wizard.next_review', 'Next: Review & Deploy')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1409,13 +1410,13 @@ export default function SubdomainsAndDomainsPage() {
                 {previewLoading ? (
                   <div className="p-8 text-center">
                     <ArrowPathIcon className="w-6 h-6 animate-spin text-indigo-500 mx-auto" />
-                    <p className="text-xs text-slate-500 mt-2">Generating configuration preview and checking DNS conflicts...</p>
+                    <p className="text-xs text-slate-500 mt-2">{t('subdomain_wizard.preview_loading', 'Generating configuration preview and checking DNS conflicts...')}</p>
                   </div>
                 ) : (
                   <>
                     <div className="p-4 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-3">
                       <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-cyber-800 pb-2">
-                        <span>Deployment Configuration Summary</span>
+                        <span>{t('subdomain_wizard.summary_title', 'Deployment Configuration Summary')}</span>
                         <span className="badge-cyan text-[10px] uppercase font-mono">{wizardForm.destination_type}</span>
                       </div>
 
@@ -1462,10 +1463,10 @@ export default function SubdomainsAndDomainsPage() {
                       />
                       <div>
                         <span className="font-bold text-indigo-950 dark:text-indigo-200 block text-xs">
-                          Authorize Automated Deployment
+                          {t('subdomain_wizard.auth_deploy', 'Authorize Automated Deployment')}
                         </span>
                         <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                          I confirm the creation of the reverse proxy virtual host and DNS configuration for this subdomain.
+                          {t('subdomain_wizard.auth_deploy_desc', 'I confirm the creation of the reverse proxy virtual host and DNS configuration for this subdomain.')}
                         </span>
                       </div>
                     </label>
@@ -1477,7 +1478,7 @@ export default function SubdomainsAndDomainsPage() {
                         className="btn-secondary py-1.5 px-3.5 text-xs flex items-center gap-1"
                       >
                         <ArrowLeftIcon className="w-3.5 h-3.5" />
-                        <span>Back</span>
+                        <span>{t('subdomain_wizard.back', 'Back')}</span>
                       </button>
                       <button
                         type="button"
@@ -1486,7 +1487,7 @@ export default function SubdomainsAndDomainsPage() {
                         className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1.5"
                       >
                         <CheckCircleIcon className="w-4 h-4" />
-                        <span>Deploy Subdomain Now</span>
+                        <span>{t('subdomain_wizard.deploy_btn', 'Deploy Subdomain Now')}</span>
                       </button>
                     </div>
                   </>
@@ -1499,17 +1500,17 @@ export default function SubdomainsAndDomainsPage() {
               <div className="space-y-4 max-w-lg mx-auto py-2 text-xs">
                 <div className="text-center space-y-1 pb-1">
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                    Multi-Stage Route Verification
+                    {t('subdomain_wizard.verifying_title', 'Multi-Stage Route Verification')}
                   </h4>
                   <p className="text-slate-500 text-[11px]">
-                    Validating authoritative DNS resolution, reverse proxy HTTP reachability, and TLS certificates.
+                    {t('subdomain_wizard.verifying_subtitle', 'Validating authoritative DNS resolution, reverse proxy HTTP reachability, and TLS certificates.')}
                   </p>
                 </div>
 
                 {verifyingDeployment ? (
                   <div className="p-8 text-center">
                     <ArrowPathIcon className="w-8 h-8 animate-spin text-cyan-500 mx-auto" />
-                    <p className="text-xs text-slate-500 mt-3 font-semibold">Running multi-stage verification suite...</p>
+                    <p className="text-xs text-slate-500 mt-3 font-semibold">{t('subdomain_wizard.verifying_suite', 'Running multi-stage verification suite...')}</p>
                   </div>
                 ) : verificationResult ? (
                   <div className="space-y-3">
@@ -1518,10 +1519,10 @@ export default function SubdomainsAndDomainsPage() {
                       <div className="flex items-center justify-between font-bold">
                         <span className="flex items-center gap-1.5">
                           <GlobeAltIcon className="w-4 h-4 text-indigo-500" />
-                          <span>1. DNS Resolution</span>
+                          <span>{t('subdomain_wizard.stage_dns', '1. DNS Resolution')}</span>
                         </span>
                         <span className={verificationResult.dns?.status === 'valid' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
-                          {verificationResult.dns?.status === 'valid' ? '✓ Resolved' : '⚠️ Pending'}
+                          {verificationResult.dns?.status === 'valid' ? `✓ ${t('subdomain_wizard.dns_resolved', 'Resolved')}` : '⚠️ Pending'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500">{verificationResult.dns?.message || 'DNS resolution check complete'}</p>
@@ -1532,10 +1533,10 @@ export default function SubdomainsAndDomainsPage() {
                       <div className="flex items-center justify-between font-bold">
                         <span className="flex items-center gap-1.5">
                           <ServerStackIcon className="w-4 h-4 text-cyan-500" />
-                          <span>2. Reverse Proxy Reachability</span>
+                          <span>{t('subdomain_wizard.stage_http', '2. Reverse Proxy Reachability')}</span>
                         </span>
                         <span className={verificationResult.http?.status === 'reachable' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
-                          {verificationResult.http?.status === 'reachable' ? `✓ Reachable (${verificationResult.http?.statusCode || 200})` : '⚠️ Check upstream'}
+                          {verificationResult.http?.status === 'reachable' ? `✓ ${t('subdomain_wizard.http_reachable', 'Reachable')} (${verificationResult.http?.statusCode || 200})` : '⚠️ Check upstream'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500">{verificationResult.http?.message || 'Reverse proxy routing check complete'}</p>
@@ -1546,10 +1547,10 @@ export default function SubdomainsAndDomainsPage() {
                       <div className="flex items-center justify-between font-bold">
                         <span className="flex items-center gap-1.5">
                           <ShieldCheckIcon className="w-4 h-4 text-emerald-500" />
-                          <span>3. HTTPS &amp; TLS Handshake</span>
+                          <span>{t('subdomain_wizard.stage_tls', '3. HTTPS & TLS Handshake')}</span>
                         </span>
                         <span className={verificationResult.tls?.valid ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
-                          {verificationResult.tls?.valid ? `✓ Secured (${verificationResult.tls?.daysRemaining || 0}d left)` : '⚠️ Cert Pending'}
+                          {verificationResult.tls?.valid ? `✓ ${t('subdomain_wizard.tls_valid', 'Valid ACME Certificate')}` : '⚠️ Cert Pending'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500">{verificationResult.tls?.message || 'TLS certificate handshake verified'}</p>
@@ -1575,14 +1576,14 @@ export default function SubdomainsAndDomainsPage() {
                     className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
                   >
                     <ArrowPathIcon className={`w-3.5 h-3.5 ${verifyingDeployment ? 'animate-spin' : ''}`} />
-                    <span>Re-Run Verification</span>
+                    <span>{t('common.refresh', 'Re-Run Verification')}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowWizard(false)}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold"
                   >
-                    Finish &amp; Close Wizard
+                    {t('subdomain_wizard.finish_btn', 'Finish & Close Wizard')}
                   </button>
                 </div>
               </div>

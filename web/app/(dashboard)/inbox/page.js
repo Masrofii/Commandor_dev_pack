@@ -7,6 +7,7 @@ import { useInbox } from '../../../hooks/useInbox';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import { api } from '../../../lib/api';
 import { extractVerificationCode, formatBytes, formatTimeAgo, detectServiceAndCategory, summarizeEmail } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   MagnifyingGlassIcon,
   XMarkIcon,
@@ -46,6 +47,7 @@ function getAvatarColor(str = '') {
 
 export default function InboxPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // all, unread, starred, spam
   const [selectedAlias, setSelectedAlias] = useState('');
@@ -246,17 +248,17 @@ export default function InboxPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-                Inbox
+                {t('nav.inbox', 'Inbox')}
               </h1>
               <span className="badge-cyan text-xs">
-                {total} messages
+                {total} {t('common.all', 'messages')}
               </span>
             </div>
             <button
               onClick={refresh}
               disabled={isLoading}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
-              title="Refresh messages"
+              title={t('common.refresh', 'Refresh messages')}
             >
               <ArrowPathIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -264,19 +266,19 @@ export default function InboxPage() {
 
           {/* Search Box */}
           <form onSubmit={handleSearchSubmit} className="relative">
-            <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 rtl:left-auto rtl:right-3" />
             <input
               type="text"
-              placeholder="Search sender, subject, content..."
+              placeholder={t('inbox.search_placeholder', 'Search sender, subject, content...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input pl-9 pr-8 text-xs py-2 bg-slate-50 dark:bg-cyber-950"
+              className="input pl-9 rtl:pl-3 rtl:pr-9 pr-8 text-xs py-2 bg-slate-50 dark:bg-cyber-950"
             />
             {search && (
               <button
                 type="button"
                 onClick={clearSearch}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 rtl:right-auto rtl:left-2.5 top-2.5 text-slate-400 hover:text-slate-600"
               >
                 <XMarkIcon className="w-4 h-4" />
               </button>
@@ -286,9 +288,9 @@ export default function InboxPage() {
           {/* Filter Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
             {[
-              { id: 'all', label: 'All' },
-              { id: 'unread', label: 'Unread' },
-              { id: 'starred', label: 'Starred' }
+              { id: 'all', label: t('common.all', 'All') },
+              { id: 'unread', label: t('inbox.filter_unread', 'Unread') },
+              { id: 'starred', label: t('inbox.filter_starred', 'Starred') }
             ].map((f) => (
               <button
                 key={f.id}
@@ -310,7 +312,7 @@ export default function InboxPage() {
                 onChange={(e) => applyAliasFilter(e.target.value)}
                 className="text-xs bg-slate-100 dark:bg-cyber-800 text-slate-700 dark:text-slate-300 rounded-lg px-2.5 py-1 border-0 focus:ring-1 focus:ring-indigo-500 max-w-[130px] truncate"
               >
-                <option value="">All Aliases</option>
+                <option value="">{t('common.all', 'All Aliases')}</option>
                 {aliasesList.map(a => (
                   <option key={a.address} value={a.address}>{a.address}</option>
                 ))}
@@ -385,10 +387,10 @@ export default function InboxPage() {
                 📬
               </div>
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                No emails found
+                {search ? t('common.no_results', 'No emails found') : t('inbox.empty_inbox', 'Your inbox is empty')}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                {search ? `No messages matched "${search}"` : 'Incoming emails sent to any of your aliases will appear here instantly.'}
+                {search ? t('common.no_results', `No messages matched "${search}"`) : t('inbox.empty_desc', 'Incoming emails received on your aliases and subdomains will appear here in real-time.')}
               </p>
             </div>
           ) : (
@@ -867,10 +869,10 @@ export default function InboxPage() {
               ✉️
             </div>
             <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
-              No message selected
+              {t('inbox.select_message', 'Select an email to read')}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-              Select an email from the left pane to read full contents, copy OTP verification codes, download attachments, or compose a reply.
+              {t('inbox.select_desc', 'Choose a message from the list on the left to inspect full headers, HTML formatting, and attachments.')}
             </p>
           </div>
         )}

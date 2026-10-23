@@ -77,6 +77,7 @@ const logger = require('../monitoring/logger');
 
 function getLang(ctx) {
   try {
+    if (!ctx?.from?.id) return 'en';
     const u = getDb().prepare('SELECT language FROM users WHERE tg_id=?').get(ctx.from.id);
     return u?.language || 'en';
   } catch {
@@ -91,12 +92,12 @@ function setupCallbacks(bot) {
     const [action, ...rest] = data.split(':');
     const param = rest.join(':');
     const lang = getLang(ctx);
-    const admin = isOwnerOrAdmin(ctx.from.id);
+    const admin = isOwnerOrAdmin(ctx.from?.id);
 
     try {
       // Allow ToS callbacks without prior acceptance
       if (action !== 'tos' && ctx.from && !isTosAccepted(ctx.from.id)) {
-        await ctx.answerCbQuery('⚠️ Terms of Service acceptance required').catch(() => {});
+        await ctx.answerCbQuery(t('bot.cb.tos_required', lang, '⚠️ Terms of Service acceptance required')).catch(() => {});
         return showTosPrompt(ctx);
       }
 
@@ -285,7 +286,7 @@ function setupCallbacks(bot) {
           } else if (subAction === 'confirm_delete') {
             const id = parseInt(subParam, 10);
             deleteSubdomain(id, ctx.from.id);
-            await ctx.answerCbQuery('🗑 Subdomain deleted').catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.subdomain_deleted', lang, '🗑 Subdomain deleted')).catch(() => {});
             await showSubdomains(ctx, 1);
           }
           break;
@@ -299,7 +300,7 @@ function setupCallbacks(bot) {
 
           if (hostAction === 'add_node_prompt' || hostAction === 'nodes' || hostAction === 'node_info' || hostAction === 'node_ping' || hostAction === 'node_delete' || hostAction === 'confirm_delete_node') {
             if (!isOwnerOrAdmin(ctx.from.id)) {
-              return ctx.answerCbQuery('Access denied: Owner only.').catch(() => {});
+              return ctx.answerCbQuery(t('bot.cb.access_denied', lang, '⛔ Access denied: Administrator only.')).catch(() => {});
             }
           }
 
@@ -337,7 +338,7 @@ function setupCallbacks(bot) {
           } else if (hostAction === 'confirm_delete_node') {
             const id = parseInt(hostParam, 10);
             deleteHostingNode(id);
-            await ctx.answerCbQuery('🗑 Node removed successfully').catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.node_removed', lang, '🗑 Node removed successfully')).catch(() => {});
             await showHostingNodes(ctx);
           } else if (hostAction === 'plans') {
             await showHostingPlans(ctx);
@@ -356,7 +357,7 @@ function setupCallbacks(bot) {
           } else if (hostAction === 'confirm_delete_site') {
             const id = parseInt(hostParam, 10);
             await deleteSite(id, ctx.from.id);
-            await ctx.answerCbQuery('🗑 Site deleted').catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.site_deleted', lang, '🗑 Site deleted')).catch(() => {});
             await showHostingSites(ctx);
           } else if (hostAction === 'update_html') {
             const id = parseInt(hostParam, 10);
@@ -414,7 +415,7 @@ function setupCallbacks(bot) {
         case 'confirm_revoke_key': {
           const keyId = parseInt(param, 10);
           revokeApiKey(keyId, ctx.from.id);
-          await ctx.answerCbQuery('🗑 Key revoked successfully!').catch(() => {});
+          await ctx.answerCbQuery(t('bot.cb.key_revoked', lang, '🗑 Key revoked successfully!')).catch(() => {});
           await showApiKeys(ctx);
           break;
         }
@@ -422,7 +423,7 @@ function setupCallbacks(bot) {
         case 'admin': {
           await ctx.answerCbQuery().catch(() => {});
           if (!isOwnerOrAdmin(ctx.from.id)) {
-            return ctx.answerCbQuery('⛔ Access denied: Administrator only.', { show_alert: true }).catch(() => {});
+            return ctx.answerCbQuery(t('bot.cb.access_denied', lang, '⛔ Access denied: Administrator only.'), { show_alert: true }).catch(() => {});
           }
           const parts = param.split(':');
           const sub = parts[0];
@@ -455,14 +456,14 @@ function setupCallbacks(bot) {
           } else if (sub === 'broadcast_edit') {
             takeBroadcastConfirm(ctx.from.id);
             setBroadcast(ctx.from.id, true);
-            await ctx.answerCbQuery('✏️ Send your revised message below').catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.broadcast_revised', lang, '✏️ Send your revised message below')).catch(() => {});
             await ctx.reply('✏️ <b>Commandor Dev Pack — Edit Announcement</b>\n──────────────────────────────\nPlease reply with your revised announcement message below (text or media, or /cancel to abort):', {
               parse_mode: 'HTML'
             });
           } else if (sub === 'broadcast_cancel') {
             takeBroadcastConfirm(ctx.from.id);
             takeBroadcast(ctx.from.id);
-            await ctx.answerCbQuery('❌ Broadcast cancelled.').catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.broadcast_cancelled', lang, '❌ Broadcast cancelled.')).catch(() => {});
             await ctx.reply('❌ <b>Broadcast cancelled.</b> Pending announcement has been discarded.', {
               parse_mode: 'HTML'
             });
@@ -472,7 +473,7 @@ function setupCallbacks(bot) {
         }
 
         case 'admin_toggle_ban': {
-          if (!isOwnerOrAdmin(ctx.from.id)) return ctx.answerCbQuery('Access denied').catch(() => {});
+          if (!isOwnerOrAdmin(ctx.from.id)) return ctx.answerCbQuery(t('bot.cb.access_denied', lang, '⛔ Access denied: Administrator only.')).catch(() => {});
           const targetTgId = parseInt(param, 10);
           const u = getDb().prepare('SELECT is_banned FROM users WHERE tg_id=?').get(targetTgId);
           if (u) {
@@ -485,7 +486,7 @@ function setupCallbacks(bot) {
               details: `Admin ${ctx.from.id} ${nextBanned ? 'banned' : 'unbanned'} user ${targetTgId}`,
               metadata: { targetTgId, nextBanned }
             }).catch(() => {});
-            await ctx.answerCbQuery(nextBanned ? '🚫 User banned' : '🟢 User unbanned').catch(() => {});
+            await ctx.answerCbQuery(nextBanned ? t('bot.cb.user_banned', lang, '🚫 User banned') : t('bot.cb.user_unbanned', lang, '🟢 User unbanned')).catch(() => {});
             showUserInfo(ctx, targetTgId);
           }
           break;
@@ -520,7 +521,7 @@ function setupCallbacks(bot) {
 
           await ctx.editMessageText(text, {
             parse_mode: 'HTML',
-            ...emailActionsKeyboard(e.id, Boolean(e.is_starred), attCount > 0, config.server.webUrl)
+            ...emailActionsKeyboard(e.id, Boolean(e.is_starred), attCount > 0, config.server.webUrl, lang)
           });
           break;
         }
@@ -532,22 +533,22 @@ function setupCallbacks(bot) {
             const { extractVerificationCode } = require('../utils/helpers');
             const code = extractVerificationCode(e.subject, e.text_body);
             if (code) {
-              await ctx.answerCbQuery(`🔑 Verification Code: ${code}\n(Ready to paste)`, { show_alert: true }).catch(() => {});
+              await ctx.answerCbQuery(t('bot.cb.otp_ready', lang, { code }), { show_alert: true }).catch(() => {});
               break;
             }
           }
-          await ctx.answerCbQuery('No code detected.').catch(() => {});
+          await ctx.answerCbQuery(t('bot.cb.no_code', lang, 'No code detected.')).catch(() => {});
           break;
         }
 
         case 'delete_email': {
           const emailId = parseInt(param, 10);
           softDeleteEmail(emailId, ctx.from.id);
-          await ctx.answerCbQuery('🗑 Email deleted!').catch(() => {});
+          await ctx.answerCbQuery(t('bot.cb.email_deleted', lang, '🗑 Email deleted!')).catch(() => {});
           await ctx.editMessageText('✅ <b>Email moved to trash.</b>', {
             parse_mode: 'HTML',
             reply_markup: {
-              inline_keyboard: [[{ text: '📨 Back to Inbox', callback_data: 'inbox:1' }]]
+              inline_keyboard: [[{ text: t('bot.btn.inbox', lang, '📨 Back to Inbox'), callback_data: 'inbox:1' }]]
             }
           });
           break;
@@ -562,11 +563,11 @@ function setupCallbacks(bot) {
           }
           const newStarred = !e.is_starred;
           markStarred(emailId, ctx.from.id, newStarred);
-          await ctx.answerCbQuery(newStarred ? '⭐ Starred!' : '☆ Unstarred').catch(() => {});
+          await ctx.answerCbQuery(newStarred ? t('bot.cb.email_starred', lang, '⭐ Starred!') : t('bot.cb.email_unstarred', lang, '☆ Unstarred')).catch(() => {});
 
           const attCount = getDb().prepare('SELECT COUNT(*) as c FROM attachments WHERE email_id=?').get(emailId)?.c || 0;
           await ctx.editMessageReplyMarkup(
-            emailActionsKeyboard(emailId, newStarred, attCount > 0, config.server.webUrl).reply_markup
+            emailActionsKeyboard(emailId, newStarred, attCount > 0, config.server.webUrl, lang).reply_markup
           ).catch(() => {});
           break;
         }
@@ -574,7 +575,7 @@ function setupCallbacks(bot) {
         case 'read': {
           const emailId = parseInt(param, 10);
           markRead(emailId, ctx.from.id);
-          await ctx.answerCbQuery('✅ Marked as read').catch(() => {});
+          await ctx.answerCbQuery(t('bot.cb.marked_read', lang, '✅ Marked as read')).catch(() => {});
           break;
         }
 
@@ -596,7 +597,7 @@ function setupCallbacks(bot) {
 
           await ctx.editMessageText(text, {
             parse_mode: 'HTML',
-            ...aliasActionsKeyboard(a.address, Boolean(a.active), Boolean(a.burner))
+            ...aliasActionsKeyboard(a.address, Boolean(a.active), Boolean(a.burner), a.id, lang)
           });
           break;
         }
@@ -605,7 +606,7 @@ function setupCallbacks(bot) {
           await ctx.answerCbQuery().catch(() => {});
           try {
             const renewed = renewAlias(param, ctx.from.id, 60);
-            await ctx.answerCbQuery('⏳ Alias renewed for +1 hour!', { show_alert: true }).catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.alias_renewed', lang, '⏳ Alias renewed for +1 hour!'), { show_alert: true }).catch(() => {});
             const statusStr = renewed.active ? '🟢 Active' : '🔴 Inactive (Paused)';
             const typeStr = renewed.burner ? '🔥 1-Hour Burner' : (renewed.alias_type === 'custom' || renewed.address.includes('-ca@') ? '🛡 Custom Protected' : (renewed.alias_type || 'Throwaway'));
             const createdStr = new Date(renewed.created_at).toLocaleString();
@@ -616,7 +617,7 @@ function setupCallbacks(bot) {
             const text = `📧 <b>Alias Management</b>\n──────────────────\n📬 <code>${escapeHtml(renewed.address)}</code>\n<i>(Tap above to copy)</i>\n\n📊 <b>Status:</b> ${statusStr}\n🏷 <b>Type:</b> ${typeStr}\n📨 <b>Emails Received:</b> ${emailCount}\n🕒 <b>Created:</b> ${createdStr}\n⏳ <b>Expires:</b> ${expStr}\n──────────────────`;
             await ctx.editMessageText(text, {
               parse_mode: 'HTML',
-              ...aliasActionsKeyboard(renewed.address, Boolean(renewed.active), Boolean(renewed.burner))
+              ...aliasActionsKeyboard(renewed.address, Boolean(renewed.active), Boolean(renewed.burner), renewed.id, lang)
             }).catch(() => {});
           } catch (err) {
             await ctx.answerCbQuery(`❌ ${err.message}`, { show_alert: true }).catch(() => {});
@@ -632,10 +633,10 @@ function setupCallbacks(bot) {
           }
           if (a.active) {
             deactivateAlias(param, ctx.from.id);
-            await ctx.answerCbQuery('⏸ Alias paused').catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.alias_deactivated', lang, '⏸ Alias paused')).catch(() => {});
           } else {
             activateAlias(param, ctx.from.id);
-            await ctx.answerCbQuery('▶️ Alias activated!').catch(() => {});
+            await ctx.answerCbQuery(t('bot.cb.alias_activated', lang, '▶️ Alias activated!')).catch(() => {});
           }
           const updated = getDb().prepare('SELECT * FROM aliases WHERE address=? AND tg_id=?').get(param, ctx.from.id);
           const statusStr = updated.active ? '🟢 Active' : '🔴 Inactive (Paused)';
@@ -645,7 +646,7 @@ function setupCallbacks(bot) {
 
           await ctx.editMessageText(text, {
             parse_mode: 'HTML',
-            ...aliasActionsKeyboard(param, Boolean(updated.active))
+            ...aliasActionsKeyboard(param, Boolean(updated.active), Boolean(updated.burner), updated.id, lang)
           }).catch(() => {});
           break;
         }
@@ -668,18 +669,18 @@ function setupCallbacks(bot) {
 
         case 'confirm_delete_alias': {
           deleteAlias(param, ctx.from.id);
-          await ctx.answerCbQuery('🗑 Deleted!').catch(() => {});
+          await ctx.answerCbQuery(t('bot.cb.alias_deleted', lang, '🗑 Deleted!')).catch(() => {});
           await ctx.editMessageText(t('alias.deleted', lang, { address: escapeHtml(param) }), {
             parse_mode: 'HTML',
             reply_markup: {
-              inline_keyboard: [[{ text: '📧 View Aliases', callback_data: 'aliases:1' }]]
+              inline_keyboard: [[{ text: t('bot.btn.my_aliases', lang, '📧 View Aliases'), callback_data: 'aliases:1' }]]
             }
           });
           break;
         }
 
         case 'qr_alias': {
-          await ctx.answerCbQuery('📱 Generating QR code...').catch(() => {});
+          await ctx.answerCbQuery(t('bot.cb.qr_generating', lang, '📱 Generating QR code...')).catch(() => {});
           try {
             let emailAddress = param;
             const db = getDb();
@@ -711,6 +712,7 @@ function setupCallbacks(bot) {
           const meta = getLanguageMeta(param);
           await ctx.answerCbQuery(t('language.updated', param, { langName: meta.nativeName })).catch(() => {});
           await showLanguageSelection(ctx);
+          await ctx.reply(t('language.updated', param, { langName: meta.nativeName }), mainMenuKeyboard(admin, param)).catch(() => {});
           break;
         }
 
@@ -726,7 +728,7 @@ function setupCallbacks(bot) {
           await ctx.reply(`📎 <b>Attachments (${atts.length}):</b>\n\n${list}\n\n💡 <i>Download attachments directly from the Web Dashboard.</i>`, {
             parse_mode: 'HTML',
             reply_markup: {
-              inline_keyboard: [[{ text: '⬅️ Back to Email', callback_data: `read_email:${emailId}` }]]
+              inline_keyboard: [[{ text: t('bot.btn.back_email', lang, '⬅️ Back to Email'), callback_data: `read_email:${emailId}` }]]
             }
           });
           break;
@@ -784,13 +786,13 @@ function setupCallbacks(bot) {
 
           if (action === 'toggle:mute') {
             userSettings.mute_notifications = !userSettings.mute_notifications;
-            await ctx.answerCbQuery(userSettings.mute_notifications ? '🔕 Notifications muted' : '🔔 Notifications enabled').catch(() => {});
+            await ctx.answerCbQuery(userSettings.mute_notifications ? t('bot.cb.notif_muted', lang, '🔕 Notifications muted') : t('bot.cb.notif_enabled', lang, '🔔 Notifications enabled')).catch(() => {});
           } else if (action === 'toggle:otp') {
             userSettings.notify_otp_only = !userSettings.notify_otp_only;
-            await ctx.answerCbQuery(userSettings.notify_otp_only ? '🔑 OTP-only mode active' : '📬 All email alerts active').catch(() => {});
+            await ctx.answerCbQuery(userSettings.notify_otp_only ? t('bot.cb.notif_otp_only', lang, '🔑 OTP-only mode active') : t('bot.cb.notif_all', lang, '📬 All email alerts active')).catch(() => {});
           } else if (action === 'toggle:silent') {
             userSettings.disable_notification_sound = !userSettings.disable_notification_sound;
-            await ctx.answerCbQuery(userSettings.disable_notification_sound ? '🔇 Silent mode active' : '🔊 Sound enabled').catch(() => {});
+            await ctx.answerCbQuery(userSettings.disable_notification_sound ? t('bot.cb.notif_silent', lang, '🔇 Silent mode active') : t('bot.cb.notif_sound', lang, '🔊 Sound enabled')).catch(() => {});
           }
           db.prepare('UPDATE users SET settings_json=? WHERE tg_id=?').run(JSON.stringify(userSettings), tgId);
           const { showNotificationPreferences } = require('./commands');
@@ -803,7 +805,7 @@ function setupCallbacks(bot) {
       }
     } catch (err) {
       logger.error({ err: err.message, data }, 'Callback error');
-      await ctx.answerCbQuery('An error occurred').catch(() => {});
+      await ctx.answerCbQuery(t('bot.cb.error', lang, 'An error occurred')).catch(() => {});
     }
   });
 }

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { api } from '../../../../lib/api';
+import { useTranslation } from '../../../../lib/i18n';
 import { extractVerificationCode, formatBytes, formatTimeAgo, detectServiceAndCategory, summarizeEmail } from '../../../../lib/helpers';
 import {
   ArrowLeftIcon,
@@ -20,6 +21,7 @@ import { StarIcon as StarIconOutline } from '@heroicons/react/24/outline';
 
 export default function EmailDetailPage({ params }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('html'); // 'html' or 'text'
@@ -58,7 +60,7 @@ export default function EmailDetailPage({ params }) {
 
   const handleCopyOtp = () => {
     if (!otpCode) return;
-    copyToClipboard(otpCode, 'Verification code');
+    copyToClipboard(otpCode, t('inbox_detail.otp_detected', 'Verification code'));
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
@@ -77,10 +79,10 @@ export default function EmailDetailPage({ params }) {
 
   const handleDelete = async () => {
     if (!email) return;
-    if (!confirm('Are you sure you want to delete this email?')) return;
+    if (!confirm(t('inbox_detail.delete_confirm', 'Are you sure you want to delete this email?'))) return;
     try {
       await api.deleteEmail(email.id);
-      toast.success('Email deleted');
+      toast.success(t('inbox_detail.deleted_toast', 'Email deleted'));
       router.push('/inbox');
     } catch (err) {
       toast.error(err.message || 'Failed to delete email');
@@ -92,7 +94,7 @@ export default function EmailDetailPage({ params }) {
     setSendingReply(true);
     try {
       await api.sendReply(email.id, replyText);
-      toast.success('Reply sent successfully!');
+      toast.success(t('inbox_detail.reply_sent_toast', 'Reply sent successfully!'));
       setReplyText('');
       setShowReply(false);
     } catch (err) {
@@ -126,7 +128,7 @@ export default function EmailDetailPage({ params }) {
           className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
         >
           <ArrowLeftIcon className="w-3.5 h-3.5" />
-          <span>Back to Inbox</span>
+          <span>{t('inbox_detail.back_to_inbox', 'Back to Inbox')}</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -141,7 +143,7 @@ export default function EmailDetailPage({ params }) {
             ) : (
               <StarIconOutline className="w-4 h-4" />
             )}
-            <span className="hidden sm:inline">{email.is_starred ? 'Starred' : 'Star'}</span>
+            <span className="hidden sm:inline">{email.is_starred ? t('inbox_detail.starred', 'Starred') : t('inbox_detail.star', 'Star')}</span>
           </button>
 
           <button
@@ -149,7 +151,7 @@ export default function EmailDetailPage({ params }) {
             className="btn-primary py-1.5 px-3 text-xs flex items-center gap-1.5"
           >
             <ArrowUturnLeftIcon className="w-3.5 h-3.5" />
-            <span>Reply</span>
+            <span>{t('inbox_detail.reply', 'Reply')}</span>
           </button>
 
           <button
@@ -157,14 +159,14 @@ export default function EmailDetailPage({ params }) {
             className="btn-danger py-1.5 px-3 text-xs flex items-center gap-1.5"
           >
             <TrashIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Delete</span>
+            <span className="hidden sm:inline">{t('common.delete', 'Delete')}</span>
           </button>
 
           <a
             href={`/api/emails/${email.id}/eml`}
             download={`email-${email.id}.eml`}
             className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 text-slate-700 dark:text-slate-300"
-            title="Download Raw EML"
+            title={t('inbox_detail.download_eml', 'Download Raw EML')}
           >
             <DocumentArrowDownIcon className="w-4 h-4 text-cyan-500" />
             <span className="hidden sm:inline font-mono">EML</span>
@@ -181,7 +183,7 @@ export default function EmailDetailPage({ params }) {
             </div>
             <div>
               <span className="text-xs uppercase font-bold tracking-wider text-amber-800 dark:text-amber-400">
-                Verification Code Detected
+                {t('inbox_detail.otp_detected', 'Verification Code Detected')}
               </span>
               <div className="text-2xl sm:text-3xl font-mono font-black tracking-widest text-slate-900 dark:text-white mt-0.5">
                 {otpCode}
@@ -196,12 +198,12 @@ export default function EmailDetailPage({ params }) {
             {copiedCode ? (
               <>
                 <ClipboardDocumentCheckIcon className="w-4 h-4" />
-                <span>Copied!</span>
+                <span>{t('inbox_detail.copied', 'Copied!')}</span>
               </>
             ) : (
               <>
                 <ClipboardDocumentIcon className="w-4 h-4" />
-                <span>Copy Code</span>
+                <span>{t('inbox_detail.copy_code', 'Copy Code')}</span>
               </>
             )}
           </button>
@@ -243,7 +245,7 @@ export default function EmailDetailPage({ params }) {
             <div className="flex items-center gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs mb-4">
               <ShieldExclamationIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
               <span>
-                <b>Spam Warning:</b> This email was flagged by spam filters (Score: {email.spam_score}). Be cautious with links or instructions.
+                {t('inbox_detail.spam_warning', 'Spam Warning: This email was flagged by spam filters (Score: {score}). Be cautious with links or instructions.', { score: email.spam_score })}
               </span>
             </div>
           )}
@@ -252,7 +254,7 @@ export default function EmailDetailPage({ params }) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-slate-400 w-12 font-medium">From:</span>
+                <span className="text-slate-400 w-12 font-medium">{t('inbox_detail.from', 'From:')}</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                   {email.sender_name ? `${email.sender_name} ` : ''}
                   <span className="font-mono text-slate-600 dark:text-slate-400">&lt;{email.sender}&gt;</span>
@@ -267,7 +269,7 @@ export default function EmailDetailPage({ params }) {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-slate-400 w-12 font-medium">To:</span>
+                <span className="text-slate-400 w-12 font-medium">{t('inbox_detail.to', 'To:')}</span>
                 <span className="font-mono text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">
                   {email.alias_address}
                 </span>
@@ -290,7 +292,7 @@ export default function EmailDetailPage({ params }) {
           {/* Authentication & Security Badges */}
           <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-slate-400 font-medium text-[11px]">Authentication:</span>
+              <span className="text-slate-400 font-medium text-[11px]">{t('inbox_detail.auth_header', 'Authentication:')}</span>
               <span className={`px-2 py-0.5 rounded-md font-mono font-bold text-[10px] ${
                 email.spf_result === 'pass'
                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
@@ -342,7 +344,7 @@ export default function EmailDetailPage({ params }) {
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               } disabled:opacity-30`}
             >
-              🎨 Formatted View (HTML)
+              🎨 {t('inbox_detail.formatted_view', 'Formatted View (HTML)')}
             </button>
             <button
               onClick={() => setActiveTab('text')}
@@ -352,7 +354,7 @@ export default function EmailDetailPage({ params }) {
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              📝 Plain Text
+              📝 {t('inbox_detail.plain_view', 'Plain Text')}
             </button>
           </div>
 
@@ -361,7 +363,7 @@ export default function EmailDetailPage({ params }) {
             className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1"
           >
             <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-            <span>Copy Text</span>
+            <span>{t('inbox_detail.copy_text', 'Copy Text')}</span>
           </button>
         </div>
 
@@ -378,7 +380,7 @@ export default function EmailDetailPage({ params }) {
             </div>
           ) : (
             <pre className="whitespace-pre-wrap font-sans text-sm text-slate-800 dark:text-slate-200 leading-relaxed break-words">
-              {email.text_body || 'No text content available in this email.'}
+              {email.text_body || t('inbox_detail.no_text', 'No text content available in this email.')}
             </pre>
           )}
         </div>
@@ -388,7 +390,7 @@ export default function EmailDetailPage({ params }) {
           <div className="p-5 sm:p-6 bg-slate-50/50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-700/80">
             <h3 className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3 flex items-center gap-1.5">
               <PaperClipIcon className="w-3.5 h-3.5" />
-              <span>Attachments ({email.attachments.length})</span>
+              <span>{t('inbox_detail.attachments', 'Attachments')} ({email.attachments.length})</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -424,10 +426,10 @@ export default function EmailDetailPage({ params }) {
                         download
                         className="btn-secondary py-1 px-2.5 text-xs flex-shrink-0"
                       >
-                        Download
+                        {t('inbox_detail.download', 'Download')}
                       </a>
                     ) : (
-                      <span className="badge-red text-[11px]">Blocked</span>
+                      <span className="badge-red text-[11px]">{t('inbox_detail.blocked', 'Blocked')}</span>
                     )}
                   </div>
                 );
@@ -443,13 +445,13 @@ export default function EmailDetailPage({ params }) {
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <ArrowUturnLeftIcon className="w-4 h-4 text-indigo-600" />
-              <span>Compose Reply to {email.sender}</span>
+              <span>{t('inbox_detail.compose_reply', 'Compose Reply to {sender}', { sender: email.sender })}</span>
             </h3>
             <button
               onClick={() => setShowReply(false)}
               className="text-slate-400 hover:text-slate-600 text-xs"
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </button>
           </div>
 
@@ -457,7 +459,7 @@ export default function EmailDetailPage({ params }) {
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             rows={5}
-            placeholder="Write your reply here..."
+            placeholder={t('inbox_detail.reply_placeholder', 'Write your reply here...')}
             className="input resize-none"
             autoFocus
           />
@@ -467,14 +469,14 @@ export default function EmailDetailPage({ params }) {
               onClick={() => setShowReply(false)}
               className="btn-secondary py-1.5 px-3.5 text-xs"
             >
-              Discard
+              {t('inbox_detail.discard', 'Discard')}
             </button>
             <button
               onClick={handleSendReply}
               disabled={!replyText.trim() || sendingReply}
               className="btn-primary py-1.5 px-4 text-xs"
             >
-              {sendingReply ? 'Sending...' : 'Send Reply ↗'}
+              {sendingReply ? t('inbox_detail.sending', 'Sending...') : t('inbox_detail.send_reply', 'Send Reply ↗')}
             </button>
           </div>
         </div>

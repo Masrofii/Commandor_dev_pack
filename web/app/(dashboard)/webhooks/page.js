@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   LinkIcon,
   PlusIcon,
@@ -26,6 +27,7 @@ const EVENTS = [
 ];
 
 export default function WebhooksPage() {
+  const { t } = useTranslation();
   const { data, isLoading, mutate } = useSWR('webhooks', api.getWebhooks);
   const [form, setForm] = useState({
     name: '',
@@ -118,10 +120,10 @@ export default function WebhooksPage() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            Webhooks &amp; Real-Time Dispatcher
+            {t('webhooks.title', 'Webhooks & Real-Time Dispatcher')}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Dispatch HTTP POST requests in real-time with automated exponential retry backoff, HMAC verification, and delivery tracking.
+            {t('webhooks.subtitle', 'Dispatch HTTP POST requests in real-time with automated exponential retry backoff, HMAC verification, and delivery tracking.')}
           </p>
         </div>
 
@@ -130,7 +132,7 @@ export default function WebhooksPage() {
           className="btn-primary py-2 px-3.5 text-xs shadow-sm flex items-center gap-1.5 self-start"
         >
           <PlusIcon className="w-4 h-4" />
-          <span>Add Webhook</span>
+          <span>{t('webhooks.add_btn', 'Add Webhook')}</span>
         </button>
       </div>
 
@@ -139,7 +141,7 @@ export default function WebhooksPage() {
         <div className="card p-5 sm:p-6 border-indigo-200 dark:border-indigo-900/80 shadow-md animate-fade-in space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-              Configure New Webhook
+              {t('webhooks.modal_title', 'Configure New Webhook')}
             </h3>
             <button
               onClick={() => setShowAdd(false)}
@@ -152,10 +154,10 @@ export default function WebhooksPage() {
           <div className="space-y-3 text-xs">
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Webhook Name
+                {t('webhooks.name_label', 'Webhook Name')}
               </label>
               <input
-                placeholder="e.g. Discord Notifier, Zapier Endpoint"
+                placeholder={t('webhooks.name_placeholder', 'e.g. Discord Notifier, Zapier Endpoint')}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 className="input-cyber w-full"
@@ -164,7 +166,7 @@ export default function WebhooksPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Payload URL (HTTPS)
+                {t('webhooks.url_label', 'Payload URL (HTTPS)')}
               </label>
               <input
                 placeholder="https://example.com/api/webhooks/incoming"
@@ -176,7 +178,7 @@ export default function WebhooksPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Signing Secret (Optional, for HMAC SHA-256 verification)
+                {t('webhooks.secret_label', 'Signing Secret (Optional, for HMAC SHA-256 verification)')}
               </label>
               <input
                 placeholder="whsec_..."
@@ -189,7 +191,7 @@ export default function WebhooksPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
-                Trigger Events
+                {t('webhooks.trigger_events', 'Trigger Events')}
               </label>
               <div className="flex flex-wrap gap-2">
                 {EVENTS.map((ev) => (
@@ -215,14 +217,14 @@ export default function WebhooksPage() {
               onClick={() => setShowAdd(false)}
               className="btn-secondary py-1.5 px-3.5 text-xs"
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </button>
             <button
               onClick={create}
               disabled={!form.name || !form.url || creating}
               className="btn-primary py-1.5 px-4 text-xs font-semibold"
             >
-              {creating ? 'Saving...' : 'Save Webhook'}
+              {creating ? t('webhooks.saving_btn', 'Saving...') : t('webhooks.save_btn', 'Save Webhook')}
             </button>
           </div>
         </div>
@@ -231,13 +233,13 @@ export default function WebhooksPage() {
       {/* Webhooks List */}
       <div className="card overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-400 text-xs">Loading webhooks...</div>
+          <div className="p-8 text-center text-slate-400 text-xs">{t('webhooks.loading', 'Loading webhooks...')}</div>
         ) : webhooks.length === 0 ? (
           <div className="p-8 text-center">
             <LinkIcon className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
-            <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">No webhooks configured</h4>
+            <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">{t('webhooks.empty_title', 'No webhooks configured')}</h4>
             <p className="text-xs text-slate-400 mt-1">
-              Add a webhook to forward incoming email events or service alerts to external systems.
+              {t('webhooks.empty_desc', 'Add a webhook to forward incoming email events or service alerts to external systems.')}
             </p>
           </div>
         ) : (

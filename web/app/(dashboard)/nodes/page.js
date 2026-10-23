@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { isAdmin } from '../../../lib/auth';
 import { formatTimeAgo, formatMemoryMb } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   ServerStackIcon,
   PlusIcon,
@@ -35,6 +36,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function NodesPage() {
+  const { t } = useTranslation();
   const [adminUser, setAdminUser] = useState(false);
 
   useEffect(() => {
@@ -453,11 +455,11 @@ export default function NodesPage() {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Nodes &amp; Servers
+              {t('nodes.title', 'Nodes & Servers')}
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Enterprise Linux cluster management with verified SSH host keys, AES-256 encrypted credentials, and live telemetry.
+            {t('nodes.subtitle', 'Enterprise Linux cluster management with verified SSH host keys, AES-256 encrypted credentials, and live telemetry.')}
           </p>
         </div>
 
@@ -465,24 +467,24 @@ export default function NodesPage() {
           <button
             onClick={() => mutateNodes()}
             className="btn-secondary py-2 px-3 text-xs shadow-xs"
-            title="Refresh Nodes"
+            title={t('common.refresh', 'Refresh Nodes')}
           >
             <ArrowPathIcon className={`w-4 h-4 ${loadingNodes ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('common.refresh', 'Refresh')}</span>
           </button>
           <button
             onClick={() => { setAddMode('bulk'); setBulkResult(null); setBulkValidationResult(null); setShowAddModal(true); }}
             className="btn-secondary py-2 px-3.5 text-xs shadow-xs font-semibold"
           >
             <ListBulletIcon className="w-4 h-4 text-indigo-500" />
-            <span>Bulk Import</span>
+            <span>{t('nodes.bulk_import', 'Bulk Import')}</span>
           </button>
           <button
             onClick={() => { setAddMode('single'); setTestResult(null); setShowAddModal(true); }}
             className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold"
           >
             <PlusIcon className="w-4 h-4" />
-            <span>Add Node</span>
+            <span>{t('nodes.provision_btn', 'Add Node')}</span>
           </button>
         </div>
       </div>
@@ -491,49 +493,49 @@ export default function NodesPage() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>Total Nodes</span>
+            <span>{t('nodes.total_nodes', 'Total Nodes')}</span>
             <ServerStackIcon className="w-4 h-4 text-indigo-500" />
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-white">{totalNodes}</div>
-          <div className="text-[11px] text-slate-500">{onlineNodes} online right now</div>
+          <div className="text-[11px] text-slate-500">{onlineNodes} {t('common.online', 'online')}</div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>Availability</span>
+            <span>{t('nodes.availability', 'Availability')}</span>
             <SignalIcon className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
             {totalNodes > 0 ? Math.round((onlineNodes / totalNodes) * 100) : 100}%
           </div>
-          <div className="text-[11px] text-slate-500">Cluster health ratio</div>
+          <div className="text-[11px] text-slate-500">{t('nodes.cluster_health', 'Cluster health ratio')}</div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>vCPU Cores</span>
+            <span>{t('nodes.vcpu_cores', 'vCPU Cores')}</span>
             <CpuChipIcon className="w-4 h-4 text-indigo-500" />
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-white">{totalCpus} Cores</div>
-          <div className="text-[11px] text-slate-500">Total cluster compute</div>
+          <div className="text-[11px] text-slate-500">{t('nodes.cluster_compute', 'Total cluster compute')}</div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>Total RAM</span>
+            <span>{t('nodes.total_ram', 'Total RAM')}</span>
             <CircleStackIcon className="w-4 h-4 text-cyan-500" />
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-white">{totalRamGb} GB</div>
-          <div className="text-[11px] text-slate-500">Allocated memory pool</div>
+          <div className="text-[11px] text-slate-500">{t('nodes.allocated_memory', 'Allocated memory pool')}</div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800 col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>Hosted Sites</span>
+            <span>{t('nodes.hosted_sites', 'Hosted Sites')}</span>
             <GlobeAltIcon className="w-4 h-4 text-purple-500" />
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-white">{totalSites}</div>
-          <div className="text-[11px] text-slate-500">Active deployments</div>
+          <div className="text-[11px] text-slate-500">{t('nodes.active_deployments', 'Active deployments')}</div>
         </div>
       </div>
 
@@ -543,7 +545,7 @@ export default function NodesPage() {
           <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search nodes by name, IP address, user, or group..."
+            placeholder={t('nodes.search_placeholder', 'Search nodes by name, IP address, user, or group...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input pl-9 text-xs w-full"
@@ -557,12 +559,12 @@ export default function NodesPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="input text-xs"
           >
-            <option value="all">All Statuses</option>
-            <option value="online">Online Only</option>
-            <option value="stale">Stale Telemetry</option>
-            <option value="offline">Offline Only</option>
-            <option value="active">Active Only</option>
-            <option value="inactive">Disabled Only</option>
+            <option value="all">{t('nodes.status_all', 'All Statuses')}</option>
+            <option value="online">{t('nodes.status_online', 'Online Only')}</option>
+            <option value="stale">{t('nodes.status_stale', 'Stale Telemetry')}</option>
+            <option value="offline">{t('nodes.status_offline', 'Offline Only')}</option>
+            <option value="active">{t('nodes.status_active', 'Active Only')}</option>
+            <option value="inactive">{t('nodes.status_inactive', 'Disabled Only')}</option>
           </select>
 
           {/* Group Filter */}
@@ -572,7 +574,7 @@ export default function NodesPage() {
               onChange={(e) => setGroupFilter(e.target.value)}
               className="input text-xs"
             >
-              <option value="all">All Groups</option>
+              <option value="all">{t('nodes.groups_all', 'All Groups')}</option>
               {availableGroups.map(g => (
                 <option key={g} value={g}>{g}</option>
               ))}
@@ -598,19 +600,19 @@ export default function NodesPage() {
             🖥️
           </div>
           <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-            {searchQuery || statusFilter !== 'all' ? 'No matching nodes found' : 'No server nodes connected'}
+            {searchQuery || statusFilter !== 'all' ? t('common.no_results', 'No matching nodes found') : t('nodes.empty_none', 'No server nodes connected')}
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {searchQuery || statusFilter !== 'all'
-              ? 'Try adjusting your search query or status filter.'
-              : 'Add your first Linux server node via SSH to start hosting static sites, proxying microservices, and balancing cluster traffic.'}
+              ? t('common.try_adjusting_search', 'Try adjusting your search query or status filter.')
+              : t('nodes.empty_desc_none', 'Add your first Linux server node via SSH to start hosting static sites, proxying microservices, and balancing cluster traffic.')}
           </p>
           {!searchQuery && statusFilter === 'all' && (
             <button
               onClick={() => { setAddMode('single'); setTestResult(null); setShowAddModal(true); }}
               className="btn-primary py-1.5 px-4 text-xs font-semibold"
             >
-              Connect First Node
+              {t('nodes.connect_first', 'Connect First Node')}
             </button>
           )}
         </div>

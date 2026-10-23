@@ -1,14 +1,16 @@
 'use strict';
 
-function mainMenuKeyboard(isAdmin = false) {
+const { t, getLanguageMeta, SUPPORTED_LANGUAGES } = require('./i18n');
+
+function mainMenuKeyboard(isAdmin = false, lang = 'en') {
   const keyboard = [
-    ['📬 Email Suite', '📨 Inbox'],
-    ['🌐 Subdomains', '🖥️ Cloud Hosting'],
-    ['🔑 API Keys', '📝 Change Log'],
-    ['⚙️ Settings', '🌐 Web Dashboard']
+    [t('bot.btn.email_suite', lang), t('bot.btn.inbox', lang)],
+    [t('bot.btn.subdomains', lang), t('bot.btn.hosting', lang)],
+    [t('bot.btn.api_keys', lang), t('bot.btn.changelog', lang)],
+    [t('bot.btn.settings', lang), t('bot.btn.web_dashboard', lang)]
   ];
   if (isAdmin) {
-    keyboard.push(['👑 Owner Admin Panel']);
+    keyboard.push([t('bot.btn.admin_panel', lang)]);
   }
   return {
     reply_markup: {
@@ -19,165 +21,165 @@ function mainMenuKeyboard(isAdmin = false) {
   };
 }
 
-function startInlineKeyboard(webUrl = null, isAdmin = false, unreadCount = 0) {
+function startInlineKeyboard(webUrl = null, isAdmin = false, unreadCount = 0, lang = 'en') {
   const unreadBadge = unreadCount > 0 ? ` (${unreadCount})` : '';
   const rows = [
     [
-      { text: `📬 Email Suite${unreadBadge}`, callback_data: 'menu:email_suite' },
-      { text: '🌐 Subdomains', callback_data: 'subdomain:hub' }
+      { text: `${t('bot.btn.email_suite', lang)}${unreadBadge}`, callback_data: 'menu:email_suite' },
+      { text: t('bot.btn.subdomains', lang), callback_data: 'subdomain:hub' }
     ],
     [
-      { text: '🖥️ Cloud Hosting', callback_data: 'hosting:menu' },
-      { text: '🔑 API & Devs', callback_data: 'api:hub' }
+      { text: t('bot.btn.hosting', lang), callback_data: 'hosting:menu' },
+      { text: t('bot.btn.api_keys', lang), callback_data: 'api:hub' }
     ],
     [
-      { text: `📨 View Inbox${unreadBadge}`, callback_data: 'inbox:1' },
-      { text: '📊 Statistics', callback_data: 'stats:1' }
+      { text: `${t('bot.btn.inbox', lang)}${unreadBadge}`, callback_data: 'inbox:1' },
+      { text: t('bot.btn.stats', lang), callback_data: 'stats:1' }
     ],
     [
-      { text: '📝 Change Log', callback_data: 'menu:changelog' },
-      { text: '🌐 Language', callback_data: 'menu:language' }
+      { text: t('bot.btn.changelog', lang), callback_data: 'menu:changelog' },
+      { text: t('bot.btn.language', lang), callback_data: 'menu:language' }
     ]
   ];
   if (isAdmin) {
-    rows.push([{ text: '👑 Owner Admin Panel', callback_data: 'admin:dashboard' }]);
+    rows.push([{ text: t('bot.btn.admin_panel', lang), callback_data: 'admin:dashboard' }]);
   }
   if (webUrl) {
-    rows.push([{ text: '🌐 Open Web Dashboard', url: webUrl }]);
+    rows.push([{ text: t('bot.btn.web_dashboard', lang), url: webUrl }]);
   }
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function tosPromptKeyboard() {
+function tosPromptKeyboard(lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '✅ I Accept Terms of Service', callback_data: 'tos:accept' }],
+        [{ text: t('bot.btn.accept_tos', lang), callback_data: 'tos:accept' }],
         [
-          { text: '📜 Read Detailed Terms', callback_data: 'tos:full' },
-          { text: '❌ Decline', callback_data: 'tos:decline' }
+          { text: t('bot.btn.read_tos', lang), callback_data: 'tos:full' },
+          { text: t('bot.btn.decline_tos', lang), callback_data: 'tos:decline' }
         ]
       ]
     }
   };
 }
 
-function tosFullKeyboard() {
+function tosFullKeyboard(lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '✅ I Accept Terms of Service', callback_data: 'tos:accept' }],
-        [{ text: '⬅️ Back to Summary', callback_data: 'tos:prompt' }]
+        [{ text: t('bot.btn.accept_tos', lang), callback_data: 'tos:accept' }],
+        [{ text: t('bot.btn.back_summary', lang), callback_data: 'tos:prompt' }]
       ]
     }
   };
 }
 
-function tosDeclinedKeyboard() {
+function tosDeclinedKeyboard(lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '✅ Accept Terms of Service', callback_data: 'tos:accept' }]
+        [{ text: t('bot.btn.accept_tos', lang), callback_data: 'tos:accept' }]
       ]
     }
   };
 }
 
-function emailSuiteKeyboard(aliasCount = 0, unreadCount = 0) {
+function emailSuiteKeyboard(aliasCount = 0, unreadCount = 0, lang = 'en') {
   const unreadBadge = unreadCount > 0 ? ` (${unreadCount})` : '';
   return {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: `📥 Inbox${unreadBadge}`, callback_data: 'inbox:1' },
-          { text: `📧 My Aliases (${aliasCount})`, callback_data: 'aliases:1' }
+          { text: `${t('bot.btn.inbox', lang)}${unreadBadge}`, callback_data: 'inbox:1' },
+          { text: t('bot.btn.my_aliases', lang, { count: aliasCount }), callback_data: 'aliases:1' }
         ],
         [
-          { text: '➕ New Alias', callback_data: 'menu:new' },
-          { text: '🎨 Custom Alias (-ca)', callback_data: 'menu:custom_alias' }
+          { text: t('bot.btn.new_alias', lang), callback_data: 'menu:new' },
+          { text: t('bot.btn.custom_alias', lang), callback_data: 'menu:custom_alias' }
         ],
         [
-          { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' },
-          { text: '🔎 Search Emails', callback_data: 'menu:search' }
+          { text: t('bot.btn.burner', lang), callback_data: 'menu:burner' },
+          { text: t('bot.btn.search', lang), callback_data: 'menu:search' }
         ],
         [
-          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+          { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
         ]
       ]
     }
   };
 }
 
-function infraHubKeyboard(subCount = 0, siteCount = 0) {
+function infraHubKeyboard(subCount = 0, siteCount = 0, lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: `🌐 Subdomains (${subCount})`, callback_data: 'subdomain:hub' },
-          { text: `🖥️ Cloud Hosting (${siteCount})`, callback_data: 'hosting:menu' }
+          { text: `${t('bot.btn.subdomains', lang)} (${subCount})`, callback_data: 'subdomain:hub' },
+          { text: `${t('bot.btn.hosting', lang)} (${siteCount})`, callback_data: 'hosting:menu' }
         ],
         [
-          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+          { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
         ]
       ]
     }
   };
 }
 
-function utilitiesHubKeyboard() {
+function utilitiesHubKeyboard(lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' },
-          { text: '🔎 Search Emails', callback_data: 'menu:search' }
+          { text: t('bot.btn.burner', lang), callback_data: 'menu:burner' },
+          { text: t('bot.btn.search', lang), callback_data: 'menu:search' }
         ],
         [
-          { text: '⚙️ Settings', callback_data: 'menu:settings' },
-          { text: '🌐 Language', callback_data: 'menu:language' }
+          { text: t('bot.btn.settings', lang), callback_data: 'menu:settings' },
+          { text: t('bot.btn.language', lang), callback_data: 'menu:language' }
         ],
         [
-          { text: '📊 Account Stats', callback_data: 'stats:1' },
-          { text: '📖 Help Guide', callback_data: 'menu:help' }
+          { text: t('bot.btn.stats', lang), callback_data: 'stats:1' },
+          { text: t('menu.help', lang), callback_data: 'menu:help' }
         ],
         [
-          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+          { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
         ]
       ]
     }
   };
 }
 
-function subdomainHubKeyboard(subCount = 0) {
+function subdomainHubKeyboard(subCount = 0, lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: `🌐 My Subdomains (${subCount})`, callback_data: 'subdomain:list:1' },
-          { text: '➕ Claim Subdomain', callback_data: 'subdomain:claim_prompt' }
+          { text: `${t('subdomains.tab_subdomains', lang)} (${subCount})`, callback_data: 'subdomain:list:1' },
+          { text: t('bot.btn.claim_subdomain', lang), callback_data: 'subdomain:claim_prompt' }
         ],
         [
           { text: '📡 Webhook / Web Requests', callback_data: 'subdomain:requests:1' },
-          { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+          { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
         ]
       ]
     }
   };
 }
 
-function apiHubKeyboard(keyCount = 0, webUrl = null) {
+function apiHubKeyboard(keyCount = 0, webUrl = null, lang = 'en') {
   const rows = [
     [
-      { text: `🔑 My API Keys (${keyCount})`, callback_data: 'api_key:list' },
-      { text: '➕ Generate New Token', callback_data: 'api_key:new' }
+      { text: `${t('api_keys.title', lang)} (${keyCount})`, callback_data: 'api_key:list' },
+      { text: t('api_keys.generate_btn', lang), callback_data: 'api_key:new' }
     ],
     [
-      { text: '📖 API Documentation', callback_data: 'api_key:docs' },
-      { text: '🏠 Back to Main Menu', callback_data: 'menu:home' }
+      { text: t('api_keys.docs_title', lang), callback_data: 'api_key:docs' },
+      { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
     ]
   ];
   if (webUrl) {
-    rows.push([{ text: '🌐 Launch Web Dashboard', url: `${webUrl}/api-keys` }]);
+    rows.push([{ text: t('bot.btn.web_dashboard', lang), url: `${webUrl}/api-keys` }]);
   }
   return {
     reply_markup: {
@@ -186,26 +188,26 @@ function apiHubKeyboard(keyCount = 0, webUrl = null) {
   };
 }
 
-function changeLogKeyboard(isAdmin = false) {
+function changeLogKeyboard(isAdmin = false, lang = 'en') {
   const rows = [
     [
-      { text: '🔄 Refresh Updates', callback_data: 'menu:changelog' },
-      { text: '📜 Terms of Service', callback_data: 'tos:full' }
+      { text: `🔄 ${t('common.refresh', lang)}`, callback_data: 'menu:changelog' },
+      { text: t('bot.btn.read_tos', lang), callback_data: 'tos:full' }
     ]
   ];
   if (isAdmin) {
-    rows.push([{ text: '📋 View System Audit Logs', callback_data: 'admin:logs:1:all' }]);
+    rows.push([{ text: `📋 ${t('settings.tab_logs', lang)}`, callback_data: 'admin:logs:1:all' }]);
   }
-  rows.push([{ text: '🏠 Back to Main Menu', callback_data: 'menu:home' }]);
+  rows.push([{ text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function adminAuditLogsKeyboard(page = 1, totalPages = 1, currentCategory = 'all') {
+function adminAuditLogsKeyboard(page = 1, totalPages = 1, currentCategory = 'all', lang = 'en') {
   const rows = [];
   
   // Category filters
   rows.push([
-    { text: currentCategory === 'all' ? '• All •' : 'All', callback_data: 'admin:logs:1:all' },
+    { text: currentCategory === 'all' ? '• All •' : t('common.all', lang), callback_data: 'admin:logs:1:all' },
     { text: currentCategory === 'email' ? '• Email •' : 'Email', callback_data: 'admin:logs:1:email' },
     { text: currentCategory === 'hosting' ? '• Hosting •' : 'Hosting', callback_data: 'admin:logs:1:hosting' },
     { text: currentCategory === 'subdomain' ? '• Subdomains •' : 'Subdomains', callback_data: 'admin:logs:1:subdomain' }
@@ -216,44 +218,44 @@ function adminAuditLogsKeyboard(page = 1, totalPages = 1, currentCategory = 'all
   if (page > 1) {
     nav.push({ text: '⬅️ Prev', callback_data: `admin:logs:${page - 1}:${currentCategory}` });
   }
-  nav.push({ text: `Page ${page}/${totalPages}`, callback_data: `admin:logs:${page}:${currentCategory}` });
+  nav.push({ text: `${t('common.page', lang)} ${page}/${totalPages}`, callback_data: `admin:logs:${page}:${currentCategory}` });
   if (page < totalPages) {
     nav.push({ text: 'Next ➡️', callback_data: `admin:logs:${page + 1}:${currentCategory}` });
   }
   rows.push(nav);
 
   rows.push([
-    { text: '🔄 Refresh', callback_data: `admin:logs:${page}:${currentCategory}` },
-    { text: '👑 Admin Dashboard', callback_data: 'admin:dashboard' }
+    { text: `🔄 ${t('common.refresh', lang)}`, callback_data: `admin:logs:${page}:${currentCategory}` },
+    { text: t('bot.btn.admin_panel', lang), callback_data: 'admin:dashboard' }
   ]);
 
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function adminDashboardKeyboard(webUrl = null) {
+function adminDashboardKeyboard(webUrl = null, lang = 'en') {
   const rows = [
     [
-      { text: '🔄 Refresh Status', callback_data: 'admin:dashboard' },
+      { text: `🔄 ${t('common.refresh', lang)}`, callback_data: 'admin:dashboard' },
       { text: '📬 Live Email Feed', callback_data: 'admin:emails:1' }
     ],
     [
-      { text: '👥 User Directory', callback_data: 'admin:users:1' },
-      { text: '🌐 All Subdomains', callback_data: 'admin:subdomains:1' }
+      { text: `👥 ${t('admin.tab_users', lang)}`, callback_data: 'admin:users:1' },
+      { text: `🌐 ${t('admin.tab_subdomains', lang)}`, callback_data: 'admin:subdomains:1' }
     ],
     [
-      { text: '🚀 Hosted Sites', callback_data: 'admin:sites:1' },
-      { text: '🖥️ Server Nodes', callback_data: 'hosting:nodes' }
+      { text: `🚀 ${t('admin.tab_sites', lang)}`, callback_data: 'admin:sites:1' },
+      { text: `🖥️ ${t('nav.nodes', lang)}`, callback_data: 'hosting:nodes' }
     ],
     [
-      { text: '📜 Audit & Change Logs', callback_data: 'admin:logs:1:all' },
-      { text: '🛡️ Threat Interceptions', callback_data: 'admin:threats:1' }
+      { text: `📜 ${t('settings.tab_logs', lang)}`, callback_data: 'admin:logs:1:all' },
+      { text: `🛡️ ${t('admin.stat_threats', lang)}`, callback_data: 'admin:threats:1' }
     ],
     [
-      { text: '📢 Global Broadcast', callback_data: 'admin:broadcast' },
+      { text: `📢 ${t('admin.tab_broadcast', lang)}`, callback_data: 'admin:broadcast' },
       { text: '🧹 Optimize Database', callback_data: 'admin:vacuum' }
     ],
     [
-      { text: '🏠 Main Menu', callback_data: 'menu:home' }
+      { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
     ]
   ];
   if (webUrl) {
@@ -262,11 +264,11 @@ function adminDashboardKeyboard(webUrl = null) {
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function apiKeysKeyboard(keys = []) {
+function apiKeysKeyboard(keys = [], lang = 'en') {
   const rows = [
     [
-      { text: '➕ Generate API Key', callback_data: 'api_key:new' },
-      { text: 'ℹ️ API Guide & Docs', callback_data: 'api_key:docs' }
+      { text: t('api_keys.generate_btn', lang), callback_data: 'api_key:new' },
+      { text: t('api_keys.docs_title', lang), callback_data: 'api_key:docs' }
     ]
   ];
   const activeKeys = keys.filter(k => !k.revoked);
@@ -276,35 +278,35 @@ function apiKeysKeyboard(keys = []) {
     ]);
   }
   rows.push([
-    { text: '🔄 Refresh', callback_data: 'api_key:list' },
-    { text: '🏠 Main Menu', callback_data: 'menu:home' }
+    { text: `🔄 ${t('common.refresh', lang)}`, callback_data: 'api_key:list' },
+    { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
   ]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function emailActionsKeyboard(emailId, isStarred = false, hasAttachments = false, webUrl = null) {
+function emailActionsKeyboard(emailId, isStarred = false, hasAttachments = false, webUrl = null, lang = 'en') {
   const rows = [
     [
-      { text: '↩️ Reply', callback_data: `reply:${emailId}` },
-      ...(hasAttachments ? [{ text: '📎 Attachments', callback_data: `attachments:${emailId}` }] : [])
+      { text: t('bot.btn.reply', lang), callback_data: `reply:${emailId}` },
+      ...(hasAttachments ? [{ text: t('bot.btn.attachments', lang), callback_data: `attachments:${emailId}` }] : [])
     ],
     [
-      { text: isStarred ? '⭐ Starred' : '☆ Star', callback_data: `star:${emailId}` },
-      { text: '✅ Mark Read', callback_data: `read:${emailId}` },
-      { text: '🗑 Delete', callback_data: `delete_email:${emailId}` }
+      { text: isStarred ? t('bot.btn.starred', lang) : t('bot.btn.star', lang), callback_data: `star:${emailId}` },
+      { text: t('bot.btn.mark_read', lang), callback_data: `read:${emailId}` },
+      { text: t('bot.btn.delete', lang), callback_data: `delete_email:${emailId}` }
     ]
   ];
   const nav = [
-    { text: '⬅️ Back to Inbox', callback_data: 'inbox:1' }
+    { text: `⬅️ ${t('nav.inbox', lang)}`, callback_data: 'inbox:1' }
   ];
   if (webUrl) {
-    nav.push({ text: '🌐 View on Web', url: `${webUrl}/inbox/${emailId}` });
+    nav.push({ text: t('bot.btn.open_web', lang), url: `${webUrl}/inbox/${emailId}` });
   }
   rows.push(nav);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function aliasActionsKeyboard(address, isActive = true, isBurner = false, aliasId = null) {
+function aliasActionsKeyboard(address, isActive = true, isBurner = false, aliasId = null, lang = 'en') {
   let addrStr = typeof address === 'object' && address !== null ? address.address : address;
   let qrTarget = aliasId || (typeof address === 'object' && address !== null ? address.id : null);
   if (!qrTarget) {
@@ -320,28 +322,28 @@ function aliasActionsKeyboard(address, isActive = true, isBurner = false, aliasI
 
   const rows = [
     [
-      { text: '📨 View Inbox', callback_data: `alias_inbox:${addrStr}:1` },
-      { text: '📱 QR Code', callback_data: `qr_alias:${qrTarget}` }
+      { text: t('bot.btn.inbox', lang), callback_data: `alias_inbox:${addrStr}:1` },
+      { text: t('bot.btn.qr_code', lang), callback_data: `qr_alias:${qrTarget}` }
     ]
   ];
   if (isBurner) {
-    rows.push([{ text: '⏳ Renew Expiry (+1 Hour)', callback_data: `renew_alias:${addrStr}` }]);
+    rows.push([{ text: t('bot.btn.renew_alias', lang), callback_data: `renew_alias:${addrStr}` }]);
   }
   rows.push([
-    { text: isActive ? '⏸ Deactivate' : '▶️ Activate', callback_data: `toggle_alias:${addrStr}` },
-    { text: '🗑 Delete', callback_data: `delete_alias:${addrStr}` }
+    { text: isActive ? t('bot.btn.deactivate', lang) : t('bot.btn.activate', lang), callback_data: `toggle_alias:${addrStr}` },
+    { text: t('bot.btn.delete', lang), callback_data: `delete_alias:${addrStr}` }
   ]);
   rows.push([
-    { text: '⬅️ Back to Aliases', callback_data: 'aliases:1' }
+    { text: `⬅️ ${t('nav.aliases', lang)}`, callback_data: 'aliases:1' }
   ]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function subdomainListKeyboard(subdomains = [], page = 1, total = 0) {
+function subdomainListKeyboard(subdomains = [], page = 1, total = 0, lang = 'en') {
   const rows = [
     [
-      { text: '➕ Claim Subdomain', callback_data: 'subdomain:claim_prompt' },
-      { text: '🔄 Refresh', callback_data: `subdomain:list:${page}` }
+      { text: t('bot.btn.claim_subdomain', lang), callback_data: 'subdomain:claim_prompt' },
+      { text: `🔄 ${t('common.refresh', lang)}`, callback_data: `subdomain:list:${page}` }
     ]
   ];
 
@@ -356,11 +358,11 @@ function subdomainListKeyboard(subdomains = [], page = 1, total = 0) {
     ]);
   }
 
-  rows.push([{ text: '🏠 Main Menu', callback_data: 'menu:home' }]);
+  rows.push([{ text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function subdomainActionsKeyboard(sub) {
+function subdomainActionsKeyboard(sub, lang = 'en') {
   const catchAllBadge = sub.email_catch_all ? '✅ ON' : '❌ OFF';
   const webBadge = sub.web_enabled ? '✅ ON' : '⏸ OFF';
   const modeBadge = (sub.web_mode || 'landing').toUpperCase();
@@ -381,41 +383,41 @@ function subdomainActionsKeyboard(sub) {
           { text: '📊 Captured Requests', callback_data: `subdomain:requests:${sub.id}` }
         ],
         [
-          { text: '➕ Create Alias Here', callback_data: `subdomain:new_alias:${sub.id}` },
-          { text: '🗑 Delete Subdomain', callback_data: `subdomain:delete:${sub.id}` }
+          { text: `➕ ${t('nav.new_alias', lang)}`, callback_data: `subdomain:new_alias:${sub.id}` },
+          { text: `🗑 ${t('common.delete', lang)}`, callback_data: `subdomain:delete:${sub.id}` }
         ],
         [
-          { text: '⬅️ Back to Subdomains', callback_data: 'subdomain:list:1' }
+          { text: `⬅️ ${t('subdomains.tab_subdomains', lang)}`, callback_data: 'subdomain:list:1' }
         ]
       ]
     }
   };
 }
 
-function hostingMainMenuKeyboard(isAdmin = false) {
+function hostingMainMenuKeyboard(isAdmin = false, lang = 'en') {
   const rows = [
     [
-      { text: '➕ Deploy Simple Site', callback_data: 'hosting:deploy_prompt' },
-      { text: '📋 My Sites', callback_data: 'hosting:sites' }
+      { text: t('bot.btn.deploy_site', lang), callback_data: 'hosting:deploy_prompt' },
+      { text: t('bot.btn.my_sites', lang), callback_data: 'hosting:sites' }
     ],
     [
-      { text: '📦 Plans & Limits', callback_data: 'hosting:plans' },
-      { text: '📜 Anti-Abuse TOS', callback_data: 'hosting:tos' }
+      { text: t('bot.btn.plans_limits', lang), callback_data: 'hosting:plans' },
+      { text: t('bot.btn.anti_abuse', lang), callback_data: 'hosting:tos' }
     ]
   ];
   if (isAdmin) {
     rows.push([
-      { text: '🖥️ Manage Server Nodes', callback_data: 'hosting:nodes' },
-      { text: '➕ Add Node (host:user:pass)', callback_data: 'hosting:add_node_prompt' }
+      { text: t('bot.btn.manage_nodes', lang), callback_data: 'hosting:nodes' },
+      { text: t('bot.btn.add_node', lang), callback_data: 'hosting:add_node_prompt' }
     ]);
   }
-  rows.push([{ text: '🏠 Main Menu', callback_data: 'menu:home' }]);
+  rows.push([{ text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function hostingSitesListKeyboard(sites = []) {
+function hostingSitesListKeyboard(sites = [], lang = 'en') {
   const rows = [
-    [{ text: '➕ Deploy New Site', callback_data: 'hosting:deploy_prompt' }]
+    [{ text: t('bot.btn.deploy_site', lang), callback_data: 'hosting:deploy_prompt' }]
   ];
   for (const s of sites) {
     const statusIcon = s.status === 'active' ? '🟢' : '🔴';
@@ -423,11 +425,11 @@ function hostingSitesListKeyboard(sites = []) {
       { text: `${statusIcon} ${s.name} (${s.visits_count} hits)`, callback_data: `hosting:site:${s.id}` }
     ]);
   }
-  rows.push([{ text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' }]);
+  rows.push([{ text: `⬅️ ${t('bot.btn.hosting', lang)}`, callback_data: 'hosting:menu' }]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function hostingSiteActionsKeyboard(site) {
+function hostingSiteActionsKeyboard(site, lang = 'en') {
   const siteUrl = `http://${site.full_domain}`;
   return {
     reply_markup: {
@@ -435,19 +437,19 @@ function hostingSiteActionsKeyboard(site) {
         [{ text: '🌐 Visit Live Site', url: siteUrl }],
         [
           { text: '🔄 Update HTML', callback_data: `hosting:update_html:${site.id}` },
-          { text: '🗑 Delete Site', callback_data: `hosting:delete_site:${site.id}` }
+          { text: `🗑 ${t('common.delete', lang)}`, callback_data: `hosting:delete_site:${site.id}` }
         ],
-        [{ text: '⬅️ Back to Sites', callback_data: 'hosting:sites' }]
+        [{ text: `⬅️ ${t('bot.btn.my_sites', lang)}`, callback_data: 'hosting:sites' }]
       ]
     }
   };
 }
 
-function hostingNodesKeyboard(nodes = []) {
+function hostingNodesKeyboard(nodes = [], lang = 'en') {
   const rows = [
     [
-      { text: '➕ Add Server Node', callback_data: 'hosting:add_node_prompt' },
-      { text: '🔄 Refresh Nodes', callback_data: 'hosting:nodes' }
+      { text: t('bot.btn.add_node', lang), callback_data: 'hosting:add_node_prompt' },
+      { text: `🔄 ${t('common.refresh', lang)}`, callback_data: 'hosting:nodes' }
     ]
   ];
   for (const n of nodes) {
@@ -457,22 +459,22 @@ function hostingNodesKeyboard(nodes = []) {
     ]);
   }
   rows.push([
-    { text: '⬅️ Back to Hosting', callback_data: 'hosting:menu' },
-    { text: '🏠 Main Menu', callback_data: 'menu:home' }
+    { text: `⬅️ ${t('bot.btn.hosting', lang)}`, callback_data: 'hosting:menu' },
+    { text: t('bot.btn.main_menu', lang), callback_data: 'menu:home' }
   ]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function hostingNodeActionsKeyboard(node) {
+function hostingNodeActionsKeyboard(node, lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
         [
           { text: '⚡ Ping & Connection Test', callback_data: `hosting:node_ping:${node.id}` },
-          { text: '🗑 Remove Node', callback_data: `hosting:node_delete:${node.id}` }
+          { text: `🗑 ${t('common.delete', lang)}`, callback_data: `hosting:node_delete:${node.id}` }
         ],
         [
-          { text: '⬅️ Back to Server Nodes', callback_data: 'hosting:nodes' }
+          { text: `⬅️ ${t('nav.nodes', lang)}`, callback_data: 'hosting:nodes' }
         ]
       ]
     }
@@ -502,18 +504,18 @@ function languageSelectionKeyboard(currentLang = 'en') {
       callback_data: `set_lang:${l.code}`
     })));
   }
-  rows.push([{ text: '🏠 Back to Menu', callback_data: 'menu:home' }]);
+  rows.push([{ text: t('bot.btn.main_menu', currentLang), callback_data: 'menu:home' }]);
   return { reply_markup: { inline_keyboard: rows } };
 }
 
-function broadcastConfirmKeyboard() {
+function broadcastConfirmKeyboard(lang = 'en') {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '🚀 Confirm & Send Announcement', callback_data: 'admin:broadcast_confirm' }],
+        [{ text: t('broadcast.confirm', lang), callback_data: 'admin:broadcast_confirm' }],
         [
-          { text: '✏️ Edit Content', callback_data: 'admin:broadcast_edit' },
-          { text: '❌ Cancel Announcement', callback_data: 'admin:broadcast_cancel' }
+          { text: t('broadcast.edit', lang), callback_data: 'admin:broadcast_edit' },
+          { text: t('broadcast.cancel', lang), callback_data: 'admin:broadcast_cancel' }
         ]
       ]
     }

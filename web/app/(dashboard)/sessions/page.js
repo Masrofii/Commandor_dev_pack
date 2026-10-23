@@ -3,6 +3,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   ComputerDesktopIcon,
   DevicePhoneMobileIcon,
@@ -11,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function SessionsPage() {
+  const { t } = useTranslation();
   const { data, isLoading, mutate } = useSWR('sessions', api.getSessions);
 
   async function revoke(id) {
@@ -42,10 +44,10 @@ export default function SessionsPage() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            Active Sessions
+            {t('sessions.title', 'Active Sessions')}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage web sessions and logged-in devices across all platforms
+            {t('sessions.subtitle', 'Manage web sessions and logged-in devices across all platforms')}
           </p>
         </div>
 
@@ -54,17 +56,17 @@ export default function SessionsPage() {
             onClick={revokeAll}
             className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
           >
-            <ArrowRightOnRectangleIcon className="w-4 h-4 text-rose-500" />
-            <span>Sign Out All Other Devices</span>
+            <ArrowRightOnRectangleIcon className="w-4 h-4 text-rose-500 rtl:rotate-180" />
+            <span>{t('sessions.terminate_all_btn', 'Sign Out All Other Devices')}</span>
           </button>
         )}
       </div>
 
       <div className="card overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-400 text-xs">Loading sessions...</div>
+          <div className="p-8 text-center text-slate-400 text-xs">{t('common.loading', 'Loading sessions...')}</div>
         ) : sessions.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-xs">No active sessions found.</div>
+          <div className="p-8 text-center text-slate-400 text-xs">{t('common.no_results', 'No active sessions found.')}</div>
         ) : (
           sessions.map((s) => {
             const isMobile = (s.device_name || '').toLowerCase().includes('mobile') || (s.device_name || '').toLowerCase().includes('android') || (s.device_name || '').toLowerCase().includes('iphone');
@@ -84,7 +86,7 @@ export default function SessionsPage() {
                       <span>{s.device_name || 'Web Browser'}</span>
                       {s.isCurrent && (
                         <span className="badge-green text-[10px] py-0 px-2">
-                          This Device
+                          {t('sessions.current_session', 'Current Session')}
                         </span>
                       )}
                     </div>
@@ -105,7 +107,7 @@ export default function SessionsPage() {
                     onClick={() => revoke(s.id)}
                     className="btn-secondary py-1 px-3 text-xs hover:text-rose-500"
                   >
-                    Revoke
+                    {t('common.delete', 'Revoke')}
                   </button>
                 )}
               </div>

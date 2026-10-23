@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
 import { extractVerificationCode, formatTimeAgo } from '../../lib/helpers';
+import { useTranslation } from '../../lib/i18n';
 import InfrastructureTopologyMap from '../../components/InfrastructureTopologyMap';
 import {
   InboxIcon,
@@ -28,6 +29,7 @@ import {
 
 export default function OverviewDashboardPage() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Fetch real data from backend
   const { data: aliasesData, isLoading: loadingAliases, mutate: mutateAliases } = useSWR('overview-aliases', () => api.getAliases({ limit: 100 }));
@@ -94,13 +96,13 @@ export default function OverviewDashboardPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-cyan-950/60 text-indigo-700 dark:text-cyan-300 border border-indigo-200/60 dark:border-cyan-800/60">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span>Commandor Dev Pack Control Center</span>
+              <span>{t('overview.banner_tag', 'Commandor Dev Pack Control Center')}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Cloud Infrastructure &amp; Self-Hosting Platform
+              {t('overview.banner_title', 'Cloud Infrastructure & Self-Hosting Platform')}
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-              Manage multi-node VPS clusters, provision subdomains with automatic DNS, route reverse proxies, deploy edge websites, and manage secure email aliases.
+              {t('overview.banner_desc', 'Manage multi-node VPS clusters, provision subdomains with automatic DNS, route reverse proxies, deploy edge websites, and manage secure email aliases.')}
             </p>
           </div>
 
@@ -110,7 +112,7 @@ export default function OverviewDashboardPage() {
               className="btn bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-cyan-300 border border-indigo-200 dark:border-indigo-900/60 py-2.5 px-4 text-xs sm:text-sm font-semibold flex items-center gap-1.5"
             >
               <ServerStackIcon className="w-4 h-4 text-indigo-500" />
-              <span>Server Nodes ({nodes.length})</span>
+              <span>{t('nav.nodes', 'Server Nodes')} ({nodes.length})</span>
             </Link>
             <button
               onClick={handleQuickInstantAlias}
@@ -118,7 +120,7 @@ export default function OverviewDashboardPage() {
               className="btn-primary py-2.5 px-4 text-xs sm:text-sm font-semibold shadow-md shadow-indigo-500/20"
             >
               <PlusIcon className="w-4 h-4" />
-              <span>Instant Alias</span>
+              <span>{t('aliases.new_btn', 'Instant Alias')}</span>
             </button>
             <button
               onClick={handleQuickBurner}
@@ -126,14 +128,14 @@ export default function OverviewDashboardPage() {
               className="btn bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 py-2.5 px-4 text-xs sm:text-sm font-semibold"
             >
               <FireIcon className="w-4 h-4 text-rose-500" />
-              <span>1-Hour Burner</span>
+              <span>{t('nav.burner_quick', '1-Hour Burner')}</span>
             </button>
             <Link
               href="/inbox"
               className="btn-secondary py-2.5 px-4 text-xs sm:text-sm font-semibold"
             >
               <InboxIcon className="w-4 h-4 text-slate-500" />
-              <span>View Inbox</span>
+              <span>{t('nav.inbox', 'View Inbox')}</span>
             </Link>
           </div>
         </div>
@@ -145,7 +147,7 @@ export default function OverviewDashboardPage() {
         <Link href="/aliases" className="card-hover p-5 space-y-3 group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Active Aliases
+              {t('overview.stat_aliases', 'Active Aliases')}
             </span>
             <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-cyan-400 group-hover:scale-105 transition-transform">
               <AtSymbolIcon className="w-5 h-5" />
@@ -156,9 +158,9 @@ export default function OverviewDashboardPage() {
               {loadingAliases ? '...' : activeAliases.length}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-              <span>{aliases.length} total generated</span>
+              <span>{aliases.length} {t('common.all', 'total')}</span>
               <span>•</span>
-              <span className="text-rose-500 font-medium">{burnerAliases.length} burners</span>
+              <span className="text-rose-500 font-medium">{burnerAliases.length} {t('nav.burner_quick', 'burners')}</span>
             </div>
           </div>
         </Link>
@@ -167,7 +169,7 @@ export default function OverviewDashboardPage() {
         <Link href="/inbox" className="card-hover p-5 space-y-3 group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Total Messages
+              {t('overview.stat_inboxes', 'Total Messages')}
             </span>
             <div className="w-9 h-9 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-100 dark:border-cyan-900/50 flex items-center justify-center text-cyan-600 dark:text-cyan-400 group-hover:scale-105 transition-transform">
               <InboxIcon className="w-5 h-5" />
@@ -179,10 +181,10 @@ export default function OverviewDashboardPage() {
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
               <span className={unreadEmails > 0 ? 'text-indigo-600 dark:text-cyan-400 font-semibold' : ''}>
-                {unreadEmails} unread
+                {unreadEmails} {t('inbox.filter_unread', 'unread')}
               </span>
               <span>•</span>
-              <span>Real-time sync</span>
+              <span>{t('nav.live_sync', 'Real-time sync')}</span>
             </div>
           </div>
         </Link>
@@ -191,7 +193,7 @@ export default function OverviewDashboardPage() {
         <Link href="/subdomains" className="card-hover p-5 space-y-3 group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Domains & Routing
+              {t('overview.stat_subdomains', 'Domains & Routing')}
             </span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
               <GlobeAltIcon className="w-5 h-5" />
@@ -202,9 +204,9 @@ export default function OverviewDashboardPage() {
               {subdomains.length}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-              <span>{domains.length} base domain</span>
+              <span>{domains.length} {t('subdomains.tab_domains', 'domains')}</span>
               <span>•</span>
-              <span>Proxy & Webhooks</span>
+              <span>{t('subdomains.tab_subdomains', 'Proxy & Webhooks')}</span>
             </div>
           </div>
         </Link>
@@ -213,7 +215,7 @@ export default function OverviewDashboardPage() {
         <Link href="/nodes" className="card-hover p-5 space-y-3 group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Servers &amp; Nodes
+              {t('overview.stat_nodes', 'Servers & Nodes')}
             </span>
             <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/60 border border-violet-100 dark:border-violet-900/50 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-105 transition-transform">
               <ServerStackIcon className="w-5 h-5" />
@@ -244,13 +246,13 @@ export default function OverviewDashboardPage() {
             </div>
             <div>
               <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>Applications</span>
+                <span>{t('nav.applications', 'Applications')}</span>
                 <span className="badge-cyan text-[10px] py-0 px-1.5">{apps.length}</span>
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400">Git deployments &amp; PM2/Docker</div>
             </div>
           </div>
-          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-cyan-400 transition-colors" />
+          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-cyan-400 transition-colors rtl:rotate-180" />
         </Link>
 
         <Link
@@ -263,13 +265,13 @@ export default function OverviewDashboardPage() {
             </div>
             <div>
               <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>Telemetry</span>
-                <span className="badge-green text-[10px] py-0 px-1.5">Live</span>
+                <span>{t('nav.monitoring', 'Telemetry')}</span>
+                <span className="badge-green text-[10px] py-0 px-1.5">{t('common.online', 'Live')}</span>
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400">CPU, Memory, Logs &amp; Events</div>
             </div>
           </div>
-          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
+          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors rtl:rotate-180" />
         </Link>
 
         <Link
@@ -282,13 +284,13 @@ export default function OverviewDashboardPage() {
             </div>
             <div>
               <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>Disaster Recovery</span>
-                <span className="badge text-[10px] py-0 px-1.5 bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">{backups.length} Snapshots</span>
+                <span>{t('nav.backups', 'Disaster Recovery')}</span>
+                <span className="badge text-[10px] py-0 px-1.5 bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">{backups.length} {t('backups.title', 'Snapshots')}</span>
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400">SQLite WAL &amp; Full System Zip</div>
             </div>
           </div>
-          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" />
+          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors rtl:rotate-180" />
         </Link>
       </div>
 
@@ -299,16 +301,16 @@ export default function OverviewDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Recent Incoming Mail
+                {t('overview.recent_emails', 'Recent Incoming Mail')}
               </h2>
-              <p className="text-xs text-slate-500">Live incoming email stream across your aliases</p>
+              <p className="text-xs text-slate-500">{t('overview.recent_emails_desc', 'Live incoming email stream across your aliases')}</p>
             </div>
             <Link
               href="/inbox"
               className="text-xs font-semibold text-indigo-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
             >
-              <span>View All</span>
-              <ArrowRightIcon className="w-3.5 h-3.5" />
+              <span>{t('common.view_all', 'View All')}</span>
+              <ArrowRightIcon className="w-3.5 h-3.5 rtl:rotate-180" />
             </Link>
           </div>
 
@@ -329,14 +331,14 @@ export default function OverviewDashboardPage() {
                   📬
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  No emails received yet
+                  {t('overview.no_emails', 'No emails received yet')}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                  Copy any of your aliases and send a test message. Incoming emails and verification codes will display here in real time.
+                  {t('inbox.empty_desc', 'Incoming emails and verification codes will display here in real time.')}
                 </p>
                 <div className="pt-2">
                   <Link href="/aliases" className="btn-primary py-2 px-4 text-xs font-semibold">
-                    Copy Alias Address
+                    {t('common.copy', 'Copy Alias Address')}
                   </Link>
                 </div>
               </div>
@@ -397,16 +399,16 @@ export default function OverviewDashboardPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <CpuChipIcon className="w-4 h-4 text-cyan-500" />
-                <span>Service Health</span>
+                <span>{t('overview.service_health', 'Service Health')}</span>
               </h3>
-              <span className="badge-green text-[10px]">All Operational</span>
+              <span className="badge-green text-[10px]">{t('overview.all_operational', 'All Operational')}</span>
             </div>
 
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-cyber-850/70 border border-slate-200/60 dark:border-cyber-800">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">API Gateway & Server</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{t('overview.api_gateway', 'API Gateway & Server')}</span>
                 </div>
                 <span className="text-slate-400 font-mono">Port 3000</span>
               </div>
@@ -414,7 +416,7 @@ export default function OverviewDashboardPage() {
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-cyber-850/70 border border-slate-200/60 dark:border-cyber-800">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">Realtime WebSocket Hub</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{t('overview.realtime_ws', 'Realtime WebSocket Hub')}</span>
                 </div>
                 <span className="text-slate-400 font-mono">Active /ws</span>
               </div>
@@ -422,7 +424,7 @@ export default function OverviewDashboardPage() {
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-cyber-850/70 border border-slate-200/60 dark:border-cyber-800">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">SQLite Storage Engine</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{t('overview.sqlite_storage', 'SQLite Storage Engine')}</span>
                 </div>
                 <span className="text-slate-400 font-mono">WAL Mode</span>
               </div>
@@ -430,7 +432,7 @@ export default function OverviewDashboardPage() {
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-cyber-850/70 border border-slate-200/60 dark:border-cyber-800">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">Cloudflare MX Inbound</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{t('overview.cloudflare_mx', 'Cloudflare MX Inbound')}</span>
                 </div>
                 <span className="text-slate-400 font-mono">Active</span>
               </div>
@@ -441,20 +443,20 @@ export default function OverviewDashboardPage() {
           <div className="card p-5 space-y-3 bg-gradient-to-br from-indigo-50/50 to-cyan-50/30 dark:from-cyber-900 dark:to-cyber-850 border-indigo-100 dark:border-cyber-800">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <SparklesIcon className="w-4 h-4 text-indigo-500" />
-              <span>Quick Tips</span>
+              <span>{t('overview.quick_tips', 'Quick Tips')}</span>
             </h3>
             <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               <li className="flex items-start gap-2">
                 <span className="text-indigo-500 font-bold">•</span>
-                <span><b>Custom Aliases</b> end with <code>-ca@</code> to prevent conflicts with administrative usernames.</span>
+                <span>{t('overview.tip_custom_aliases', 'Custom Aliases end with -ca@ to prevent conflicts with administrative usernames.')}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-indigo-500 font-bold">•</span>
-                <span><b>Subdomain Modes:</b> Run reverse proxies, webhook inspectors, or static landing pages under your own brand.</span>
+                <span>{t('overview.tip_subdomain_modes', 'Subdomain Modes: Run reverse proxies, webhook inspectors, or static landing pages under your own brand.')}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-indigo-500 font-bold">•</span>
-                <span><b>Telegram Bot:</b> Connect via <code>@{process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot'}</code> to receive instant push alerts and 1-tap OTP copy buttons.</span>
+                <span>{t('overview.tip_telegram_bot', 'Telegram Bot: Connect via @{bot} to receive instant push alerts and 1-tap OTP copy buttons.', { bot: process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot' })}</span>
               </li>
             </ul>
           </div>

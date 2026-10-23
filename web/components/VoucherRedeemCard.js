@@ -3,6 +3,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import {
   TicketIcon,
   SparklesIcon,
@@ -40,6 +41,7 @@ const PLAN_BADGES = {
 };
 
 export default function VoucherRedeemCard() {
+  const { t } = useTranslation();
   const { data: subData, isLoading, mutate } = useSWR('user-subscription', () => api.getCurrentSubscription());
   const { data: plansData } = useSWR('subscription-plans', () => api.getSubscriptionPlans());
 
@@ -91,7 +93,7 @@ export default function VoucherRedeemCard() {
             </div>
 
             <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-              Subscription &amp; Platform Quotas
+              {t('voucher.title', 'Subscription & Platform Quotas')}
             </h2>
 
             <p className="text-xs text-indigo-100/80 max-w-xl">
@@ -114,7 +116,7 @@ export default function VoucherRedeemCard() {
               title="Refresh Quota Stats"
             >
               <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <span>{t('common.refresh', 'Refresh')}</span>
             </button>
           </div>
         </div>
@@ -124,7 +126,7 @@ export default function VoucherRedeemCard() {
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <GlobeAltIcon className="h-4 w-4 text-cyan-400" />
-              <span>Custom Domains</span>
+              <span>{t('nav.subdomains', 'Custom Domains')}</span>
             </div>
             <div className="mt-1 text-base font-mono font-bold text-white">
               {subData?.usage?.domains || 0} <span className="text-xs text-indigo-300 font-normal">/ {subData?.custom_domain_limit > 90000 ? '∞' : subData?.custom_domain_limit || 1}</span>
@@ -134,7 +136,7 @@ export default function VoucherRedeemCard() {
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <CommandLineIcon className="h-4 w-4 text-purple-400" />
-              <span>Git Apps &amp; Sites</span>
+              <span>{t('nav.applications', 'Git Apps & Sites')}</span>
             </div>
             <div className="mt-1 text-base font-mono font-bold text-white">
               {subData?.usage?.applications || 0} <span className="text-xs text-indigo-300 font-normal">/ {subData?.application_limit > 90000 ? '∞' : subData?.application_limit || 3}</span>
@@ -144,7 +146,7 @@ export default function VoucherRedeemCard() {
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <EnvelopeIcon className="h-4 w-4 text-amber-400" />
-              <span>Active Aliases</span>
+              <span>{t('aliases.total_aliases', 'Active Aliases')}</span>
             </div>
             <div className="mt-1 text-base font-mono font-bold text-white">
               {subData?.usage?.aliases || 0} <span className="text-xs text-indigo-300 font-normal">/ {subData?.alias_limit > 90000 ? '∞' : subData?.alias_limit || 10}</span>
@@ -154,7 +156,7 @@ export default function VoucherRedeemCard() {
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <CircleStackIcon className="h-4 w-4 text-emerald-400" />
-              <span>Email Storage</span>
+              <span>{t('monitoring.storage_usage', 'Email Storage')}</span>
             </div>
             <div className="mt-1 text-sm font-mono font-bold text-white">
               {subData?.storageBreakdown?.email?.usedFormatted || `${((subData?.email_storage_used || 0) / 1024 / 1024).toFixed(1)} MB`}
@@ -167,7 +169,7 @@ export default function VoucherRedeemCard() {
           <div className="p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs text-indigo-200">
               <ServerStackIcon className="h-4 w-4 text-pink-400" />
-              <span>Hosting Storage</span>
+              <span>{t('hosting.storage_used', 'Hosting Storage')}</span>
             </div>
             <div className="mt-1 text-sm font-mono font-bold text-white">
               {subData?.storageBreakdown?.hosting?.usedFormatted || `${((subData?.hosting_storage_used || 0) / 1024 / 1024).toFixed(1)} MB`}

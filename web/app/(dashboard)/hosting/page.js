@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { isAdmin } from '../../../lib/auth';
 import { formatMemoryMb } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   ServerStackIcon,
   PlusIcon,
@@ -25,6 +26,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function HostingPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('sites'); // 'sites' | 'nodes' | 'plans' | 'security'
   const [adminUser, setAdminUser] = useState(false);
 
@@ -194,10 +196,10 @@ export default function HostingPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
             <ServerStackIcon className="h-7 w-7 text-indigo-500" />
-            Cloud Hosting &amp; Sites
+            {t('hosting.title', 'Cloud Hosting & Sites')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            High-performance cloud hosting with automated real-time security scanning and instant subdomains.
+            {t('hosting.subtitle', 'High-performance cloud hosting with automated real-time security scanning and instant subdomains.')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -207,7 +209,7 @@ export default function HostingPage() {
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors"
             >
               <PlusIcon className="h-4 w-4" />
-              Add Server Node
+              {t('nodes.provision_btn', 'Add Server Node')}
             </button>
           )}
           <button
@@ -215,7 +217,7 @@ export default function HostingPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
           >
             <PlusIcon className="h-4 w-4" />
-            Deploy Website
+            {t('hosting.deploy_btn', 'Deploy Website')}
           </button>
         </div>
       </div>
@@ -227,14 +229,14 @@ export default function HostingPage() {
           className={`pb-3 border-b-2 flex items-center gap-2 ${tab === 'sites' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
         >
           <GlobeAltIcon className="h-4 w-4" />
-          My Hosted Sites ({sites.length})
+          {t('hosting.title', 'My Hosted Sites')} ({sites.length})
         </button>
         <button
           onClick={() => setTab('plans')}
           className={`pb-3 border-b-2 flex items-center gap-2 ${tab === 'plans' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
         >
           <InformationCircleIcon className="h-4 w-4" />
-          Packs &amp; Limits
+          {t('bot.btn.plans_limits', 'Packs & Limits')}
         </button>
         {adminUser && (
           <button
@@ -242,7 +244,7 @@ export default function HostingPage() {
             className={`pb-3 border-b-2 flex items-center gap-2 ${tab === 'nodes' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
           >
             <ServerStackIcon className="h-4 w-4" />
-            Server Nodes ({nodes.length})
+            {t('nav.nodes', 'Server Nodes')} ({nodes.length})
           </button>
         )}
         {adminUser && (
@@ -266,9 +268,9 @@ export default function HostingPage() {
           ) : sites.length === 0 ? (
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 shadow-sm">
               <GlobeAltIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-base font-semibold text-gray-900 dark:text-white">No websites deployed</h3>
+              <h3 className="mt-2 text-base font-semibold text-gray-900 dark:text-white">{t('hosting.empty_title', 'No sites deployed yet')}</h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Deploy your HTML portfolio, landing page, or web project in seconds.
+                {t('hosting.empty_desc', 'Deploy your first static website, landing page, or HTML app onto your connected edge server nodes.')}
               </p>
               <div className="mt-6">
                 <button
@@ -276,7 +278,7 @@ export default function HostingPage() {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium"
                 >
                   <PlusIcon className="h-4 w-4" />
-                  Deploy Your First Site
+                  {t('hosting.deploy_first', 'Deploy First Site')}
                 </button>
               </div>
             </div>
@@ -456,30 +458,30 @@ export default function HostingPage() {
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">{p.name}</h3>
                   <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
                     <div className="flex items-center justify-between">
-                      <span>Max Sites:</span>
+                      <span>{t('hosting.plan_max_sites', 'Max Sites:')}</span>
                       <span className="font-bold text-gray-900 dark:text-white">{p.max_sites}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Storage Quota:</span>
+                      <span>{t('hosting.plan_storage', 'Storage Quota:')}</span>
                       <span className="font-bold">{(p.max_storage_bytes / (1024 * 1024)).toFixed(0)} MB</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Max Files:</span>
+                      <span>{t('hosting.plan_max_files', 'Max Files:')}</span>
                       <span className="font-bold">{p.max_files}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Monthly Requests:</span>
+                      <span>{t('hosting.plan_monthly_req', 'Monthly Requests:')}</span>
                       <span className="font-bold">{p.max_requests_monthly.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Anti-Malware Scanner:</span>
-                      <span className="text-green-600 font-bold">Included</span>
+                      <span>{t('hosting.plan_scanner', 'Anti-Malware Scanner:')}</span>
+                      <span className="text-green-600 font-bold">{t('hosting.plan_included', 'Included')}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <span className="text-xs text-gray-400 uppercase font-semibold">Strict Anti-Abuse Protected</span>
+                  <span className="text-xs text-gray-400 uppercase font-semibold">{t('hosting.plan_protected', 'Strict Anti-Abuse Protected')}</span>
                 </div>
               </div>
             ))}
@@ -493,23 +495,23 @@ export default function HostingPage() {
           <div className="p-5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
             <h3 className="text-base font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2">
               <ShieldCheckIcon className="h-5 w-5 text-amber-600" />
-              Automated Threat Shield &amp; Anti-Abuse Policy
+              {t('hosting.security_shield_title', 'Automated Threat Shield & Anti-Abuse Policy')}
             </h3>
             <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
-              To maintain high performance and platform reliability, every deployed site is scanned in real-time before saving to remote disks.
+              {t('hosting.security_shield_desc', 'To maintain high performance and platform reliability, every deployed site is scanned in real-time before saving to remote disks.')}
             </p>
             <ul className="mt-3 text-xs space-y-1 list-disc list-inside text-amber-700 dark:text-amber-300">
-              <li><b>Zero Mining Policy:</b> XMRig, Stratum, CoinHive, and CPU hashing routines are automatically blocked.</li>
-              <li><b>Phishing Blocklist:</b> Fake login forms (PayPal, Steam, Discord webhooks, Metamask seed harvesters) are blocked.</li>
-              <li><b>Webshell Filter:</b> PHP/Python backdoors (c99, r57, eval(base64), /bin/sh reverse shells) are rejected.</li>
+              <li>{t('hosting.security_rule_mining', 'Zero Mining Policy: XMRig, Stratum, CoinHive, and CPU hashing routines are automatically blocked.')}</li>
+              <li>{t('hosting.security_rule_phishing', 'Phishing Blocklist: Fake login forms (PayPal, Steam, Discord webhooks, Metamask seed harvesters) are blocked.')}</li>
+              <li>{t('hosting.security_rule_webshell', 'Webshell Filter: PHP/Python backdoors (c99, r57, eval(base64), /bin/sh reverse shells) are rejected.')}</li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Recent Security Scanner Audit Logs</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('hosting.security_logs_title', 'Recent Security Scanner Audit Logs')}</h4>
             {logs.length === 0 ? (
               <p className="text-xs text-gray-400 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                No security violations detected. All deployments are clean.
+                {t('hosting.security_logs_clean', 'No security violations detected. All deployments are clean.')}
               </p>
             ) : (
               <div className="space-y-2">
@@ -534,7 +536,7 @@ export default function HostingPage() {
             <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <GlobeAltIcon className="h-5 w-5 text-indigo-500" />
-                Deploy Website
+                {t('hosting.deploy_title', 'Deploy Website')}
               </h2>
               <button onClick={() => setShowDeploy(false)} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-5 w-5" />
@@ -544,7 +546,7 @@ export default function HostingPage() {
             <form onSubmit={handleDeploy} className="space-y-4 mt-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Site Name (Subdomain)
+                  {t('hosting.site_name_label', 'Site Name (Subdomain)')}
                 </label>
                 <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
                   <input
@@ -568,21 +570,21 @@ export default function HostingPage() {
                   onClick={() => setDeployMode('html')}
                   className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${deployMode === 'html' ? 'bg-white dark:bg-gray-800 shadow-sm text-indigo-600 font-bold' : 'text-gray-500'}`}
                 >
-                  HTML Code Editor
+                  {t('hosting.deploy_type_html', 'HTML Code Editor')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeployMode('zip')}
                   className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${deployMode === 'zip' ? 'bg-white dark:bg-gray-800 shadow-sm text-indigo-600 font-bold' : 'text-gray-500'}`}
                 >
-                  Upload ZIP Archive
+                  {t('hosting.deploy_type_zip', 'Upload ZIP Archive')}
                 </button>
               </div>
 
               {deployMode === 'html' ? (
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    HTML Code (index.html)
+                    {t('hosting.html_content_label', 'HTML Code (index.html)')}
                   </label>
                   <textarea
                     rows={6}
@@ -594,7 +596,7 @@ export default function HostingPage() {
               ) : (
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Select ZIP File
+                    {t('hosting.upload_zip_label', 'Select ZIP File')}
                   </label>
                   <input
                     type="file"
@@ -627,14 +629,14 @@ export default function HostingPage() {
                   onClick={() => setShowDeploy(false)}
                   className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={deploying}
                   className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                 >
-                  {deploying ? 'Scanning & Deploying...' : 'Deploy to Cloud'}
+                  {deploying ? t('hosting.deploying_btn', 'Scanning & Deploying...') : t('hosting.deploy_now_btn', 'Deploy to Cloud')}
                 </button>
               </div>
             </form>

@@ -121,7 +121,7 @@ export default function DashboardLayout({ children }) {
           <div className="flex-1 w-0">
             <div className="flex items-start">
               <div className="flex-shrink-0 pt-0.5 text-xl">📬</div>
-              <div className="ml-3 flex-1">
+              <div className="ml-3 rtl:ml-0 rtl:mr-3 flex-1">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                   {em?.subject || 'New email received'}
                 </p>
@@ -136,7 +136,7 @@ export default function DashboardLayout({ children }) {
               </div>
             </div>
           </div>
-          <div className="ml-4 flex flex-col justify-center gap-1 border-l border-slate-100 dark:border-cyber-800 pl-3">
+          <div className="ml-4 rtl:ml-0 rtl:mr-4 flex flex-col justify-center gap-1 border-l rtl:border-l-0 rtl:border-r border-slate-100 dark:border-cyber-800 pl-3 rtl:pl-0 rtl:pr-3">
             <button
               onClick={() => {
                 toast.dismiss(t.id);
@@ -200,8 +200,8 @@ export default function DashboardLayout({ children }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-cyber-900 border-r border-slate-200/90 dark:border-cyber-800 backdrop-blur-md transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static flex flex-col ${
-          open ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 w-64 bg-white dark:bg-cyber-900 border-r rtl:border-r-0 rtl:border-l border-slate-200/90 dark:border-cyber-800 backdrop-blur-md transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:rtl:translate-x-0 lg:static flex flex-col ${
+          open ? 'translate-x-0' : 'max-lg:-translate-x-full max-lg:rtl:translate-x-full'
         }`}
       >
         {/* Brand Header */}
@@ -211,7 +211,7 @@ export default function DashboardLayout({ children }) {
           </div>
           <div className="flex-1 min-w-0">
             <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">Commandor Dev Pack</span>
-            <span className="block text-[11px] text-cyan-600 dark:text-cyan-400 font-medium">Cloud &amp; Hosting Platform</span>
+            <span className="block text-[11px] text-cyan-600 dark:text-cyan-400 font-medium">{t('overview.banner_tag', 'Cloud & Hosting Platform')}</span>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -228,7 +228,7 @@ export default function DashboardLayout({ children }) {
             const active = i.exact ? pathname === i.href : pathname.startsWith(i.href);
             const isInbox = i.href === '/inbox';
             const unreadCount = unreadData || 0;
-            const label = t(i.key) || i.defaultLabel;
+            const label = t(i.key, i.defaultLabel);
 
             return (
               <Link
@@ -265,7 +265,7 @@ export default function DashboardLayout({ children }) {
               onClick={() => setOpen(false)}
             >
               <ShieldCheckIcon className="w-5 h-5 text-rose-500" />
-              <span>{t('nav.admin') || 'Admin Center'}</span>
+              <span>{t('nav.admin', 'Admin Center')}</span>
             </Link>
           )}
         </nav>
@@ -274,17 +274,17 @@ export default function DashboardLayout({ children }) {
         <div className="px-3 py-3 border-t border-slate-100 dark:border-cyber-800">
           <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800 text-xs">
             <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-200 mb-1">
-              <span>🤖 Telegram Bot</span>
+              <span>🤖 {t('nav.bot_card_title', 'Telegram Bot')}</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
             </div>
-            <p className="text-slate-500 dark:text-slate-400 mb-2">Sync emails directly with your Telegram client.</p>
+            <p className="text-slate-500 dark:text-slate-400 mb-2">{t('nav.bot_card_desc', 'Sync emails directly with your Telegram client.')}</p>
             <a
               href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot'}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
             >
-              Open Bot ↗
+              {t('nav.bot_card_btn', 'Open Bot ↗')}
             </a>
           </div>
         </div>
@@ -302,16 +302,16 @@ export default function DashboardLayout({ children }) {
               <span>{user?.role}</span>
               <span>•</span>
               <span className={connected ? 'text-emerald-500 font-medium' : 'text-slate-400'}>
-                {connected ? 'Live' : 'Offline'}
+                {connected ? t('common.online', 'Live') : t('common.offline', 'Offline')}
               </span>
             </div>
           </div>
           <button
             onClick={logout}
             className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
-            title="Sign out"
+            title={t('nav.logout', 'Sign out')}
           >
-            <ArrowRightOnRectangleIcon className="w-4 h-4" />
+            <ArrowRightOnRectangleIcon className="w-4 h-4 rtl:rotate-180" />
           </button>
         </div>
       </aside>
@@ -332,7 +332,7 @@ export default function DashboardLayout({ children }) {
               <span className="text-xs font-medium text-slate-400">Commandor Dev Pack</span>
               <span className="text-slate-300 dark:text-slate-600">/</span>
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 capitalize">
-                {pathname === '/' ? 'Overview' : pathname.replace('/', '')}
+                {pathname === '/' ? t('nav.overview', 'Overview') : (NAV_ITEMS.find(n => n.href === pathname) ? t(NAV_ITEMS.find(n => n.href === pathname).key, NAV_ITEMS.find(n => n.href === pathname).defaultLabel) : pathname.replace('/', ''))}
               </span>
             </div>
           </div>
@@ -351,7 +351,7 @@ export default function DashboardLayout({ children }) {
                   connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
                 }`}
               />
-              <span>{connected ? 'Realtime Connected' : 'Connecting...'}</span>
+              <span>{connected ? t('nav.live_sync', 'Realtime Connected') : t('nav.connecting', 'Connecting...')}</span>
             </div>
 
             {/* Quick 1-Hour Burner Button */}
@@ -359,10 +359,10 @@ export default function DashboardLayout({ children }) {
               onClick={handleQuickBurner}
               disabled={quickCreating}
               className="btn bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 py-1.5 px-3 text-xs"
-              title="Instant 1-Hour Burner"
+              title={t('nav.burner_quick', 'Instant 1-Hour Burner')}
             >
               <FireIcon className="w-4 h-4 text-rose-500" />
-              <span className="hidden sm:inline">{quickCreating ? 'Generating...' : '1-Hour Burner'}</span>
+              <span className="hidden sm:inline">{quickCreating ? t('common.loading', 'Generating...') : t('nav.burner_quick', '1-Hour Burner')}</span>
             </button>
 
             {/* Quick Create Alias Button */}
@@ -371,7 +371,7 @@ export default function DashboardLayout({ children }) {
               className="btn-primary py-1.5 px-3 text-xs shadow-sm"
             >
               <PlusIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">New Alias</span>
+              <span className="hidden sm:inline">{t('nav.new_alias', 'New Alias')}</span>
             </Link>
 
             {/* Language Selector Dropdown */}

@@ -143,7 +143,8 @@ function isTosAccepted(tgId) {
 }
 
 function showTosPrompt(ctx) {
-  const text = `┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+  const lang = getLang(ctx);
+  const text = t('bot.tos.prompt', lang, `┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃   ⚖️ <b>TERMS OF SERVICE & USAGE POLICY</b>   ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 Welcome to <b>COMMANDOR CLOUD PLATFORM</b> 🚀
@@ -165,47 +166,21 @@ To protect the integrity of our edge network, server nodes, and users, you must 
    • Any breach will result in immediate termination and permanent blacklisting across all nodes.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<i>By clicking <b>"Accept Terms"</b>, you certify that you have read, understood, and agreed to abide by these guidelines.</i>`;
+<i>By clicking <b>"Accept Terms"</b>, you certify that you have read, understood, and agreed to abide by these guidelines.</i>`);
 
-  return send(ctx, text, tosPromptKeyboard());
+  return send(ctx, text, tosPromptKeyboard(lang));
 }
 
 function showDetailedTos(ctx) {
-  const text = `📜 <b>DETAILED TERMS OF SERVICE & ACCEPTABLE USE</b>
-──────────────────────────────
-<b>1. Acceptance of Terms</b>
-By interacting with this bot, API, web dashboard, or edge hosting nodes, you legally agree to adhere to these Terms of Service.
-
-<b>2. Acceptable Use Policy</b>
-You agree to use this platform only for lawful communications, software testing, personal portfolios, and verified development.
-Strictly Prohibited:
-• Distribution of malicious software (trojans, worms, ransomware)
-• Hosting or linking to phishing or fraudulent login pages
-• Unauthorized vulnerability scanning or DDoS orchestration
-• Copyright infringement or hosting pirated content
-• Cryptocurrency mining scripts in any form
-
-<b>3. Service Availability & Quotas</b>
-We reserve the right to limit, throttle, or suspend accounts that generate anomalous network traffic, overload hosting nodes, or attempt unauthorized privilege escalation.
-
-<b>4. Logging & Security Scanners</b>
-All deployed files and system actions undergo automatic heuristics and signature checks. Malicious signatures result in immediate blocking and audit logging.
-
-<b>5. Modification of Terms</b>
-Terms may be updated periodically to reflect security requirements. Continuing to use the bot constitutes acceptance of modified terms.
-──────────────────────────────`;
-
-  return send(ctx, text, tosFullKeyboard());
+  const lang = getLang(ctx);
+  const text = t('bot.tos.detailed', lang);
+  return send(ctx, text, tosFullKeyboard(lang));
 }
 
 function showTosDeclined(ctx) {
-  const text = `❌ <b>Terms of Service Declined</b>
-
-You have chosen not to accept the Terms of Service. Platform access remains locked.
-
-Whenever you change your mind and wish to use the service, tap <b>Accept Terms</b> below or send /start.`;
-
-  return send(ctx, text, tosDeclinedKeyboard());
+  const lang = getLang(ctx);
+  const text = t('bot.tos.declined', lang);
+  return send(ctx, text, tosDeclinedKeyboard(lang));
 }
 
 async function handleTosAccept(ctx) {
@@ -220,6 +195,7 @@ async function handleTosAccept(ctx) {
     metadata: { username: ctx.from.username, first_name: ctx.from.first_name }
   }).catch(() => {});
 
+  const lang = getLang(ctx);
   await ctx.answerCbQuery('🎉 Terms Accepted! Welcome aboard!').catch(() => {});
   await replyHtml(ctx, '🎉 <b>Terms of Service Accepted!</b>\n\nYour account has been verified and active. Welcome to <b>COMMANDOR CLOUD PLATFORM</b>!\n\n<i>Loading your dashboard...</i>');
   return showMainDashboard(ctx);
@@ -229,148 +205,84 @@ async function showMainDashboard(ctx) {
   const db = getDb();
   const tgId = ctx.from.id;
   const admin = isOwnerOrAdmin(tgId);
+  const lang = getLang(ctx);
 
   const aliasCount = db.prepare('SELECT COUNT(*) as c FROM aliases WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
   const unreadCount = db.prepare('SELECT COUNT(*) as c FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE a.tg_id=? AND e.is_read=0 AND e.is_deleted=0').get(tgId)?.c || 0;
   const subCount = db.prepare('SELECT COUNT(*) as c FROM subdomains WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
   const siteCount = db.prepare("SELECT COUNT(*) as c FROM hosting_sites WHERE tg_id=? AND status='active'").get(tgId)?.c || 0;
 
-  const roleBadge = admin ? '👑 Owner / Admin' : '💎 Unlimited Pro';
+  const roleBadge = admin ? t('bot.dash.tier_admin', lang, '👑 Owner / Admin') : t('bot.dash.tier_pro', lang, '💎 Unlimited Pro');
   const name = escapeHtml(ctx.from.first_name || ctx.from.username || 'Commander');
   const userHandle = ctx.from.username ? `@${escapeHtml(ctx.from.username)}` : `<code>${tgId}</code>`;
 
-  const text = `┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃   ⚡ <b>COMMANDOR CLOUD PLATFORM</b>   ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-👋 <i>Welcome,</i> <b>${name}</b>!
-
-👤 <b>Profile:</b> ${userHandle}  •  <b>Tier:</b> <code>${roleBadge}</code>
-🟢 <b>Core Status:</b> <code>100% Operational • Edge Connected</code>
-
-📊 <b>Live Workspace Snapshot:</b>
-• 📧 <b>Active Aliases:</b> <code>${aliasCount}</code>
-• 📨 <b>Unread Emails:</b> <code>${unreadCount}</code>
-• 🌐 <b>Subdomains:</b> <code>${subCount}</code>
-• 🖥️ <b>Hosted Sites:</b> <code>${siteCount}</code>
-• 🛡️ <b>Security Status:</b> <code>Protected & Monitored</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<i>Select a module below to manage your cloud services:</i>`;
+  const text = t('bot.dash.main_message', lang, {
+    name,
+    userHandle,
+    roleBadge,
+    aliasCount,
+    unreadCount,
+    subCount,
+    siteCount
+  });
 
   await send(ctx, text, {
-    reply_markup: startInlineKeyboard(config.server.webUrl, admin, unreadCount).reply_markup
+    reply_markup: startInlineKeyboard(config.server.webUrl, admin, unreadCount, lang).reply_markup
   });
 
   // Ensure persistent bottom keyboard
-  await ctx.reply('⚡ <i>Use the keyboard buttons below for quick navigation anytime:</i>', {
+  await ctx.reply(t('bot.msg.quick_nav', lang, '⚡ Use the keyboard buttons below for quick navigation anytime:'), {
     parse_mode: 'HTML',
-    reply_markup: mainMenuKeyboard(admin).reply_markup
+    reply_markup: mainMenuKeyboard(admin, lang).reply_markup
   }).catch(() => {});
 }
 
 async function showEmailSuiteHub(ctx) {
   const db = getDb();
   const tgId = ctx.from.id;
+  const lang = getLang(ctx);
   const aliasCount = db.prepare('SELECT COUNT(*) as c FROM aliases WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
   const unreadCount = db.prepare('SELECT COUNT(*) as c FROM emails e JOIN aliases a ON e.alias_address=a.address WHERE a.tg_id=? AND e.is_read=0 AND e.is_deleted=0').get(tgId)?.c || 0;
 
-  const text = `📬 <b>EMAIL SUITE & ALIAS MANAGER</b>
-──────────────────────────────
-Protect your personal inbox, bypass signup gates, and receive verification OTPs in real-time.
-
-⚡ <b>Available Capabilities:</b>
-• <b>Quick Disposable:</b> Instant 1-click throwaway address.
-• <b>Custom Alias:</b> Personalized prefix with protected <code>-ca</code> namespace.
-• <b>1-Hour Burner:</b> Self-destructing temporary mailbox.
-• <b>Catch-All Subdomains:</b> Receive emails sent to any address on your subdomains.
-
-📊 <b>Status:</b> <code>${aliasCount} active aliases</code> • <code>${unreadCount} unread emails</code>
-──────────────────────────────
-<i>Select an action below:</i>`;
-
-  return send(ctx, text, emailSuiteKeyboard(aliasCount, unreadCount));
+  const text = t('bot.email_suite.main_message', lang, { aliasCount, unreadCount });
+  return send(ctx, text, emailSuiteKeyboard(aliasCount, unreadCount, lang));
 }
 
 async function showSubdomainHub(ctx) {
   const db = getDb();
   const tgId = ctx.from.id;
+  const lang = getLang(ctx);
   const subCount = db.prepare('SELECT COUNT(*) as c FROM subdomains WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
 
-  const text = `🌐 <b>SUBDOMAINS & ROUTING HUB</b>
-──────────────────────────────
-Claim custom subdomains under <code>*.commandor.my.id</code> with full DNS routing and HTTP proxying.
-
-⚡ <b>Subdomain Modes:</b>
-• <b>Email Catch-All:</b> <code>*@yoursub.commandor.my.id</code> routes to Telegram.
-• <b>HTTP Webhooks:</b> Capture incoming POST/GET requests in real-time.
-• <b>Static HTML:</b> Serve custom landing pages.
-• <b>Reverse Proxy:</b> Forward traffic to your external web servers.
-
-📊 <b>Active Subdomains:</b> <code>${subCount}</code>
-──────────────────────────────
-<i>Select an action below:</i>`;
-
-  return send(ctx, text, subdomainHubKeyboard(subCount));
+  const text = t('bot.subdomain_hub.main_message', lang, { subCount });
+  return send(ctx, text, subdomainHubKeyboard(subCount, lang));
 }
 
 async function showApiHub(ctx) {
   const db = getDb();
   const tgId = ctx.from.id;
+  const lang = getLang(ctx);
   const keyCount = db.prepare('SELECT COUNT(*) as c FROM api_keys WHERE tg_id=? AND revoked=0').get(tgId)?.c || 0;
 
-  const text = `🔑 <b>API & DEVELOPER PLATFORM</b>
-──────────────────────────────
-Automate inbox monitoring, alias generation, and subdomain management with our fast REST API.
-
-⚡ <b>Developer Features:</b>
-• <b>Secure Bearer Tokens:</b> Cryptographically hashed API credentials.
-• <b>Granular Scopes:</b> Read, write, delete, and admin permissions.
-• <b>Full REST Endpoints:</b> JSON APIs for all bot capabilities.
-
-📊 <b>Active API Keys:</b> <code>${keyCount}</code>
-──────────────────────────────
-<i>Select an action below:</i>`;
-
-  return send(ctx, text, apiHubKeyboard(keyCount, config.server.webUrl));
+  const text = t('bot.api_hub.main_message', lang, { keyCount });
+  return send(ctx, text, apiHubKeyboard(keyCount, config.server.webUrl, lang));
 }
 
 async function showInfraHub(ctx) {
   const db = getDb();
   const tgId = ctx.from.id;
+  const lang = getLang(ctx);
   const subCount = db.prepare('SELECT COUNT(*) as c FROM subdomains WHERE tg_id=? AND active=1').get(tgId)?.c || 0;
   const siteCount = db.prepare('SELECT COUNT(*) as c FROM hosting_sites WHERE tg_id=?').get(tgId)?.c || 0;
 
-  const text = `🌐 <b>DOMAINS & INFRASTRUCTURE HUB</b>
-──────────────────────────────
-Orchestrate high-speed email routing, custom subdomains, and multi-node cloud hosting.
-
-⚡ <b>Available Capabilities:</b>
-• <b>Subdomains:</b> Claim custom subdomains with catch-all routing & reverse proxy.
-• <b>Cloud Hosting:</b> Deploy static HTML or full ZIP websites directly onto edge nodes.
-• <b>Server Nodes:</b> (Admins) Provision and monitor multi-node SSH server clusters.
-
-📊 <b>Active:</b> <code>${subCount} Subdomains</code> • <code>${siteCount} Hosted Sites</code>
-──────────────────────────────
-<i>Select an infrastructure action below:</i>`;
-
-  return send(ctx, text, infraHubKeyboard(subCount, siteCount));
+  const text = t('bot.infra_hub.main_message', lang, { subCount, siteCount });
+  return send(ctx, text, infraHubKeyboard(subCount, siteCount, lang));
 }
 
 async function showUtilitiesHub(ctx) {
-  const text = `⚙️ <b>UTILITIES & SYSTEM TOOLS</b>
-──────────────────────────────
-Fast access to email burners, full-text message search, account statistics, and platform configuration.
-
-⚡ <b>Available Tools:</b>
-• <b>1-Hour Burner:</b> Instant self-destructing throwaway inbox.
-• <b>Search:</b> Scan incoming messages, sender addresses, and subjects.
-• <b>Interface Language:</b> Select from 12 natively translated languages.
-• <b>Usage Stats:</b> Storage, quota limits, and activity metrics.
-• <b>Help Reference:</b> Complete command list and usage guidelines.
-──────────────────────────────
-<i>Select a tool below:</i>`;
-
-  return send(ctx, text, utilitiesHubKeyboard());
+  const lang = getLang(ctx);
+  const text = t('bot.utilities_hub.main_message', lang);
+  return send(ctx, text, utilitiesHubKeyboard(lang));
 }
 
 async function showChangeLog(ctx) {
@@ -401,11 +313,13 @@ Stay updated with latest improvements, security patches, and releases.
 • Protected custom alias creation with <code>-ca</code> namespace.
 ──────────────────────────────`;
 
-  return send(ctx, text, changeLogKeyboard(isAdmin));
+  const lang = getLang(ctx);
+  return send(ctx, text, changeLogKeyboard(isAdmin, lang));
 }
 
 async function showAdminAuditLogs(ctx, page = 1, category = 'all') {
-  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+  const lang = getLang(ctx);
+  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', lang));
 
   const limit = 6;
   const { logs, total, totalPages } = getAuditLogs({ page, limit, category });
@@ -430,7 +344,7 @@ async function showAdminAuditLogs(ctx, page = 1, category = 'all') {
 
   text += `──────────────────────────────`;
 
-  return send(ctx, text, adminAuditLogsKeyboard(page, totalPages, category));
+  return send(ctx, text, adminAuditLogsKeyboard(page, totalPages, category, lang));
 }
 
 function wrap(handler, opts = {}) {
@@ -519,9 +433,9 @@ async function showAliases(ctx, page = 1) {
     return send(ctx, t('alias.none', lang), {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '➕ Create Alias', callback_data: 'menu:new' }, { text: '✏️ Custom Alias', callback_data: 'menu:custom_alias' }],
-          [{ text: '🔥 1-Hour Burner', callback_data: 'menu:burner' }],
-          [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+          [{ text: t('bot.btn.create_alias', lang, '➕ Create Alias'), callback_data: 'menu:new' }, { text: t('bot.btn.custom_alias', lang, '✏️ Custom Alias'), callback_data: 'menu:custom_alias' }],
+          [{ text: t('bot.btn.burner', lang, '🔥 1-Hour Burner'), callback_data: 'menu:burner' }],
+          [{ text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }]
         ]
       }
     });
@@ -529,17 +443,17 @@ async function showAliases(ctx, page = 1) {
 
   const kb = aliasKeyboard(aliases);
   const nav = [];
-  if (page > 1) nav.push({ text: '⬅️ Prev', callback_data: `aliases:${page - 1}` });
+  if (page > 1) nav.push({ text: t('bot.btn.prev', lang, '⬅️ Prev'), callback_data: `aliases:${page - 1}` });
   nav.push({ text: `📄 ${page}/${Math.max(totalPages, 1)}`, callback_data: 'noop' });
-  if (page < totalPages) nav.push({ text: 'Next ➡️', callback_data: `aliases:${page + 1}` });
+  if (page < totalPages) nav.push({ text: t('bot.btn.next', lang, 'Next ➡️'), callback_data: `aliases:${page + 1}` });
   if (nav.length) kb.push(nav);
 
   kb.push([
-    { text: '➕ New Alias', callback_data: 'menu:new' },
-    { text: '✏️ Custom Alias', callback_data: 'menu:custom_alias' },
-    { text: '🔥 1-Hour Burner', callback_data: 'menu:burner' }
+    { text: t('bot.btn.create_alias', lang, '➕ New Alias'), callback_data: 'menu:new' },
+    { text: t('bot.btn.custom_alias', lang, '✏️ Custom Alias'), callback_data: 'menu:custom_alias' },
+    { text: t('bot.btn.burner', lang, '🔥 1-Hour Burner'), callback_data: 'menu:burner' }
   ]);
-  kb.push([{ text: '🏠 Main Menu', callback_data: 'menu:home' }]);
+  kb.push([{ text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }]);
 
   const content = `${t('alias.header', lang, { count: total })}\n\n${aliasLines(aliases).join('\n\n')}\n\n💡 <i>Tap any address above to copy, or tap an alias button below to manage, view QR, or delete.</i>`;
   return send(ctx, content, { reply_markup: { inline_keyboard: kb } });
@@ -562,12 +476,12 @@ async function showInbox(ctx, page = 1, filter, aliasFilter = null) {
   if (!emails.length) {
     const emptyTxt = `${prefix}${aliasPrefix}${t('inbox.empty', lang)}`;
     const emptyKb = [
-      [{ text: '🔄 Refresh', callback_data: `inbox:${page}${filter ? ':' + filter : ''}` }],
+      [{ text: t('bot.btn.refresh', lang, '🔄 Refresh'), callback_data: `inbox:${page}${filter ? ':' + filter : ''}` }],
       [
-        { text: '➕ New Alias', callback_data: 'menu:new' },
-        { text: '✏️ Custom Alias', callback_data: 'menu:custom_alias' }
+        { text: t('bot.btn.create_alias', lang, '➕ New Alias'), callback_data: 'menu:new' },
+        { text: t('bot.btn.custom_alias', lang, '✏️ Custom Alias'), callback_data: 'menu:custom_alias' }
       ],
-      [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+      [{ text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }]
     ];
     if (ctx.callbackQuery) return send(ctx, emptyTxt, { reply_markup: { inline_keyboard: emptyKb } });
     return ctx.reply(emptyTxt, { reply_markup: { inline_keyboard: emptyKb } });
@@ -595,19 +509,19 @@ async function showInbox(ctx, page = 1, filter, aliasFilter = null) {
   });
 
   const nav = [];
-  if (page > 1) nav.push({ text: '⬅️ Prev', callback_data: `inbox:${page - 1}${filter ? ':' + filter : ''}` });
+  if (page > 1) nav.push({ text: t('bot.btn.prev', lang, '⬅️ Prev'), callback_data: `inbox:${page - 1}${filter ? ':' + filter : ''}` });
   nav.push({ text: `📄 ${page}/${Math.max(totalPages, 1)}`, callback_data: 'noop' });
-  if (page < totalPages) nav.push({ text: 'Next ➡️', callback_data: `inbox:${page + 1}${filter ? ':' + filter : ''}` });
+  if (page < totalPages) nav.push({ text: t('bot.btn.next', lang, 'Next ➡️'), callback_data: `inbox:${page + 1}${filter ? ':' + filter : ''}` });
   if (nav.length) kb.push(nav);
 
   kb.push([
-    { text: '📥 All', callback_data: 'inbox:1' },
-    { text: '🔵 Unread', callback_data: 'inbox:1:unread' },
-    { text: '⭐ Starred', callback_data: 'inbox:1:starred' }
+    { text: t('bot.btn.all', lang, '📥 All'), callback_data: 'inbox:1' },
+    { text: t('bot.btn.unread', lang, '🔵 Unread'), callback_data: 'inbox:1:unread' },
+    { text: t('bot.btn.starred', lang, '⭐ Starred'), callback_data: 'inbox:1:starred' }
   ]);
   kb.push([
-    { text: '🔄 Refresh', callback_data: `inbox:${page}${filter ? ':' + filter : ''}` },
-    { text: '🏠 Main Menu', callback_data: 'menu:home' }
+    { text: t('bot.btn.refresh', lang, '🔄 Refresh'), callback_data: `inbox:${page}${filter ? ':' + filter : ''}` },
+    { text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }
   ]);
 
   return send(ctx, `${prefix}${aliasPrefix}${header}\n\n${lines.join('\n\n')}`, { reply_markup: { inline_keyboard: kb } });
@@ -641,8 +555,8 @@ async function showStats(ctx) {
   return send(ctx, content, {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '🔄 Refresh', callback_data: 'stats:1' }, { text: '🌐 Web Dashboard', callback_data: 'menu:web' }],
-        [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+        [{ text: t('bot.btn.refresh', lang, '🔄 Refresh'), callback_data: 'stats:1' }, { text: t('bot.btn.web_dashboard', lang, '🌐 Web Dashboard'), callback_data: 'menu:web' }],
+        [{ text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }]
       ]
     }
   });
@@ -677,15 +591,15 @@ async function createThrowaway(ctx, lang, label = null) {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '📨 View Inbox', callback_data: `alias_inbox:${a.address}:1` },
-          { text: '📱 QR Code', callback_data: `qr_alias:${a.id || a.address}` }
+          { text: t('bot.btn.view_inbox', lang, '📨 View Inbox'), callback_data: `alias_inbox:${a.address}:1` },
+          { text: t('bot.btn.qr_code', lang, '📱 QR Code'), callback_data: `qr_alias:${a.id || a.address}` }
         ],
         [
-          { text: '🗑 Delete', callback_data: `delete_alias:${a.address}` },
-          { text: '📧 All Aliases', callback_data: 'aliases:1' }
+          { text: t('bot.btn.delete', lang, '🗑 Delete'), callback_data: `delete_alias:${a.address}` },
+          { text: t('bot.btn.my_aliases', lang, '📧 All Aliases'), callback_data: 'aliases:1' }
         ],
         [
-          { text: '🏠 Main Menu', callback_data: 'menu:home' }
+          { text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }
         ]
       ]
     }
@@ -702,15 +616,15 @@ async function createBurnerAlias(ctx, lang) {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '📨 View Inbox', callback_data: `alias_inbox:${a.address}:1` },
-          { text: '📱 QR Code', callback_data: `qr_alias:${a.id || a.address}` }
+          { text: t('bot.btn.view_inbox', lang, '📨 View Inbox'), callback_data: `alias_inbox:${a.address}:1` },
+          { text: t('bot.btn.qr_code', lang, '📱 QR Code'), callback_data: `qr_alias:${a.id || a.address}` }
         ],
         [
-          { text: '🗑 Delete Burner', callback_data: `delete_alias:${a.address}` },
-          { text: '📧 All Aliases', callback_data: 'aliases:1' }
+          { text: t('bot.btn.delete', lang, '🗑 Delete Burner'), callback_data: `delete_alias:${a.address}` },
+          { text: t('bot.btn.my_aliases', lang, '📧 All Aliases'), callback_data: 'aliases:1' }
         ],
         [
-          { text: '🏠 Main Menu', callback_data: 'menu:home' }
+          { text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }
         ]
       ]
     }
@@ -728,15 +642,15 @@ async function createCustom(ctx, customName, lang) {
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '📨 View Inbox', callback_data: `alias_inbox:${a.address}:1` },
-            { text: '📱 QR Code', callback_data: `qr_alias:${a.id || a.address}` }
+            { text: t('bot.btn.view_inbox', lang, '📨 View Inbox'), callback_data: `alias_inbox:${a.address}:1` },
+            { text: t('bot.btn.qr_code', lang, '📱 QR Code'), callback_data: `qr_alias:${a.id || a.address}` }
           ],
           [
-            { text: '🗑 Delete', callback_data: `delete_alias:${a.address}` },
-            { text: '📧 All Aliases', callback_data: 'aliases:1' }
+            { text: t('bot.btn.delete', lang, '🗑 Delete'), callback_data: `delete_alias:${a.address}` },
+            { text: t('bot.btn.my_aliases', lang, '📧 All Aliases'), callback_data: 'aliases:1' }
           ],
           [
-            { text: '🏠 Main Menu', callback_data: 'menu:home' }
+            { text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }
           ]
         ]
       }
@@ -746,8 +660,8 @@ async function createCustom(ctx, customName, lang) {
     return replyHtml(ctx, `❌ <b>Custom Alias Error:</b>\n${escapeHtml(err.message)}`, {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '✏️ Try Another Name', callback_data: 'menu:custom_alias' }],
-          [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+          [{ text: t('bot.btn.custom_alias', lang, '✏️ Try Another Name'), callback_data: 'menu:custom_alias' }],
+          [{ text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }]
         ]
       }
     });
@@ -760,7 +674,7 @@ async function showCustomAliasPrompt(ctx) {
   return send(ctx, t('alias.custom_prompt', lang), {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '❌ Cancel', callback_data: 'menu:home' }]
+        [{ text: t('bot.btn.cancel', lang, '❌ Cancel'), callback_data: 'menu:home' }]
       ]
     }
   });
@@ -783,7 +697,7 @@ async function showApiKeys(ctx) {
   }
 
   const content = t('api.header', lang, { count: activeKeys.length, keysList: keyLines });
-  return send(ctx, content, apiKeysKeyboard(activeKeys));
+  return send(ctx, content, apiKeysKeyboard(activeKeys, lang));
 }
 
 async function showApiDocs(ctx) {
@@ -809,8 +723,9 @@ function formatUptime(seconds) {
 }
 
 async function showAdminDashboard(ctx) {
+  const lang = getLang(ctx);
   if (!isOwnerOrAdmin(ctx.from.id)) {
-    return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+    return replyHtml(ctx, t('admin.denied', lang));
   }
 
   const db = getDb();
@@ -857,7 +772,7 @@ async function showAdminDashboard(ctx) {
   const auditStats = getAuditStats();
   const text = `👑 <b>Platform Owner & Admin Control Center</b>\n─────────────────────────────\n📊 <b>System Overview:</b>\n• 👥 <b>Total Users:</b> <b>${dbStats.users}</b> (Joined today: <b>+${usersToday}</b>)\n• 📧 <b>Active Aliases:</b> <b>${dbStats.aliases}</b> (Custom: <b>${customCount}</b>)\n• 📬 <b>Emails Received:</b> <b>${dbStats.emails}</b> (Today: <b>${dbStats.emailsToday}</b>)\n• 🔵 <b>Unread Emails:</b> <b>${dbStats.unreadEmails}</b>\n• 🛡 <b>Spam Blocked:</b> <b>${dbStats.spamToday}</b> today\n• 🔑 <b>Active API Keys:</b> <b>${activeKeysCount}</b>\n• 📜 <b>Changes Logged:</b> <b>${auditStats.total}</b> (Today: <b>+${auditStats.today}</b>)\n\n🖥 <b>Server & Node Health:</b>\n• ⏱ <b>Uptime:</b> ${uptimeStr}\n• 🧠 <b>RAM (Heap / RSS):</b> ${heapMb} MB / ${rssMb} MB\n• 💾 <b>DB Size:</b> ${formatBytes(dbSizeBytes)}\n• ⚙️ <b>Node.js:</b> ${procStats.nodeVersion} (PID: ${procStats.pid})\n\n🔍 <b>Recent Live Incoming Emails (Last 5):</b>\n${emailSnippets}\n\n👥 <b>Recent Users Registered (Last 5):</b>\n${userSnippets}\n─────────────────────────────\n💡 <i>Live statistics refreshed instantly.</i>`;
 
-  return send(ctx, text, adminDashboardKeyboard(config.server.webUrl || 'https://commandor.my.id'));
+  return send(ctx, text, adminDashboardKeyboard(config.server.webUrl || 'https://commandor.my.id', lang));
 }
 
 async function showAdminEmailFeed(ctx, page = 1) {
@@ -946,8 +861,9 @@ async function promptBroadcastPreview(ctx, payload) {
     broadcastData = payload;
   }
   
+  const lang = getLang(ctx);
   if (!broadcastData || (!broadcastData.text && !broadcastData.fileId && !broadcastData.caption)) {
-    return replyHtml(ctx, t('broadcast.empty', getLang(ctx)));
+    return replyHtml(ctx, t('broadcast.empty', lang));
   }
 
   const db = getDb();
@@ -965,23 +881,23 @@ async function promptBroadcastPreview(ctx, payload) {
     return ctx.replyWithPhoto(broadcastData.fileId, {
       caption: previewMsg,
       parse_mode: 'HTML',
-      ...broadcastConfirmKeyboard()
+      ...broadcastConfirmKeyboard(lang)
     });
   } else if (broadcastData.type === 'video' && broadcastData.fileId) {
     return ctx.replyWithVideo(broadcastData.fileId, {
       caption: previewMsg,
       parse_mode: 'HTML',
-      ...broadcastConfirmKeyboard()
+      ...broadcastConfirmKeyboard(lang)
     });
   } else if (broadcastData.type === 'document' && broadcastData.fileId) {
     return ctx.replyWithDocument(broadcastData.fileId, {
       caption: previewMsg,
       parse_mode: 'HTML',
-      ...broadcastConfirmKeyboard()
+      ...broadcastConfirmKeyboard(lang)
     });
   }
 
-  return send(ctx, previewMsg, broadcastConfirmKeyboard());
+  return send(ctx, previewMsg, broadcastConfirmKeyboard(lang));
 }
 
 async function handleConfirmedBroadcast(ctx) {
@@ -1122,7 +1038,8 @@ async function handleConfirmedBroadcast(ctx) {
 }
 
 async function showHostingNodeDetails(ctx, nodeId) {
-  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+  const lang = getLang(ctx);
+  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', lang));
   const node = getNodeById(nodeId);
   if (!node) return replyHtml(ctx, '❌ Node not found.');
 
@@ -1134,11 +1051,12 @@ async function showHostingNodeDetails(ctx, nodeId) {
 
   const text = `${icon} <b>Server Node Details: ${escapeHtml(node.name)}</b>\n──────────────────────────────\n• <b>Host:</b> <code>${escapeHtml(node.host)}:${node.port}</code>\n• <b>User:</b> <code>${escapeHtml(node.username || 'root')}</code>\n• <b>Public Gateway:</b> <code>${escapeHtml(node.public_url || 'N/A')}</code>\n• <b>Specs:</b> ${cpus} vCPU | ${ram} RAM | Disk: ${disk}\n• <b>Hosted Sites:</b> <b>${node.current_sites || 0}</b> / ${node.max_sites || 100}\n• <b>Status:</b> <b>${node.status}</b>\n• <b>Provisioned:</b> ${createdStr}\n──────────────────────────────`;
 
-  return send(ctx, text, hostingNodeActionsKeyboard(node));
+  return send(ctx, text, hostingNodeActionsKeyboard(node, lang));
 }
 
 async function handleNodePing(ctx, nodeId) {
-  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+  const lang = getLang(ctx);
+  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', lang));
   const node = getNodeById(nodeId);
   if (!node) return replyHtml(ctx, '❌ Node not found.');
 
@@ -1155,10 +1073,10 @@ async function handleNodePing(ctx, nodeId) {
     });
     const latency = Date.now() - start;
     const freeRamStr = res.system_info?.ramAvailableMb ? formatMemoryMb(res.system_info.ramAvailableMb) : (res.system_info?.ramFreeMb ? formatMemoryMb(res.system_info.ramFreeMb) : formatMemoryMb(res.system_info?.ramTotalMb || res.system_info?.ramMb));
-    return replyHtml(ctx, `🟢 <b>Node Online & Healthy!</b>\n──────────────────────────────\n• <b>Node:</b> ${escapeHtml(node.name)}\n• <b>Latency:</b> ${latency}ms\n• <b>OS:</b> ${res.system_info?.os || 'Linux'}\n• <b>CPU:</b> ${res.system_info?.cpus || 1} vCPU\n• <b>Free RAM:</b> ${freeRamStr}\n• <b>Free Disk:</b> ${res.system_info?.freeDisk || 'N/A'}\n──────────────────────────────`, hostingNodeActionsKeyboard(node));
+    return replyHtml(ctx, `🟢 <b>Node Online & Healthy!</b>\n──────────────────────────────\n• <b>Node:</b> ${escapeHtml(node.name)}\n• <b>Latency:</b> ${latency}ms\n• <b>OS:</b> ${res.system_info?.os || 'Linux'}\n• <b>CPU:</b> ${res.system_info?.cpus || 1} vCPU\n• <b>Free RAM:</b> ${freeRamStr}\n• <b>Free Disk:</b> ${res.system_info?.freeDisk || 'N/A'}\n──────────────────────────────`, hostingNodeActionsKeyboard(node, lang));
   } catch (err) {
     const latency = Date.now() - start;
-    return replyHtml(ctx, `🔴 <b>Node Connection Failed (${latency}ms):</b>\n<code>${escapeHtml(err.message)}</code>`, hostingNodeActionsKeyboard(node));
+    return replyHtml(ctx, `🔴 <b>Node Connection Failed (${latency}ms):</b>\n<code>${escapeHtml(err.message)}</code>`, hostingNodeActionsKeyboard(node, lang));
   }
 }
 
@@ -1309,7 +1227,7 @@ async function handleCancel(ctx) {
   clearAllUserStates(ctx.from.id);
   const lang = getLang(ctx);
   return replyHtml(ctx, t('cancel.success', lang), {
-    reply_markup: mainMenuKeyboard(isOwnerOrAdmin(ctx.from?.id)).reply_markup
+    reply_markup: mainMenuKeyboard(isOwnerOrAdmin(ctx.from?.id), lang).reply_markup
   });
 }
 
@@ -1332,17 +1250,18 @@ function setupCommands(bot) {
   }, { allowWithoutTos: true }));
 
   bot.help(wrap(async ctx => {
+    const lang = getLang(ctx);
     const admin = isOwnerOrAdmin(ctx.from.id);
     const kb = [
-      [{ text: '➕ Create Alias', callback_data: 'menu:new' }, { text: '✏️ Custom Alias', callback_data: 'menu:custom_alias' }],
-      [{ text: '📨 View Inbox', callback_data: 'inbox:1' }, { text: '🔑 API Keys', callback_data: 'api_key:list' }]
+      [{ text: t('bot.btn.create_alias', lang, '➕ Create Alias'), callback_data: 'menu:new' }, { text: t('bot.btn.custom_alias', lang, '✏️ Custom Alias'), callback_data: 'menu:custom_alias' }],
+      [{ text: t('bot.btn.inbox', lang, '📨 View Inbox'), callback_data: 'inbox:1' }, { text: t('bot.btn.api_keys', lang, '🔑 API Keys'), callback_data: 'api_key:list' }]
     ];
     if (admin) {
-      kb.push([{ text: '👑 Owner Admin Panel', callback_data: 'admin:dashboard' }]);
+      kb.push([{ text: t('bot.btn.admin_panel', lang, '👑 Owner Admin Panel'), callback_data: 'admin:dashboard' }]);
     }
-    kb.push([{ text: '🏠 Main Menu', callback_data: 'menu:home' }]);
+    kb.push([{ text: t('bot.btn.home', lang, '🏠 Main Menu'), callback_data: 'menu:home' }]);
 
-    return replyHtml(ctx, t('help.text', getLang(ctx)), {
+    return replyHtml(ctx, t('help.text', lang), {
       reply_markup: { inline_keyboard: kb }
     });
   }));
@@ -1700,48 +1619,61 @@ function setupCommands(bot) {
   bot.command(['credits', 'credit', 'about'], wrap(async ctx => showCreditsInfo(ctx), { allowWithoutTos: true }));
   bot.command(['notifications', 'notify', 'alerts'], wrap(async ctx => showNotificationPreferences(ctx)));
 
+  function getButtonVariants(key, extraList = []) {
+    const set = new Set(extraList);
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const text = t(key, lang.code);
+      if (text && text !== key) {
+        set.add(text);
+        const stripped = text.replace(/^[\p{Emoji}\s]+/u, '').trim();
+        if (stripped) set.add(stripped);
+      }
+    }
+    return Array.from(set);
+  }
+
   // Persistent keyboard buttons
   bot.hears(['✨ Credits', 'Credits', '👑 Owner', 'About'], wrap(async ctx => showCreditsInfo(ctx), { allowWithoutTos: true }));
-  bot.hears(['📬 Email Suite', 'Email Suite'], wrap(ctx => showEmailSuiteHub(ctx)));
-  bot.hears(['📝 Change Log', 'Change Log', '📝 Changelog', 'Changelog'], wrap(ctx => showChangeLog(ctx)));
-  bot.hears(['📥 Inbox', '📨 Inbox', 'Inbox', '📨 View Inbox'], wrap(ctx => showInbox(ctx, 1)));
-  bot.hears(['✉️ My Aliases', '📧 My Aliases', 'My Aliases'], wrap(ctx => showAliases(ctx, 1)));
-  bot.hears(['➕ Create Alias', '➕ New Alias', 'New Alias', 'Create Alias'], wrap(async ctx => {
+  bot.hears(getButtonVariants('bot.btn.email_suite', ['📬 Email Suite', 'Email Suite']), wrap(ctx => showEmailSuiteHub(ctx)));
+  bot.hears(getButtonVariants('bot.btn.changelog', ['📝 Change Log', 'Change Log', '📝 Changelog', 'Changelog']), wrap(ctx => showChangeLog(ctx)));
+  bot.hears(getButtonVariants('bot.btn.inbox', ['📥 Inbox', '📨 Inbox', 'Inbox', '📨 View Inbox']), wrap(ctx => showInbox(ctx, 1)));
+  bot.hears(getButtonVariants('bot.btn.my_aliases', ['✉️ My Aliases', '📧 My Aliases', 'My Aliases']), wrap(ctx => showAliases(ctx, 1)));
+  bot.hears(getButtonVariants('bot.btn.create_alias', ['➕ Create Alias', '➕ New Alias', 'New Alias', 'Create Alias']), wrap(async ctx => {
     try {
       return await createThrowaway(ctx, getLang(ctx));
     } catch (err) {
       return replyHtml(ctx, err.message);
     }
   }));
-  bot.hears(['🎨 Custom Alias', '✏️ Custom Alias', 'Custom Alias'], wrap(ctx => showCustomAliasPrompt(ctx)));
-  bot.hears(['⏳ Temporary Burner', '🔥 Burner', '🔥 1-Hour Burner', '1-Hour Burner', 'Burner'], wrap(async ctx => {
+  bot.hears(getButtonVariants('bot.btn.custom_alias', ['🎨 Custom Alias', '✏️ Custom Alias', 'Custom Alias']), wrap(ctx => showCustomAliasPrompt(ctx)));
+  bot.hears(getButtonVariants('bot.btn.burner', ['⏳ Temporary Burner', '🔥 Burner', '🔥 1-Hour Burner', '1-Hour Burner', 'Burner']), wrap(async ctx => {
     try {
       return await createBurnerAlias(ctx, getLang(ctx));
     } catch (err) {
       return replyHtml(ctx, err.message);
     }
   }));
-  bot.hears(['🌐 Domains & Hosting', 'Domains & Hosting', '🌐 Domains & Subdomains', '🌐 Subdomains', 'Subdomains', 'Domains'], wrap(ctx => showInfraHub(ctx)));
-  bot.hears(['🛠️ Developer Tools', 'Developer Tools', '🔑 API Keys', 'API Keys', '🔑 API & Devs'], wrap(ctx => showApiHub(ctx)));
-  bot.hears(['⚙️ Utilities', 'Utilities', '⚙️ Tools', 'Tools'], wrap(ctx => showUtilitiesHub(ctx)));
-  bot.hears(['☁️ Cloud Hosting', '🖥️ Cloud Hosting', 'Cloud Hosting', 'Hosting'], wrap(async ctx => showHostingMenu(ctx)));
-  bot.hears(['🔎 Search', 'Search', '🔎 Search Messages'], wrap(async ctx => {
+  bot.hears(getButtonVariants('bot.btn.subdomains', ['🌐 Domains & Hosting', 'Domains & Hosting', '🌐 Domains & Subdomains', '🌐 Subdomains', 'Subdomains', 'Domains']), wrap(ctx => showInfraHub(ctx)));
+  bot.hears(getButtonVariants('bot.btn.api_keys', ['🛠️ Developer Tools', 'Developer Tools', '🔑 API Keys', 'API Keys', '🔑 API & Devs']), wrap(ctx => showApiHub(ctx)));
+  bot.hears(getButtonVariants('bot.btn.utilities', ['⚙️ Utilities', 'Utilities', '⚙️ Tools', 'Tools']), wrap(ctx => showUtilitiesHub(ctx)));
+  bot.hears(getButtonVariants('bot.btn.hosting', ['☁️ Cloud Hosting', '🖥️ Cloud Hosting', 'Cloud Hosting', 'Hosting']), wrap(async ctx => showHostingMenu(ctx)));
+  bot.hears(getButtonVariants('bot.btn.search', ['🔎 Search', 'Search', '🔎 Search Messages']), wrap(async ctx => {
     setSearch(ctx.from.id, {});
     return replyHtml(ctx, t('search.prompt', getLang(ctx)));
   }));
-  bot.hears(['🌐 Language', 'Language', '🌐 لغة', 'لغة', 'Sprache', 'Langue', 'Idioma', 'Dil'], wrap(showLanguageSelection));
-  bot.hears(['❌ Cancel', 'Cancel', 'إلغاء', 'Abbrechen', 'Annuler', 'Cancelar', 'İptal', 'Отмена', '取消', 'रद्द करें'], wrap(handleCancel));
-  bot.hears('⚙️ Settings', wrap(ctx => showSettings(ctx)));
-  bot.hears(['📊 Usage & Stats', '📊 Statistics', 'Statistics', 'Stats'], wrap(ctx => showStats(ctx)));
-  bot.hears(['👑 Commandor Admin Panel', '👑 Owner Admin Panel', 'Admin Panel', '👑 Admin Panel'], wrap(ctx => showAdminDashboard(ctx)));
-  bot.hears(['🌍 Web Dashboard', '🌐 Web Dashboard', '🌐 Open Web Inbox', 'Web Dashboard'], wrap(async ctx => {
+  bot.hears(getButtonVariants('bot.btn.language', ['🌐 Language', 'Language', '🌐 لغة', 'لغة', 'Sprache', 'Langue', 'Idioma', 'Dil']), wrap(showLanguageSelection));
+  bot.hears(getButtonVariants('bot.btn.cancel', ['❌ Cancel', 'Cancel', 'إلغاء', 'Abbrechen', 'Annuler', 'Cancelar', 'İptal', 'Отмена', '取消', 'रद्द करें']), wrap(handleCancel));
+  bot.hears(getButtonVariants('bot.btn.settings', ['⚙️ Settings', 'Settings']), wrap(ctx => showSettings(ctx)));
+  bot.hears(getButtonVariants('bot.btn.stats', ['📊 Usage & Stats', '📊 Statistics', 'Statistics', 'Stats']), wrap(ctx => showStats(ctx)));
+  bot.hears(getButtonVariants('bot.btn.admin_panel', ['👑 Commandor Admin Panel', '👑 Owner Admin Panel', 'Admin Panel', '👑 Admin Panel']), wrap(ctx => showAdminDashboard(ctx)));
+  bot.hears(getButtonVariants('bot.btn.web_dashboard', ['🌍 Web Dashboard', '🌐 Web Dashboard', '🌐 Open Web Inbox', 'Web Dashboard']), wrap(async ctx => {
     const lang = getLang(ctx);
     const token = createLoginToken(ctx.from.id);
     const url = `${config.server.webUrl}/login?token=${token}`;
     return replyHtml(ctx, t('web.open', lang, { url: config.server.webUrl }), {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🌍 Launch Commandor Web App', url }]
+          [{ text: t('bot.btn.web_dashboard', lang, '🌍 Launch Commandor Web App'), url }]
         ]
       }
     });
@@ -1944,6 +1876,7 @@ async function runSearch(ctx, query, lang) {
 }
 
 async function showSubdomains(ctx, page = 1) {
+  const lang = getLang(ctx);
   const { subdomains, total } = getUserSubdomains(ctx.from.id, { page, limit: 8 });
 
   let text = `🌐 <b>Subdomain Service</b>\n\n`;
@@ -1962,10 +1895,11 @@ async function showSubdomains(ctx, page = 1) {
     }
   }
 
-  return replyHtml(ctx, text, subdomainListKeyboard(subdomains, page, total));
+  return replyHtml(ctx, text, subdomainListKeyboard(subdomains, page, total, lang));
 }
 
 async function showSubdomainDetails(ctx, id) {
+  const lang = getLang(ctx);
   const sub = getSubdomainById(id, ctx.from.id);
   if (!sub) return replyHtml(ctx, '❌ Subdomain not found or unauthorized.');
 
@@ -1995,7 +1929,7 @@ async function showSubdomainDetails(ctx, id) {
   text += `• Requests Handled: <b>${sub.web_requests_count}</b>\n`;
   text += `• Last Active: ${sub.last_active_at ? escapeHtml(sub.last_active_at) : '<i>Never</i>'}\n`;
 
-  return replyHtml(ctx, text, subdomainActionsKeyboard(sub));
+  return replyHtml(ctx, text, subdomainActionsKeyboard(sub, lang));
 }
 
 async function showClaimSubdomainPrompt(ctx) {
@@ -2009,6 +1943,7 @@ async function showClaimSubdomainPrompt(ctx) {
 }
 
 async function handleSubdomainClaim(ctx, name) {
+  const lang = getLang(ctx);
   try {
     const sub = claimSubdomain({
       tgId: ctx.from.id,
@@ -2018,31 +1953,33 @@ async function handleSubdomainClaim(ctx, name) {
     text += `Your full domain: <b><code>${escapeHtml(sub.full_domain)}</code></b>\n\n`;
     text += `• <b>Catch-All Email is ACTIVE:</b> Send emails to <code>anything@${escapeHtml(sub.full_domain)}</code> and they will arrive directly in your bot!\n`;
     text += `• <b>Web Routing is READY:</b> You can configure proxy, redirect, or inspect webhooks below.`;
-    return replyHtml(ctx, text, subdomainActionsKeyboard(sub));
+    return replyHtml(ctx, text, subdomainActionsKeyboard(sub, lang));
   } catch (err) {
     return replyHtml(ctx, `❌ <b>Could not claim subdomain:</b>\n${escapeHtml(err.message)}\n\nUse /subdomain to view your subdomains.`);
   }
 }
 
 async function handleSubdomainTargetUpdate(ctx, subdomainId, targetUrl) {
+  const lang = getLang(ctx);
   try {
     const sub = updateSubdomain(subdomainId, ctx.from.id, { web_target: targetUrl });
     let text = `✅ <b>Target URL Updated!</b>\n\n`;
     text += `Subdomain: <b><code>${escapeHtml(sub.full_domain)}</code></b>\n`;
     text += `Target: <code>${escapeHtml(sub.web_target)}</code>`;
-    return replyHtml(ctx, text, subdomainActionsKeyboard(sub));
+    return replyHtml(ctx, text, subdomainActionsKeyboard(sub, lang));
   } catch (err) {
     return replyHtml(ctx, `❌ <b>Failed to update target:</b>\n${escapeHtml(err.message)}`);
   }
 }
 
 async function handleSubdomainBodyUpdate(ctx, subdomainId, bodyContent) {
+  const lang = getLang(ctx);
   try {
     const sub = updateSubdomain(subdomainId, ctx.from.id, { web_custom_body: bodyContent, web_mode: 'static' });
     let text = `✅ <b>Static Content Updated!</b>\n\n`;
     text += `Subdomain: <b><code>${escapeHtml(sub.full_domain)}</code></b>\n`;
     text += `Web mode has been set to <b>STATIC</b>.`;
-    return replyHtml(ctx, text, subdomainActionsKeyboard(sub));
+    return replyHtml(ctx, text, subdomainActionsKeyboard(sub, lang));
   } catch (err) {
     return replyHtml(ctx, `❌ <b>Failed to update body:</b>\n${escapeHtml(err.message)}`);
   }
@@ -2079,28 +2016,31 @@ async function showSubdomainRequests(ctx, subdomainId) {
 }
 
 async function showHostingMenu(ctx) {
+  const lang = getLang(ctx);
   const admin = isOwnerOrAdmin(ctx.from.id);
   const sites = getUserSites(ctx.from.id, admin);
   const limits = checkUserLimits(ctx.from.id);
 
-  let text = `🖥️ <b>Cloud Hosting Service</b>\n\n`;
-  text += `Deploy simple websites, HTML portfolios, and landing pages across high-speed edge clusters!\n\n`;
-  text += `• <b>Active Sites:</b> ${sites.length} / ${limits.plan.max_sites}\n`;
-  text += `• <b>Current Plan:</b> <b>${escapeHtml(limits.plan.name)}</b> (${formatBytes(limits.plan.max_storage_bytes)})\n`;
-  text += `• <b>Auto Subdomain:</b> Every site gets an instant <code>&lt;name&gt;.commandor.my.id</code> URL!\n`;
-  text += `• <b>Active Threat Shield:</b> Built-in real-time security scanner protecting against malware, phishing, and crypto exploits.\n\n`;
-
+  let sitesList = '';
   if (sites.length === 0) {
-    text += `<i>You have not deployed any sites yet. Click below to launch your first website!</i>`;
+    sitesList = `<i>You have not deployed any sites yet. Click below to launch your first website!</i>`;
   } else {
-    text += `<b>Your Sites (${sites.length}):</b>\n`;
+    sitesList = `<b>Your Sites (${sites.length}):</b>\n`;
     for (const s of sites) {
       const statusIcon = s.status === 'active' ? '🟢' : '🔴';
-      text += `\n${statusIcon} <b><code>${escapeHtml(s.full_domain)}</code></b>\n   Hits: <b>${s.visits_count}</b> | Storage: ${formatBytes(s.storage_used_bytes)} | Files: <b>${s.files_count}</b>`;
+      sitesList += `\n${statusIcon} <b><code>${escapeHtml(s.full_domain)}</code></b>\n   Hits: <b>${s.visits_count}</b> | Storage: ${formatBytes(s.storage_used_bytes)} | Files: <b>${s.files_count}</b>`;
     }
   }
 
-  return replyHtml(ctx, text, hostingMainMenuKeyboard(admin));
+  const text = t('bot.hosting.main_message', lang, {
+    sitesCount: sites.length,
+    maxSites: limits.plan.max_sites,
+    planName: escapeHtml(limits.plan.name),
+    planStorage: formatBytes(limits.plan.max_storage_bytes),
+    sitesList
+  });
+
+  return replyHtml(ctx, text, hostingMainMenuKeyboard(admin, lang));
 }
 
 async function showDeploySitePrompt(ctx) {
@@ -2155,6 +2095,7 @@ async function showHostingTOS(ctx) {
 }
 
 async function showHostingSites(ctx) {
+  const lang = getLang(ctx);
   const admin = isOwnerOrAdmin(ctx.from.id);
   const sites = getUserSites(ctx.from.id, admin);
   let text = `📋 <b>Your Hosted Sites (${sites.length})</b>\n\n`;
@@ -2167,10 +2108,11 @@ async function showHostingSites(ctx) {
       text += `   Visits: <b>${s.visits_count}</b> | Storage: ${formatBytes(s.storage_used_bytes)} | Files: ${s.files_count}\n`;
     }
   }
-  return replyHtml(ctx, text, hostingSitesListKeyboard(sites));
+  return replyHtml(ctx, text, hostingSitesListKeyboard(sites, lang));
 }
 
 async function showHostingSiteDetails(ctx, id) {
+  const lang = getLang(ctx);
   const admin = isOwnerOrAdmin(ctx.from.id);
   const site = getSiteById(id, ctx.from.id, admin);
   if (!site) return replyHtml(ctx, '❌ Site not found or unauthorized.');
@@ -2186,11 +2128,12 @@ async function showHostingSiteDetails(ctx, id) {
   text += `• <b>Visitor Hits:</b> ${site.visits_count}\n`;
   text += `• <b>Last Deployed:</b> ${escapeHtml(site.last_deployed_at || site.created_at)}\n`;
 
-  return replyHtml(ctx, text, hostingSiteActionsKeyboard(site));
+  return replyHtml(ctx, text, hostingSiteActionsKeyboard(site, lang));
 }
 
 async function showHostingNodes(ctx) {
-  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
+  const lang = getLang(ctx);
+  if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', lang));
   const nodes = listNodes({ onlyActive: false });
   let text = `🖥️ <b>Server Hosting Nodes (${nodes.length})</b>\n\n`;
   if (nodes.length === 0) {
@@ -2206,7 +2149,7 @@ async function showHostingNodes(ctx) {
       text += `   Hosted Sites: <b>${n.current_sites}</b> / ${n.max_sites}\n`;
     }
   }
-  return replyHtml(ctx, text, hostingNodesKeyboard(nodes));
+  return replyHtml(ctx, text, hostingNodesKeyboard(nodes, lang));
 }
 
 async function showHostingPlans(ctx) {
@@ -2332,6 +2275,7 @@ async function handleDeploySiteName(ctx, name) {
 }
 
 async function handleDeploySiteContent(ctx, siteName, htmlContent) {
+  const lang = getLang(ctx);
   await replyHtml(ctx, `⏳ <b>Scanning and deploying <code>${escapeHtml(siteName)}</code>...</b>`);
   try {
     const admin = isOwnerOrAdmin(ctx.from.id);
@@ -2351,13 +2295,14 @@ async function handleDeploySiteContent(ctx, siteName, htmlContent) {
     text += `• <b>Storage:</b> ${formatBytes(site.storage_used_bytes)}\n\n`;
     text += `<i>Your website is now accessible worldwide!</i>`;
 
-    return replyHtml(ctx, text, hostingSiteActionsKeyboard(site));
+    return replyHtml(ctx, text, hostingSiteActionsKeyboard(site, lang));
   } catch (err) {
     return replyHtml(ctx, `❌ <b>Deployment Error:</b>\n${escapeHtml(err.message)}`);
   }
 }
 
 async function handleDeploySiteZip(ctx, siteName, zipBuffer) {
+  const lang = getLang(ctx);
   await replyHtml(ctx, `⏳ <b>Scanning ZIP archive and deploying <code>${escapeHtml(siteName)}</code>...</b>`);
   try {
     const admin = isOwnerOrAdmin(ctx.from.id);
@@ -2378,7 +2323,7 @@ async function handleDeploySiteZip(ctx, siteName, zipBuffer) {
     text += `• <b>Storage:</b> ${formatBytes(site.storage_used_bytes)}\n\n`;
     text += `<i>Your site is now live!</i>`;
 
-    return replyHtml(ctx, text, hostingSiteActionsKeyboard(site));
+    return replyHtml(ctx, text, hostingSiteActionsKeyboard(site, lang));
   } catch (err) {
     return replyHtml(ctx, `❌ <b>Deployment Error:</b>\n${escapeHtml(err.message)}`);
   }
@@ -2409,50 +2354,36 @@ async function showExportMenu(ctx) {
 }
 
 async function showPrivacyInfo(ctx) {
-  let text = `🛡️ <b>Commandor Dev Pack — Privacy & Security Architecture</b>\n\n`;
-  text += `Your privacy is our core engineering requirement:\n\n`;
-  text += `• <b>Zero Plaintext Logging:</b> Incoming messages are encrypted and isolated in storage, bound exclusively to your user identity.\n`;
-  text += `• <b>HTML Sanitization:</b> All incoming email HTML is aggressively sanitized. Tracker beacons, malicious scripts, and cross-site requests are stripped.\n`;
-  text += `• <b>1-Hour Burners:</b> Temporary aliases self-destruct automatically when their timer expires.\n`;
-  text += `• <b>Data Sovereignty:</b> You can export your data anytime via <code>/export</code> or delete your emails and aliases on demand.\n`;
-  text += `• <b>End-to-End Sessions:</b> Web sessions are hashed with SHA-256 and expire automatically.\n\n`;
-  text += `<i>Commandor Dev Pack never sells, rents, or reads your personal communications.</i>`;
+  const lang = getLang(ctx);
+  const text = `${t('bot.privacy_title', lang)}\n\n${t('bot.privacy_desc', lang)}`;
 
   const kb = [
     [
-      { text: '📦 Export Data', callback_data: 'export:menu' },
-      { text: '📜 Terms of Service', callback_data: 'tos:view' }
+      { text: t('bot.btn.export', lang), callback_data: 'export:menu' },
+      { text: t('bot.btn.tos', lang), callback_data: 'tos:view' }
     ],
-    [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+    [{ text: t('bot.btn.home', lang), callback_data: 'menu:home' }]
   ];
 
   return replyHtml(ctx, text, { reply_markup: { inline_keyboard: kb } });
 }
 
 async function showSupportInfo(ctx) {
+  const lang = getLang(ctx);
   const tgId = ctx.from.id;
   const botUser = ctx.botInfo?.username || config.telegram?.botUsername || 'CommandorDevBot';
   const ownerUser = config.telegram?.ownerUsername || 'xpT_T';
-  let text = `🎧 <b>Commandor Dev Pack — Support & Helpdesk</b>\n\n`;
-  text += `Need assistance, want to report a bug, or request a feature?\n\n`;
-  text += `👤 <b>Your Diagnostic ID:</b> <code>User #${tgId}</code>\n`;
-  text += `🤖 <b>Bot Service:</b> @${botUser}\n`;
-  text += `👑 <b>Owner:</b> <a href="https://t.me/${ownerUser}">@${ownerUser}</a>\n`;
-  text += `💬 <b>Direct Support:</b> <a href="https://t.me/${ownerUser}">@${ownerUser}</a>\n\n`;
-  text += `💡 <b>Quick Tips:</b>\n`;
-  text += `• Generate aliases instantly: <code>/new [label]</code>\n`;
-  text += `• Search messages: <code>/search [query]</code>\n`;
-  text += `• Sign in to Web: <code>/login</code>\n`;
-  text += `• Change language: <code>/language</code>\n`;
+
+  const text = `${t('bot.support_title', lang)}\n\n${t('bot.support_desc', lang, { userId: tgId, botUser, ownerUser })}`;
 
   const kb = [
     [
       { text: `💬 Contact Owner (@${ownerUser})`, url: `https://t.me/${ownerUser}` },
-      { text: '📖 Commands Guide', callback_data: 'menu:help' }
+      { text: t('bot.btn.help', lang), callback_data: 'menu:help' }
     ],
     [
-      { text: '✨ Credits & Attribution', callback_data: 'menu:credits' },
-      { text: '🏠 Main Menu', callback_data: 'menu:home' }
+      { text: t('bot.btn.credits', lang), callback_data: 'menu:credits' },
+      { text: t('bot.btn.home', lang), callback_data: 'menu:home' }
     ]
   ];
 
@@ -2460,23 +2391,18 @@ async function showSupportInfo(ctx) {
 }
 
 async function showCreditsInfo(ctx) {
+  const lang = getLang(ctx);
   const botUser = ctx.botInfo?.username || config.telegram?.botUsername || 'CommandorDevBot';
   const ownerUser = config.telegram?.ownerUsername || 'xpT_T';
-  let text = `👑 <b>Commandor Dev Pack — Credits & Attribution</b>\n`;
-  text += `──────────────────────────────\n\n`;
-  text += `🌟 <b>Owner & Lead Developer:</b> <a href="https://t.me/${ownerUser}">@${ownerUser}</a>\n`;
-  text += `🤖 <b>Official Telegram Bot:</b> <a href="https://t.me/${botUser}">@${botUser}</a>\n`;
-  text += `🐙 <b>GitHub Repository:</b> <a href="https://github.com/Masrofii/Commandor_dev_pack">Masrofii/Commandor_dev_pack</a>\n\n`;
-  text += `🛡️ <b>Platform:</b> Commandor Dev Pack\n`;
-  text += `⚙️ <b>Architecture:</b> Node.js · Telegraf · SQLite · Next.js · Nginx · Cloudflare\n\n`;
-  text += `<i>Commandor Dev Pack transforms multi-cloud, VPS, and edge servers into a cohesive, secure, and developer-friendly control plane.</i>`;
+
+  const text = `${t('bot.credits_title', lang)}\n──────────────────────────────\n\n${t('bot.credits_desc', lang, { ownerUser, botUser })}`;
 
   const kb = [
     [
       { text: `👑 Contact Owner (@${ownerUser})`, url: `https://t.me/${ownerUser}` },
       { text: '🐙 View on GitHub', url: 'https://github.com/Masrofii/Commandor_dev_pack' }
     ],
-    [{ text: '🏠 Main Menu', callback_data: 'menu:home' }]
+    [{ text: t('bot.btn.home', lang), callback_data: 'menu:home' }]
   ];
 
   return replyHtml(ctx, text, { reply_markup: { inline_keyboard: kb } });

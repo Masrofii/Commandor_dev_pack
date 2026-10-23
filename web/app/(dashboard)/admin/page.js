@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { isAdmin, getUser } from '../../../lib/auth';
 import { formatMemoryMb } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   ShieldCheckIcon,
   UsersIcon,
@@ -35,6 +36,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function AdminPage() {
+  const { t } = useTranslation();
   const [authorized, setAuthorized] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [tab, setTab] = useState('overview'); // 'overview' | 'users' | 'redeem' | 'emails' | 'subdomains' | 'hosting' | 'security' | 'broadcast' | 'logs'
@@ -451,17 +453,17 @@ export default function AdminPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500 text-white shadow-sm">
-              👑 Platform Owner Full Access
+              👑 {t('admin.role', 'Platform Owner Full Access')}
             </span>
             <span className="text-xs text-rose-200">
               ID: {currentUser?.tg_id || '8319534224'}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 flex items-center gap-2">
-            Control Center &amp; Master Admin Panel
+            {t('admin.title', 'Control Center & Master Admin Panel')}
           </h1>
           <p className="text-xs sm:text-sm text-rose-100/80 mt-1 max-w-2xl">
-            Live infrastructure management: users, system-wide emails, subdomains routing, server nodes, anti-abuse scanner, and global broadcasts.
+            {t('admin.subtitle', 'Live infrastructure management: users, system-wide emails, subdomains routing, server nodes, anti-abuse scanner, and global broadcasts.')}
           </p>
         </div>
 
@@ -473,7 +475,7 @@ export default function AdminPage() {
             title="WAL Flush & PRAGMA Optimize"
           >
             <WrenchScrewdriverIcon className={`h-4 w-4 ${cleaningDb ? 'animate-spin' : ''}`} />
-            {cleaningDb ? 'Optimizing...' : 'Optimize DB'}
+            {cleaningDb ? t('common.loading', 'Optimizing...') : t('common.refresh', 'Optimize DB')}
           </button>
           <button
             onClick={() => {
@@ -488,7 +490,7 @@ export default function AdminPage() {
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-lg text-xs font-medium border border-white/20 transition-all"
           >
             <ArrowPathIcon className="h-4 w-4" />
-            Refresh All
+            {t('common.refresh', 'Refresh All')}
           </button>
         </div>
       </div>
@@ -496,15 +498,15 @@ export default function AdminPage() {
       {/* Admin Tab Navigation */}
       <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-2 sm:space-x-4 text-xs sm:text-sm font-medium overflow-x-auto pb-1">
         {[
-          { id: 'overview', label: 'System Health', icon: CircleStackIcon, count: null },
-          { id: 'users', label: 'Users Directory', icon: UsersIcon, count: overview.users },
-          { id: 'redeem', label: 'Vouchers & Redeem', icon: TicketIcon, count: redeemData?.codes?.length || null },
-          { id: 'emails', label: 'Live Email Feed', icon: EnvelopeIcon, count: overview.emails },
-          { id: 'subdomains', label: 'Subdomains', icon: GlobeAltIcon, count: overview.subdomains },
-          { id: 'hosting', label: 'Cloud Sites & Nodes', icon: ServerStackIcon, count: overview.sites },
-          { id: 'security', label: 'Security Threats', icon: ShieldExclamationIcon, count: overview.threatsBlocked },
-          { id: 'broadcast', label: 'Broadcast', icon: MegaphoneIcon, count: null },
-          { id: 'logs', label: 'Audit Logs', icon: KeyIcon, count: null }
+          { id: 'overview', label: t('admin.tab_overview', 'System Health'), icon: CircleStackIcon, count: null },
+          { id: 'users', label: t('admin.tab_users', 'Users Directory'), icon: UsersIcon, count: overview.users },
+          { id: 'redeem', label: t('admin.tab_redeem', 'Vouchers & Redeem'), icon: TicketIcon, count: redeemData?.codes?.length || null },
+          { id: 'emails', label: t('admin.tab_emails', 'Live Email Feed'), icon: EnvelopeIcon, count: overview.emails },
+          { id: 'subdomains', label: t('admin.tab_subdomains', 'Subdomains'), icon: GlobeAltIcon, count: overview.subdomains },
+          { id: 'hosting', label: t('admin.tab_hosting', 'Cloud Sites & Nodes'), icon: ServerStackIcon, count: overview.sites },
+          { id: 'security', label: t('admin.tab_security', 'Security Threats'), icon: ShieldExclamationIcon, count: overview.threatsBlocked },
+          { id: 'broadcast', label: t('admin.tab_broadcast', 'Broadcast'), icon: MegaphoneIcon, count: null },
+          { id: 'logs', label: t('admin.tab_logs', 'Audit Logs'), icon: KeyIcon, count: null }
         ].map(item => {
           const Icon = item.icon;
           const active = tab === item.id;
@@ -541,29 +543,29 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="flex items-center justify-between text-gray-500">
-                <span className="text-xs font-semibold uppercase">Total Users</span>
+                <span className="text-xs font-semibold uppercase">{t('admin.stat_total_users', 'Total Users')}</span>
                 <UsersIcon className="h-4 w-4 text-indigo-500" />
               </div>
               <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
                 {overview.users || 0}
               </div>
-              <div className="text-[11px] text-green-600 mt-1 font-medium">Registered in Bot &amp; Web</div>
+              <div className="text-[11px] text-green-600 mt-1 font-medium">{t('admin.stat_registered_hint', 'Registered in Bot & Web')}</div>
             </div>
 
             <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="flex items-center justify-between text-gray-500">
-                <span className="text-xs font-semibold uppercase">Total Emails</span>
+                <span className="text-xs font-semibold uppercase">{t('admin.stat_total_emails', 'Total Emails')}</span>
                 <EnvelopeIcon className="h-4 w-4 text-sky-500" />
               </div>
               <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
                 {overview.emails || 0}
               </div>
-              <div className="text-[11px] text-gray-400 mt-1">Unread: {overview.unread || 0}</div>
+              <div className="text-[11px] text-gray-400 mt-1">{t('admin.stat_unread_count', 'Unread: {count}', { count: overview.unread || 0 })}</div>
             </div>
 
             <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="flex items-center justify-between text-gray-500">
-                <span className="text-xs font-semibold uppercase">Active Subdomains</span>
+                <span className="text-xs font-semibold uppercase">{t('admin.stat_active_subdomains', 'Active Subdomains')}</span>
                 <GlobeAltIcon className="h-4 w-4 text-emerald-500" />
               </div>
               <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
@@ -574,13 +576,13 @@ export default function AdminPage() {
 
             <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="flex items-center justify-between text-gray-500">
-                <span className="text-xs font-semibold uppercase">Threats Blocked</span>
+                <span className="text-xs font-semibold uppercase">{t('admin.stat_threats_blocked', 'Threats Blocked')}</span>
                 <ShieldExclamationIcon className="h-4 w-4 text-rose-500" />
               </div>
               <div className="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">
                 {overview.threatsBlocked || 0}
               </div>
-              <div className="text-[11px] text-rose-500 mt-1 font-medium">Zero-Tolerance Enforced</div>
+              <div className="text-[11px] text-rose-500 mt-1 font-medium">{t('admin.stat_auto_sanitized', 'Auto-mitigated by Shield')}</div>
             </div>
           </div>
 

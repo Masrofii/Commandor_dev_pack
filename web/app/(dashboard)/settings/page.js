@@ -78,10 +78,10 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            Settings &amp; Audit Logs
+            {t('settings.title', 'Settings & Audit Logs')}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Customize platform appearance, language preferences, sessions, and review immutable system audit logs.
+            {t('settings.subtitle', 'Customize platform appearance, language preferences, sessions, and review immutable system audit logs.')}
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function SettingsPage() {
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            Preferences &amp; Security
+            {t('settings.tab_preferences', 'Preferences & Security')}
           </button>
           <button
             onClick={() => setActiveTab('subscription')}
@@ -106,7 +106,7 @@ export default function SettingsPage() {
             }`}
           >
             <TicketIcon className="w-3.5 h-3.5" />
-            <span>Subscription &amp; Vouchers</span>
+            <span>{t('voucher.title', 'Subscription & Vouchers')}</span>
           </button>
           <button
             onClick={() => setActiveTab('logs')}
@@ -117,7 +117,7 @@ export default function SettingsPage() {
             }`}
           >
             <DocumentTextIcon className="w-3.5 h-3.5" />
-            <span>Audit Trail</span>
+            <span>{t('settings.tab_logs', 'Audit Trail')}</span>
           </button>
         </div>
       </div>
@@ -129,18 +129,18 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <SunIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
-                <span>Theme &amp; Visual Mode</span>
+                <span>{t('settings.theme_title', 'Theme & Visual Mode')}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Select your preferred color theme for Commandor Dev Pack
+                {t('settings.theme_desc', 'Select your preferred color theme for Commandor Dev Pack')}
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               {[
-                { id: 'light', label: 'Light', icon: SunIcon },
-                { id: 'dark', label: 'Dark (Cyber)', icon: MoonIcon },
-                { id: 'system', label: 'System Default', icon: ComputerDesktopIcon },
+                { id: 'light', label: t('settings.theme_light', 'Light'), icon: SunIcon },
+                { id: 'dark', label: t('settings.theme_dark', 'Dark (Cyber)'), icon: MoonIcon },
+                { id: 'system', label: t('settings.theme_system', 'System Default'), icon: ComputerDesktopIcon },
               ].map((item) => {
                 const Icon = item.icon;
                 const active = theme === item.id;
@@ -167,10 +167,10 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <LanguageIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
-                <span>Interface Language</span>
+                <span>{t('settings.language_title', 'Interface Language')}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Choose your display language across the dashboard
+                {t('settings.language_desc', 'Choose your display language across the dashboard')}
               </p>
             </div>
 

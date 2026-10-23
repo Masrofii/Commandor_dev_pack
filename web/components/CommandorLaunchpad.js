@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import {
   RocketLaunchIcon,
   CommandLineIcon,
@@ -37,6 +38,7 @@ const STEPS = [
 ];
 
 export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = null, onWorkflowCompleted }) {
+  const { t } = useTranslation();
   const [activeStep, setActiveStep] = useState(1);
   const [workflowId, setWorkflowId] = useState(null);
   const [executing, setExecuting] = useState(false);
@@ -756,8 +758,8 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
               disabled={executing}
               className="btn-secondary py-1.5 px-4 text-xs flex items-center gap-1"
             >
-              <ArrowLeftIcon className="w-3.5 h-3.5" />
-              <span>Back</span>
+              <ArrowLeftIcon className="w-3.5 h-3.5 rtl:rotate-180" />
+              <span>{t('common.cancel', 'Back')}</span>
             </button>
           ) : (
             <div />
@@ -770,15 +772,15 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                 disabled={executing || (activeStep === 7 && !confirmed)}
                 className="btn-primary py-2 px-5 text-xs font-semibold flex items-center gap-1.5"
               >
-                <span>{activeStep === 7 ? 'Execute Deployment' : 'Next Step'}</span>
-                <ArrowRightIcon className="w-3.5 h-3.5" />
+                <span>{activeStep === 7 ? t('hosting.deploy_btn', 'Execute Deployment') : t('common.next', 'Next Step')}</span>
+                <ArrowRightIcon className="w-3.5 h-3.5 rtl:rotate-180" />
               </button>
             ) : (
               <button
                 onClick={onClose}
                 className="btn-secondary py-1.5 px-5 text-xs font-semibold"
               >
-                Done
+                {t('common.done', 'Done')}
               </button>
             )}
           </div>

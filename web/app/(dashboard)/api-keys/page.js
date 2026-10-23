@@ -3,6 +3,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
+import { useTranslation } from '../../../lib/i18n';
 import {
   KeyIcon,
   PlusIcon,
@@ -23,6 +24,7 @@ const SCOPES = [
 ];
 
 export default function ApiKeysPage() {
+  const { t } = useTranslation();
   const { data, isLoading, mutate } = useSWR('api-keys', api.getApiKeys);
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState(['aliases:read', 'emails:read']);
@@ -70,10 +72,10 @@ export default function ApiKeysPage() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            API Keys
+            {t('api_keys.title', 'REST API Keys')}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Programmatically manage your email aliases and messages with secure tokens
+            {t('api_keys.subtitle', 'Programmatically manage your email aliases and messages with secure tokens')}
           </p>
         </div>
 
@@ -82,7 +84,7 @@ export default function ApiKeysPage() {
           className="btn-primary py-2 px-3.5 text-xs shadow-sm"
         >
           <PlusIcon className="w-4 h-4" />
-          <span>New API Key</span>
+          <span>{t('api_keys.generate_btn', 'New API Key')}</span>
         </button>
       </div>
 
@@ -177,12 +179,12 @@ export default function ApiKeysPage() {
       {/* Keys List */}
       <div className="card overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-400 text-xs">Loading API keys...</div>
+          <div className="p-8 text-center text-slate-400 text-xs">{t('common.loading', 'Loading API keys...')}</div>
         ) : (data?.keys || []).length === 0 ? (
           <div className="p-8 text-center">
             <KeyIcon className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
-            <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">No API keys created</h4>
-            <p className="text-xs text-slate-400 mt-1">Create an API key to access developer services, subdomains, hosting, and platform APIs via REST.</p>
+            <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">{t('apikeys.empty_title', 'No API keys created')}</h4>
+            <p className="text-xs text-slate-400 mt-1">{t('apikeys.empty_desc', 'Generate API keys with granular scopes to automate inbox monitoring and alias management.')}</p>
           </div>
         ) : (
           (data?.keys || []).map((k) => (

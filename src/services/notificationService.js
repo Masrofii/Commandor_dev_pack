@@ -57,17 +57,17 @@ async function notifyTelegram(tgId, email, alias) {
     const webUrl = config.server.webUrl ? `${config.server.webUrl}/inbox/${email.id}` : null;
     const actionRow = [];
     if (otp) {
-      actionRow.push({ text: `📋 Copy Code: ${otp}`, callback_data: `copy_code:${email.id}` });
+      actionRow.push({ text: `${t('bot.btn.copy_code', lang, '📋 Copy Code')}: ${otp}`, callback_data: `copy_code:${email.id}` });
     }
-    actionRow.push({ text: '📖 Read', callback_data: `read_email:${email.id}` });
-    actionRow.push({ text: '⭐ Star', callback_data: `star:${email.id}` });
-    actionRow.push({ text: '🗑 Delete', callback_data: `delete_email:${email.id}` });
+    actionRow.push({ text: t('bot.btn.read', lang, '📖 Read'), callback_data: `read_email:${email.id}` });
+    actionRow.push({ text: t('bot.btn.star', lang, '⭐ Star'), callback_data: `star:${email.id}` });
+    actionRow.push({ text: t('bot.btn.delete', lang, '🗑 Delete'), callback_data: `delete_email:${email.id}` });
 
     const navRow = [
-      { text: '📨 Go to Inbox', callback_data: 'inbox:1' }
+      { text: t('bot.btn.inbox', lang, '📨 Go to Inbox'), callback_data: 'inbox:1' }
     ];
     if (webUrl) {
-      navRow.push({ text: '🌐 Open Web', url: webUrl });
+      navRow.push({ text: t('bot.btn.web_dashboard', lang, '🌐 Open Web'), url: webUrl });
     }
 
     const keyboard = otp ? [actionRow.slice(0, 1), actionRow.slice(1), navRow] : [actionRow, navRow];

@@ -2,6 +2,7 @@
 import useSWR from 'swr';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import InfrastructureTopologyMap from '../../../components/InfrastructureTopologyMap';
 import {
   SignalIcon,
@@ -19,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function MonitoringPage() {
+  const { t } = useTranslation();
   const { data: overview, isLoading, mutate } = useSWR('monitoring-overview', () => api.getSystemOverview(), {
     refreshInterval: 10000
   });
@@ -39,10 +41,10 @@ export default function MonitoringPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
             <SignalIcon className="w-8 h-8 text-indigo-600 dark:text-cyan-400" />
-            <span>Infrastructure Monitoring &amp; Telemetry</span>
+            <span>{t('monitoring.title', 'Infrastructure Monitoring & Telemetry')}</span>
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time host metrics, cluster node availability, container health, and platform activity.
+            {t('monitoring.subtitle', 'Real-time host metrics, cluster node availability, container health, and platform activity.')}
           </p>
         </div>
 
@@ -51,7 +53,7 @@ export default function MonitoringPage() {
           className="btn-secondary py-1.5 px-3.5 text-xs font-semibold flex items-center gap-1.5 self-start"
         >
           <ArrowPathIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh Metrics</span>
+          <span>{t('monitoring.refresh_btn', 'Refresh Metrics')}</span>
         </button>
       </div>
 
@@ -87,7 +89,7 @@ export default function MonitoringPage() {
           <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
             <span className="flex items-center gap-1.5">
               <CpuChipIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
-              <span>CPU &amp; Load</span>
+              <span>{t('monitoring.cpu_usage', 'CPU Load')}</span>
             </span>
             <span className="font-mono text-[11px]">{host.cpuCount ? `${host.cpuCount} Cores` : '...'}</span>
           </div>
@@ -104,7 +106,7 @@ export default function MonitoringPage() {
           <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
             <span className="flex items-center gap-1.5">
               <CircleStackIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              <span>Host Memory</span>
+              <span>{t('monitoring.memory_usage', 'Memory Usage')}</span>
             </span>
             <span className="font-mono text-[11px]">{host.memory?.usagePercent || 0}% used</span>
           </div>
@@ -124,7 +126,7 @@ export default function MonitoringPage() {
           <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
             <span className="flex items-center gap-1.5">
               <ServerStackIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Host Disk (/)</span>
+              <span>{t('monitoring.storage_usage', 'Disk Storage')}</span>
             </span>
             <span className="font-mono text-[11px]">{host.disk?.usagePercent || 0}% used</span>
           </div>

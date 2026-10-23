@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   PlusIcon,
   FireIcon,
@@ -23,6 +24,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function AliasesPage() {
+  const { t } = useTranslation();
   const { data, isLoading, mutate } = useSWR('aliases-list', () => api.getAliases({ limit: 150 }));
   const { data: domainsData } = useSWR('domains-list', () => api.getDomains());
 
@@ -148,10 +150,10 @@ export default function AliasesPage() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            Email Aliases
+            {t('aliases.title', 'Email Aliases')}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Create, manage, and monitor your private temporary and custom email addresses
+            {t('aliases.subtitle', 'Create, manage, and monitor your private temporary and custom email addresses')}
           </p>
         </div>
 
@@ -162,7 +164,7 @@ export default function AliasesPage() {
             className="btn bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs py-2 px-3.5 shadow-sm font-semibold"
           >
             <FireIcon className="w-4 h-4 text-rose-500" />
-            <span>1-Hour Burner</span>
+            <span>{t('nav.burner_quick', '1-Hour Burner')}</span>
           </button>
 
           <button
@@ -170,7 +172,7 @@ export default function AliasesPage() {
             className="btn-primary py-2 px-3.5 text-xs shadow-sm font-semibold"
           >
             <PlusIcon className="w-4 h-4" />
-            <span>New Alias</span>
+            <span>{t('aliases.new_btn', 'New Alias')}</span>
           </button>
         </div>
       </div>
@@ -318,7 +320,7 @@ export default function AliasesPage() {
           <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search address or tag..."
+            placeholder={t('aliases.search_placeholder', 'Search aliases by address or label...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="input pl-9 text-xs py-2 bg-white dark:bg-cyber-900"
@@ -338,26 +340,26 @@ export default function AliasesPage() {
       {selected.size > 0 && (
         <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-cyber-850 border border-indigo-100 dark:border-cyber-700 flex items-center justify-between text-xs animate-fade-in shadow-sm">
           <span className="font-semibold text-indigo-900 dark:text-cyan-300">
-            {selected.size} alias(es) selected
+            {selected.size} {t('aliases.title', 'alias(es)')}
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleBulkAction('activate')}
               className="btn bg-white dark:bg-cyber-900 text-slate-700 dark:text-slate-200 py-1 px-3 text-xs border border-slate-200 dark:border-cyber-700 font-semibold"
             >
-              Activate
+              {t('common.status_active', 'Activate')}
             </button>
             <button
               onClick={() => handleBulkAction('deactivate')}
               className="btn bg-white dark:bg-cyber-900 text-slate-700 dark:text-slate-200 py-1 px-3 text-xs border border-slate-200 dark:border-cyber-700 font-semibold"
             >
-              Pause
+              {t('common.status_inactive', 'Pause')}
             </button>
             <button
               onClick={() => handleBulkAction('delete')}
               className="btn bg-rose-600 text-white py-1 px-3 text-xs font-semibold"
             >
-              Delete
+              {t('common.delete', 'Delete')}
             </button>
             <button
               onClick={() => setSelected(new Set())}
@@ -388,13 +390,13 @@ export default function AliasesPage() {
               ✉️
             </div>
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-              No aliases found
+              {search ? t('common.no_results', 'No aliases found') : t('aliases.empty_title', 'No aliases generated yet')}
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {search ? `No aliases matched "${search}"` : 'Create your first email alias or 1-hour burner address to get started.'}
+              {search ? t('common.no_results', `No aliases matched "${search}"`) : t('aliases.empty_desc', 'Generate instant disposable addresses or create branded aliases with your custom subdomains.')}
             </p>
             <button onClick={() => setShowCreate(true)} className="btn-primary py-2 px-4 text-xs font-semibold">
-              Generate New Alias
+              {t('aliases.create_first', 'Generate First Alias')}
             </button>
           </div>
         ) : (

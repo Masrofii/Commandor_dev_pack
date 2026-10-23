@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import CommandorLaunchpad from '../../../components/CommandorLaunchpad';
 import SubdomainTemplates from '../../../components/SubdomainTemplates';
 import {
@@ -27,6 +28,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function ApplicationsPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('apps'); // 'apps' | 'templates'
   const { data: appsData, isLoading, mutate } = useSWR('apps-list', () => api.getApplications());
   const { data: nodesData } = useSWR('apps-nodes', () => api.getHostingNodes());
@@ -215,10 +217,10 @@ export default function ApplicationsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
             <CommandLineIcon className="w-8 h-8 text-indigo-600 dark:text-cyan-400" />
-            <span>Applications &amp; Deployments</span>
+            <span>{t('apps.title', 'Applications & Deployments')}</span>
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Git-backed developer services, automated reverse-proxy ingress, release history, and rollback engine.
+            {t('apps.subtitle', 'Git-backed developer services, automated reverse-proxy ingress, release history, and rollback engine.')}
           </p>
         </div>
 
@@ -231,7 +233,7 @@ export default function ApplicationsPage() {
             className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-1.5 shadow-md bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white"
           >
             <RocketLaunchIcon className="w-4 h-4" />
-            <span>Commandor Launchpad</span>
+            <span>{t('launchpad.title', 'Commandor Launchpad')}</span>
           </button>
 
           <button
@@ -239,7 +241,7 @@ export default function ApplicationsPage() {
             className="btn-secondary py-2 px-3 text-xs font-semibold flex items-center gap-1"
           >
             <PlusIcon className="w-4 h-4" />
-            <span>Custom App</span>
+            <span>{t('apps.deploy_btn', 'Deploy Application')}</span>
           </button>
         </div>
       </div>
@@ -255,7 +257,7 @@ export default function ApplicationsPage() {
           }`}
         >
           <CommandLineIcon className="w-4 h-4" />
-          <span>Active Applications ({applications.length})</span>
+          <span>{t('apps.running_apps', 'Active Applications')} ({applications.length})</span>
         </button>
 
         <button
@@ -267,7 +269,7 @@ export default function ApplicationsPage() {
           }`}
         >
           <Square3Stack3DIcon className="w-4 h-4" />
-          <span>Service Blueprints &amp; Templates</span>
+          <span>{t('templates.title', 'Service Blueprints & Templates')}</span>
         </button>
       </div>
 
@@ -298,9 +300,9 @@ export default function ApplicationsPage() {
               <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
                 🚀
               </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">No applications deployed yet</h3>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">{t('apps.empty_title', 'No applications deployed yet')}</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Use the Commandor Launchpad to guide you through creating a Git repository service, mapping it to a custom subdomain, and deploying with zero downtime.
+                {t('apps.empty_desc', 'Use the Commandor Launchpad to guide you through creating a Git repository service, mapping it to a custom subdomain, and deploying with zero downtime.')}
               </p>
               <button
                 onClick={() => {
@@ -310,7 +312,7 @@ export default function ApplicationsPage() {
                 className="btn-primary py-2.5 px-6 text-xs font-semibold shadow-md inline-flex items-center gap-2"
               >
                 <RocketLaunchIcon className="w-4 h-4" />
-                <span>Open Commandor Launchpad</span>
+                <span>{t('apps.open_launchpad', 'Open Commandor Launchpad')}</span>
               </button>
             </div>
           ) : (
