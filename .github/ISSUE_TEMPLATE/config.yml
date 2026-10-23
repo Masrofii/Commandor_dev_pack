@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🛡️ Security Vulnerability Reporting
+    url: https://github.com/Masrofii/Commandor_dev_pack/security/advisories
+    about: Please privately report security vulnerabilities through GitHub Security Advisories.
+  - name: 🤖 Official Telegram Bot
+    url: https://t.me/CommandorDevBot
+    about: Test the official Commandor Dev Pack bot live on Telegram.
+  - name: 📖 Platform Documentation
+    url: https://github.com/Masrofii/Commandor_dev_pack#readme
+    about: Consult the full architecture overview, API reference, and deployment guide.

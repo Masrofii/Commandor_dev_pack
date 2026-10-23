@@ -2,6 +2,7 @@
   "name": "commandor-dev-pack",
   "version": "1.0.0",
   "description": "Commandor Dev Pack — Modern Self-Hosted Infrastructure, Domain & Developer Management Platform",
+  "license": "MIT",
   "author": "xpT_T (@xpT_T)",
   "main": "server.js",
   "scripts": {

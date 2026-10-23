@@ -1,0 +1,74 @@
+name: 💡 Feature Request
+description: Propose an idea, architectural enhancement, or new capability for Commandor Dev Pack
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please provide clear rationale, user context, and architectural considerations.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A concise overview of the proposed feature or capability.
+      placeholder: Describe the feature you would like to see added...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Being Solved
+      description: What challenge or workflow limitation does this proposal address?
+      placeholder: I am always frustrated when... / As an administrator managing multi-node clusters, I need...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work? Include architecture, endpoints, or UI ideas if known.
+      placeholder: Describe your ideal implementation...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which area of the platform will this feature impact?
+      options:
+        - "Web Dashboard (Next.js 14 / UI)"
+        - "Telegram Bot (Interactive Hubs / Commands)"
+        - "Core API & Service Architecture"
+        - "Subdomain Wizard & Routing Engine"
+        - "Reverse Proxy & Nginx Automation"
+        - "VPS Node Management & Compute Fleet"
+        - "DNS Provider Engine (Cloudflare / Custom DNS)"
+        - "Database, Migrations & Backup Engine"
+        - "Localization & Multilingual Framework"
+        - "Developer Experience / CLI Tooling"
+        - "Other / Cross-Cutting"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative workarounds or solutions?
+      placeholder: A clear description of any alternative solutions you've evaluated...
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any relevant mockups, diagrams, terminal outputs, or references here.
+      placeholder: Screenshots, flowcharts, or documentation references...
+    validations:
+      required: false

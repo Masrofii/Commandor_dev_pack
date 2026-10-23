@@ -194,6 +194,17 @@ pm2 start ecosystem.config.js
 
 ---
 
+## 🤝 Community & Contributing
+
+We welcome community contributions! Please review our community guidelines before submitting code:
+
+- **[Contributing Guide](CONTRIBUTING.md)**: Development prerequisites, setup guide, branch naming conventions, localization rules, and testing standards.
+- **[Code of Conduct](CODE_OF_CONDUCT.md)**: Standards for a respectful, inclusive, and welcoming community.
+- **[Security Policy](SECURITY.md)**: Vulnerability disclosure guidelines, supported release branches, and safe reporting procedures.
+- **[Accessibility Statement](ACCESSIBILITY.md)**: Keyboard accessibility, screen-reader support, color contrast, and RTL layout design.
+
+---
+
 ## 👑 Credits & Attribution
 
 - **Project Owner & Creator**: [@xpT_T](https://t.me/xpT_T)

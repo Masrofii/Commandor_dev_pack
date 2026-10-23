@@ -1,0 +1,109 @@
+name: 🐛 Bug Report
+description: File a bug report to help identify and fix issues in Commandor Dev Pack
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please provide as much detailed, reproducible information as possible.
+        **Do not report security vulnerabilities here.** Please see [SECURITY.md](https://github.com/Masrofii/Commandor_dev_pack/blob/main/SECURITY.md) for private disclosure instructions.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Bug Summary
+      description: A clear and concise description of the bug.
+      placeholder: Describe what happened unexpectedly...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which part of the Commandor Dev Pack platform is experiencing this issue?
+      options:
+        - "Web Dashboard (Next.js 14 / UI)"
+        - "Telegram Bot (Commands / Keyboards / Notifications)"
+        - "Core API & Services (Node.js / Express)"
+        - "Subdomain Wizard & Routing Engine"
+        - "Reverse Proxy & Nginx Configuration"
+        - "VPS Node Management & SSH Engine"
+        - "DNS Provider Integration (Cloudflare / Manual)"
+        - "Database, Migrations & Backup Engine"
+        - "Localization / Internationalization (i18n)"
+        - "Deployment & Docker / PM2 Setup"
+        - "Other / Unsure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: What should have happened instead...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually occurred?
+      placeholder: What occurred instead, including any error messages...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment & Software Versions
+      description: Please share details about your installation environment.
+      value: |
+        - Commandor Dev Pack Version: 1.0.0
+        - Node.js Version (`node -v`): 
+        - Operating System (`uname -a` or OS version): 
+        - Database Mode: SQLite WAL
+        - Deployment Mode: PM2 / Docker / Direct Node
+        - Browser & Version (if Web UI): 
+        - Telegram Client (if Bot): 
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Sanitized Logs
+      description: |
+        Paste relevant log output or error stack traces.
+        ⚠️ **CRITICAL: Strip all private keys, passwords, bot tokens, and user personal data before submitting.**
+      render: shell
+      placeholder: |
+        [error] Error stack trace or log excerpt here...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: hygiene_confirmation
+    attributes:
+      label: Security & Privacy Confirmation
+      options:
+        - label: I confirm that I have removed all passwords, tokens, private keys, customer emails, and sensitive credentials from this report.
+          required: true
+        - label: I have verified that this is not a duplicate of an existing issue.
+          required: true
