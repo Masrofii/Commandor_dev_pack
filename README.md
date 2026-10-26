@@ -214,6 +214,7 @@ We welcome community contributions! Please review our community guidelines befor
 - **GitHub Repository**: [Masrofii/Commandor_dev_pack](https://github.com/Masrofii/Commandor_dev_pack)
 
 Special thanks to **@xpT_T** for stewardship, product design, and architectural vision of the Commandor platform.
+
 Special thanks also to **fut0r** for contributing and fixing bugs.
 
 ---
