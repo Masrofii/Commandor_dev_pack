@@ -2,6 +2,7 @@
 const { getDb } = require('../../database/database');
 const { generateNginxVhost, validateNginxConfigSyntax, sanitizeServerName } = require('./reverseProxyService');
 const { detectConflicts } = require('./dns/DnsManager');
+const { getPlatformBaseDomains } = require('./subdomainService');
 const logger = require('../monitoring/logger');
 const { logChange } = require('./auditLogger');
 
@@ -227,7 +228,7 @@ function deleteTemplate(id, userTgId = null) {
 function previewTemplateApplication({
   templateKey,
   subdomain,
-  baseDomain = 'commandor.my.id',
+  baseDomain = null,
   targetHost = '127.0.0.1',
   targetPort = null,
   enableHttps = false
@@ -235,8 +236,13 @@ function previewTemplateApplication({
   const tpl = getTemplateByKey(templateKey);
   if (!tpl) throw new Error(`Template "${templateKey}" not found`);
 
+  const resolvedBaseDomain = baseDomain || getPlatformBaseDomains()[0];
+  if (!resolvedBaseDomain) {
+    throw new Error('No base domain is configured. Set DOMAINS or verify a custom domain first.');
+  }
+
   const cleanSub = sanitizeServerName(subdomain);
-  const cleanBase = sanitizeServerName(baseDomain);
+  const cleanBase = sanitizeServerName(resolvedBaseDomain);
   const fullDomain = `${cleanSub}.${cleanBase}`;
 
   const cleanHost = String(targetHost).trim().replace(/^https?:\/\//, '') || '127.0.0.1';

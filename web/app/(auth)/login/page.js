@@ -17,13 +17,18 @@ function LoginForm() {
   const [totp, setTotp] = useState('');
   const [pending, setPending] = useState(null);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [authConfig, setAuthConfig] = useState(null);
+  const [localUsername, setLocalUsername] = useState('');
+  const [localPassword, setLocalPassword] = useState('');
 
-  const [botUsername, setBotUsername] = useState(process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot');
+  const [botUsername, setBotUsername] = useState(process.env.NEXT_PUBLIC_BOT_USERNAME || '');
 
   useEffect(() => {
     api.getAuthConfig().then(res => {
+      setAuthConfig(res || {});
       if (res?.botUsername) setBotUsername(res.botUsername);
-    }).catch(() => {});
+      if (res?.localAuthUsername) setLocalUsername(res.localAuthUsername);
+    }).catch(() => setAuthConfig({ telegramEnabled: true, localAuthEnabled: false }));
   }, []);
 
   useEffect(() => {
@@ -38,10 +43,30 @@ function LoginForm() {
       return;
     }
 
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp?.initData) {
+    if (authConfig?.telegramEnabled && typeof window !== 'undefined' && window.Telegram?.WebApp?.initData) {
       handleTelegramLogin(window.Telegram.WebApp.initData);
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, authConfig]);
+
+  async function handleLocalLogin(e) {
+    e.preventDefault();
+    if (!localUsername.trim() || !localPassword) return;
+    setLoading(true);
+    setError('');
+    setStatusMessage(t('login.authenticating', 'Authenticating...'));
+    try {
+      const r = await api.loginWithLocal(localUsername.trim(), localPassword);
+      saveToken(r.token);
+      saveUser(r.user);
+      if (r.user?.language) applyLanguage(r.user.language);
+      setStatusMessage(t('login.success', 'Success! Redirecting...'));
+      router.replace('/');
+    } catch (err) {
+      setError(err.message || t('login.error_generic', 'An error occurred during authentication.'));
+      setLoading(false);
+      setStatusMessage('');
+    }
+  }
 
   async function handleTokenLogin(tok) {
     if (!tok || !tok.trim()) return;
@@ -157,50 +182,121 @@ function LoginForm() {
 
       {!show2fa ? (
         <div className="space-y-5">
-          <a
-            href={`https://t.me/${botUsername}?start=login`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary w-full block text-center py-3 text-base shadow-sm hover:shadow transition-all"
-          >
-            🤖 {t('login.telegram_btn', 'Log In with Telegram WebApp')}
-          </a>
+          {authConfig === null ? (
+            <div className="py-6 text-xs text-slate-400 animate-pulse">
+              {t('common.loading', 'Loading sign-in options...')}
+            </div>
+          ) : (
+            <>
+              {authConfig.localAuthEnabled && (
+                <form onSubmit={handleLocalLogin} className="space-y-3 text-left">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      {t('login.local_username', 'Username')}
+                    </label>
+                    <input
+                      type="text"
+                      value={localUsername}
+                      onChange={e => setLocalUsername(e.target.value)}
+                      autoComplete="username"
+                      placeholder={t('login.local_username_placeholder', 'Local administrator username')}
+                      className="input text-sm"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      {t('login.local_password', 'Password')}
+                    </label>
+                    <input
+                      type="password"
+                      value={localPassword}
+                      onChange={e => setLocalPassword(e.target.value)}
+                      autoComplete="current-password"
+                      placeholder={t('login.local_password_placeholder', 'Enter your password')}
+                      className="input text-sm"
+                      disabled={loading}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || !localUsername.trim() || !localPassword}
+                    className="btn-primary w-full py-2.5 text-sm"
+                  >
+                    {loading ? t('common.loading', 'Signing in...') : t('login.local_signin_btn', 'Sign In')}
+                  </button>
+                </form>
+              )}
 
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-            <span className="flex-shrink mx-4 text-xs uppercase tracking-wider text-slate-400">
-              {t('common.or', 'or enter token')}
-            </span>
-            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-          </div>
+              {authConfig.telegramEnabled && (
+                <>
+                  {authConfig.localAuthEnabled && (
+                    <div className="relative flex py-2 items-center">
+                      <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                      <span className="flex-shrink mx-4 text-xs uppercase tracking-wider text-slate-400">
+                        {t('common.or', 'or')}
+                      </span>
+                      <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                    </div>
+                  )}
 
-          <form
-            onSubmit={e => {
-              e.preventDefault();
-              handleTokenLogin(tokenInput);
-            }}
-            className="space-y-3"
-          >
-            <input
-              type="text"
-              value={tokenInput}
-              onChange={e => setTokenInput(e.target.value)}
-              placeholder={t('login.token_placeholder', 'Paste login token from /login command')}
-              className="input text-center text-sm"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={loading || !tokenInput.trim()}
-              className="btn-secondary w-full py-2.5 text-sm"
-            >
-              {loading ? t('common.loading', 'Verifying...') : t('login.signin_btn', 'Sign In with Token')}
-            </button>
-          </form>
+                  <a
+                    href={`https://t.me/${botUsername}?start=login`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary w-full block text-center py-3 text-base shadow-sm hover:shadow transition-all"
+                  >
+                    🤖 {t('login.telegram_btn', 'Log In with Telegram WebApp')}
+                  </a>
 
-          <p className="text-xs text-slate-400 mt-4">
-            {t('login.help_hint', 'Type /login in Telegram to get an instant access link.')}
-          </p>
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                    <span className="flex-shrink mx-4 text-xs uppercase tracking-wider text-slate-400">
+                      {t('common.or', 'or enter token')}
+                    </span>
+                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                  </div>
+
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      handleTokenLogin(tokenInput);
+                    }}
+                    className="space-y-3"
+                  >
+                    <input
+                      type="text"
+                      value={tokenInput}
+                      onChange={e => setTokenInput(e.target.value)}
+                      placeholder={t('login.token_placeholder', 'Paste login token from /login command')}
+                      className="input text-center text-sm"
+                      disabled={loading}
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !tokenInput.trim()}
+                      className="btn-secondary w-full py-2.5 text-sm"
+                    >
+                      {loading ? t('common.loading', 'Verifying...') : t('login.signin_btn', 'Sign In with Token')}
+                    </button>
+                  </form>
+
+                  <p className="text-xs text-slate-400 mt-4">
+                    {t('login.help_hint', 'Type /login in Telegram to get an instant access link.')}
+                  </p>
+                </>
+              )}
+
+              {!authConfig.localAuthEnabled && !authConfig.telegramEnabled && (
+                <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-sm">
+                  {t(
+                    'login.no_methods',
+                    'No sign-in method is configured. Set LOCAL_ADMIN_PASSWORD (and restart) or configure TELEGRAM_BOT_TOKEN.'
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <form

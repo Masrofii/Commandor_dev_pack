@@ -42,6 +42,7 @@ export default function HostingPage() {
   );
   const { data: plansData } = useSWR('hosting-plans', api.getHostingPlans);
   const { data: limitsData } = useSWR('hosting-limits', api.getHostingLimits);
+  const { data: basesData } = useSWR('subdomain-bases', api.getSubdomainBases);
   const { data: logsData } = useSWR(
     adminUser ? 'hosting-logs' : null,
     () => api.getHostingSecurityLogs({ limit: 20 })
@@ -50,6 +51,7 @@ export default function HostingPage() {
   const sites = sitesData?.sites || [];
   const nodes = nodesData?.nodes || [];
   const plans = plansData?.plans || [];
+  const hostingBaseDomain = basesData?.defaultDomain || basesData?.baseDomains?.[0] || '';
   const limits = limitsData || { canCreate: true, plan: { name: 'Free Tier', max_sites: 1 } };
   const logs = logsData?.logs || [];
 
@@ -558,7 +560,7 @@ export default function HostingPage() {
                     className="flex-1 px-3 py-2 bg-transparent text-sm outline-none font-mono"
                   />
                   <span className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-xs font-mono text-gray-500 border-l border-gray-300 dark:border-gray-600 flex items-center">
-                    .commandor.my.id
+                    .{hostingBaseDomain || 'configure-domain'}
                   </span>
                 </div>
               </div>

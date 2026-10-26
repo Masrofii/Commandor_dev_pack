@@ -15,6 +15,7 @@ const{incomingEmailLimiter}=require('../middleware/rateLimit');
 const config=require('../../config/config');
 const logger=require('../monitoring/logger');
 const{increment}=require('../monitoring/metrics');
+const{assertSafeOutboundUrl}=require('../utils/ssrfGuard');
 const crypto=require('crypto');
 function validateSecret(req,res,next){const s=req.headers['x-incoming-secret']||req.headers['authorization']?.replace('Bearer ','');if(!config.incoming.secret){logger.error('INCOMING_SECRET not configured');return res.status(500).json({error:'Server configuration error'});}try{const exp=Buffer.from(config.incoming.secret);const prov=Buffer.from(s||'');if(prov.length!==exp.length||!crypto.timingSafeEqual(exp,prov)){logger.warn({ip:req.ip},'Invalid incoming secret');increment('emailsRejected');return res.status(401).json({error:'Unauthorized'});}}catch{return res.status(401).json({error:'Unauthorized'});}next();}
 router.post('/',incomingEmailLimiter,validateSecret,async(req,res)=>{
@@ -81,12 +82,16 @@ router.post('/',incomingEmailLimiter,validateSecret,async(req,res)=>{
       if(alias.forward_to&&alias.forward_verified)await forwardEmail(emailRecord,alias.forward_to);
       if(shouldAutoReply(alias,parsedEmail.sender))await sendAutoReply(alias,parsedEmail);
       if(matchedSubdomain?.email_webhook_url){
-        fetch(matchedSubdomain.email_webhook_url,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','User-Agent':'CommandorDevPack-Subdomain/1.0'},
-          body:JSON.stringify({event:'email.received',subdomain:matchedSubdomain.subdomain,fullDomain:matchedSubdomain.full_domain,recipient:dest,sender:emailRecord.sender,subject:emailRecord.subject,textBody:emailRecord.text_body,htmlBody:emailRecord.html_body,receivedAt:emailRecord.received_at}),
-          signal:AbortSignal.timeout(5000)
-        }).catch(e=>logger.warn({err:e.message},'Subdomain webhook failed'));
+        try{
+          await assertSafeOutboundUrl(matchedSubdomain.email_webhook_url,{label:'Subdomain webhook URL'});
+          await fetch(matchedSubdomain.email_webhook_url,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','User-Agent':'CommandorDevPack-Subdomain/1.0'},
+            body:JSON.stringify({event:'email.received',subdomain:matchedSubdomain.subdomain,fullDomain:matchedSubdomain.full_domain,recipient:dest,sender:emailRecord.sender,subject:emailRecord.subject,textBody:emailRecord.text_body,htmlBody:emailRecord.html_body,receivedAt:emailRecord.received_at}),
+            redirect:'error',
+            signal:AbortSignal.timeout(5000)
+          });
+        }catch(e){logger.warn({err:e.message,subdomain:matchedSubdomain.full_domain},'Subdomain webhook blocked or failed');}
       }
     }catch(err){logger.error({err:err.message,emailId:emailRecord.id},'Background processing error');}});
   }catch(err){logger.error({err:err.message},'Incoming email processing error');increment('emailsRejected');res.status(500).json({error:'Processing error'});}

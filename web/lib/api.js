@@ -35,6 +35,7 @@ async function apiFetch(path, opts = {}) {
 export const api = {
   getAuthConfig: () => apiFetch('/api/auth/config'),
   loginWithToken: (token) => apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ token }) }),
+  loginWithLocal: (username, password) => apiFetch('/api/auth/local/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   loginWithTelegram: (i, t) => apiFetch('/api/auth/telegram', { method: 'POST', body: JSON.stringify({ initData: i, totpToken: t }) }),
   logout: () => apiFetch('/api/auth/logout', { method: 'POST' }),
   updateProfile: (d) => apiFetch('/api/auth/profile', { method: 'PATCH', body: JSON.stringify(d) }),
@@ -89,7 +90,10 @@ export const api = {
   deleteDomain: (id) => apiFetch(`/api/domains/${id}`, { method: 'DELETE' }),
   startExport: (format, filters) => apiFetch('/api/export', { method: 'POST', body: JSON.stringify({ format, filters }) }),
   getExportJob: (id) => apiFetch(`/api/export/${id}`),
-  getExportDownloadUrl: (id) => `${API_URL}/api/export/${id}/download`,
+  getExportDownloadUrl: (id) => {
+    const token = getToken();
+    return `${API_URL}/api/export/${id}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
   getAutomations: () => apiFetch('/api/automations'),
   createAutomation: (d) => apiFetch('/api/automations', { method: 'POST', body: JSON.stringify(d) }),
   deleteAutomation: (id) => apiFetch(`/api/automations/${id}`, { method: 'DELETE' }),
@@ -156,6 +160,7 @@ export const api = {
   rollbackApplication: (id, deploymentId) => apiFetch(`/api/applications/${id}/rollback`, { method: 'POST', body: JSON.stringify({ deployment_id: deploymentId }) }),
   controlApplication: (id, action) => apiFetch(`/api/applications/${id}/control`, { method: 'POST', body: JSON.stringify({ action }) }),
   getApplicationHealth: (id) => apiFetch(`/api/applications/${id}/health`),
+  getApplicationLogs: (id, maxBytes) => apiFetch(`/api/applications/${id}/logs${maxBytes ? `?maxBytes=${encodeURIComponent(maxBytes)}` : ''}`),
   deleteApplication: (id) => apiFetch(`/api/applications/${id}`, { method: 'DELETE' }),
 
   // Subdomain & Service Templates
@@ -186,6 +191,8 @@ export const api = {
   verifyBackup: (id) => apiFetch(`/api/backups/${id}/verify`, { method: 'POST' }),
   testRestoreBackup: (id) => apiFetch(`/api/backups/${id}/test-restore`, { method: 'POST' }),
   restoreBackup: (id, confirmation_accepted = true) => apiFetch(`/api/backups/${id}/restore`, { method: 'POST', body: JSON.stringify({ confirmation_accepted }) }),
+  deleteBackup: (id, force = false) => apiFetch(`/api/backups/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }),
+  pruneBackups: () => apiFetch('/api/backups/prune', { method: 'POST' }),
   getBackupDownloadUrl: (id) => {
     const token = getToken();
     return `${API_URL}/api/backups/${id}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;

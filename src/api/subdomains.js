@@ -23,8 +23,63 @@ const {
 } = require('../services/subdomainWizardService');
 const { createAlias, getUserAliases } = require('../services/aliasService');
 const { getDb } = require('../../database/database');
+const config = require('../../config/config');
+const { assertSafeOutboundUrl } = require('../utils/ssrfGuard');
 
 router.use(requireAuthOrApiKey(['subdomains:manage']));
+
+function isAdminRequest(req) {
+  return req.user?.role === 'admin' ||
+    Boolean(config.telegram?.adminId && String(req.tgId) === String(config.telegram.adminId));
+}
+
+function getWizardOptions(body = {}) {
+  const destinationTarget = body.destination_target !== undefined
+    ? body.destination_target
+    : (body.web_target !== undefined
+      ? body.web_target
+      : (body.target_url !== undefined ? body.target_url : body.internal_port));
+
+  return {
+    subdomain: body.subdomain,
+    baseDomain: body.base_domain,
+    destinationType: body.destination_type !== undefined ? body.destination_type : body.web_mode,
+    destinationTarget,
+    dnsContent: body.dns_content !== undefined ? body.dns_content : null,
+    nodeId: body.node_id !== undefined ? body.node_id : body.destination_node_id,
+    applicationId: body.application_id,
+    enableDns: body.enable_dns !== false,
+    recordType: body.dns_record_type || body.record_type || 'A',
+    enableProxy: body.enable_proxy !== false,
+    enableHttps: body.enable_https === true || body.enable_https === 'true',
+    enableWebsocket: body.enable_websocket !== false,
+    securityHeaders: body.security_headers === true || body.security_headers === 'true',
+    forceHttpsRedirect: body.force_https_redirect !== false,
+    webCustomBody: body.web_custom_body !== undefined ? body.web_custom_body : body.static_body,
+    webCustomContentType: body.web_custom_content_type,
+    emailCatchAll: body.email_catch_all !== false,
+    confirmationAccepted: body.confirmation_accepted === true || body.confirmation_accepted === 'true'
+  };
+}
+
+function getAccessibleSubdomain(req, id) {
+  return getSubdomainById(id, isAdminRequest(req) ? null : req.tgId);
+}
+
+async function validateUpdatePayload(body) {
+  if (body?.email_webhook_url) {
+    await assertSafeOutboundUrl(body.email_webhook_url, { label: 'Email webhook URL' });
+  }
+  // The legacy claim/update API can store a proxy target that the built-in
+  // edge router forwards to. Loopback is allowed for local applications, but
+  // link-local metadata and private network ranges are not.
+  if (typeof body?.web_target === 'string' && /^https?:\/\//i.test(body.web_target.trim())) {
+    await assertSafeOutboundUrl(body.web_target.trim(), {
+      label: 'Web target',
+      allowLoopback: true
+    });
+  }
+}
 
 // List all claimed subdomains for the authenticated user
 router.get('/', async (req, res) => {
@@ -44,12 +99,15 @@ router.get('/', async (req, res) => {
 // List available parent base domains and server DNS IP for subdomain creation
 router.get('/bases', (req, res) => {
   try {
-    const bases = getAvailableBaseDomains(req.tgId);
-    const defaultDomain = config.domains?.defaultDomain || (bases[0] || 'commandor.my.id');
+    const isAdmin = isAdminRequest(req);
+    const bases = getAvailableBaseDomains(req.tgId, isAdmin);
+    const defaultDomain = config.domains?.defaultDomain || bases[0] || null;
     res.json({
       defaultDomain,
       baseDomains: bases,
-      serverIp: '74.248.38.38'
+      serverIp: config.server.publicIp,
+      proxyMode: config.proxy?.mode || 'auto',
+      ready: bases.length > 0
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -60,8 +118,8 @@ router.get('/bases', (req, res) => {
 router.get('/check/:name', (req, res) => {
   const name = req.params.name;
   try {
-    const clean = validateSubdomainName(name, req.user?.role === 'admin');
-    const bases = getAvailableBaseDomains(req.tgId);
+    const clean = validateSubdomainName(name, isAdminRequest(req));
+    const bases = getAvailableBaseDomains(req.tgId, isAdminRequest(req));
     const db = getDb();
     const results = bases.map(base => {
       const full = `${clean}.${base}`.toLowerCase();
@@ -99,6 +157,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'subdomain is required' });
     }
 
+    if (email_webhook_url) {
+      await assertSafeOutboundUrl(email_webhook_url, { label: 'Email webhook URL' });
+    }
+    if (typeof web_target === 'string' && /^https?:\/\//i.test(web_target.trim())) {
+      await assertSafeOutboundUrl(web_target.trim(), {
+        label: 'Web target',
+        allowLoopback: true
+      });
+    }
+
     const record = claimSubdomain({
       tgId: req.tgId,
       subdomain,
@@ -124,7 +192,7 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const sub = getSubdomainById(id, req.tgId);
+    const sub = getAccessibleSubdomain(req, id);
     if (!sub) return res.status(404).json({ error: 'Subdomain not found' });
     res.json(sub);
   } catch (err) {
@@ -136,6 +204,7 @@ router.get('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
+    await validateUpdatePayload(req.body);
     const updated = updateSubdomain(id, req.tgId, req.body);
     res.json(updated);
   } catch (err) {
@@ -147,6 +216,7 @@ router.patch('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
+    await validateUpdatePayload(req.body);
     const updated = updateSubdomain(id, req.tgId, req.body);
     res.json(updated);
   } catch (err) {
@@ -162,7 +232,9 @@ router.post('/wizard/validate', (req, res) => {
     const { subdomain, base_domain } = req.body;
     const result = validateSubdomainStep({
       subdomain,
-      baseDomain: base_domain
+      baseDomain: base_domain,
+      tgId: req.tgId,
+      isAdmin: isAdminRequest(req)
     });
     res.json(result);
   } catch (err) {
@@ -173,30 +245,10 @@ router.post('/wizard/validate', (req, res) => {
 // Steps 4-6: Preview planned DNS, proxy, and TLS changes
 router.post('/wizard/preview', async (req, res) => {
   try {
-    const {
-      subdomain,
-      base_domain,
-      destination_type,
-      destination_target,
-      node_id,
-      application_id,
-      enable_dns,
-      record_type,
-      enable_proxy,
-      enable_https
-    } = req.body;
-
     const preview = await previewSubdomainWizard({
-      subdomain,
-      baseDomain: base_domain,
-      destinationType: destination_type,
-      destinationTarget: destination_target,
-      nodeId: node_id,
-      applicationId: application_id,
-      enableDns: enable_dns !== false,
-      recordType: record_type || 'A',
-      enableProxy: enable_proxy !== false,
-      enableHttps: Boolean(enable_https)
+      ...getWizardOptions(req.body),
+      tgId: req.tgId,
+      isAdmin: isAdminRequest(req)
     });
 
     res.json(preview);
@@ -208,33 +260,10 @@ router.post('/wizard/preview', async (req, res) => {
 // Step 7: Review and atomic deploy of subdomain
 router.post('/wizard/deploy', async (req, res) => {
   try {
-    const {
-      subdomain,
-      base_domain,
-      destination_type,
-      destination_target,
-      node_id,
-      application_id,
-      enable_dns,
-      record_type,
-      enable_proxy,
-      enable_https,
-      confirmation_accepted
-    } = req.body;
-
     const result = await deploySubdomainWizard({
+      ...getWizardOptions(req.body),
       tgId: req.tgId,
-      subdomain,
-      baseDomain: base_domain,
-      destinationType: destination_type,
-      destinationTarget: destination_target,
-      nodeId: node_id,
-      applicationId: application_id,
-      enableDns: enable_dns !== false,
-      recordType: record_type || 'A',
-      enableProxy: enable_proxy !== false,
-      enableHttps: Boolean(enable_https),
-      confirmationAccepted: confirmation_accepted === true || confirmation_accepted === 'true'
+      isAdmin: isAdminRequest(req)
     });
 
     res.status(201).json(result);
@@ -247,6 +276,8 @@ router.post('/wizard/deploy', async (req, res) => {
 router.post('/:id/verify', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
+    const sub = getAccessibleSubdomain(req, id);
+    if (!sub) return res.status(404).json({ error: 'Subdomain not found' });
     const verification = await verifySubdomainRoute(id);
     res.json(verification);
   } catch (err) {
@@ -258,7 +289,9 @@ router.post('/:id/verify', async (req, res) => {
 router.post('/:id/repair-route', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const result = await repairSubdomainRoute(id, req.tgId);
+    const sub = getAccessibleSubdomain(req, id);
+    if (!sub) return res.status(404).json({ error: 'Subdomain not found' });
+    const result = await repairSubdomainRoute(id, req.tgId, isAdminRequest(req));
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -269,9 +302,17 @@ router.post('/:id/repair-route', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { deleteDns, deleteSiteData } = req.body || {};
-    const isAdmin = req.user?.role === 'admin';
-    const result = await safeDeleteSubdomain(id, req.tgId, { deleteDns, deleteSiteData }, isAdmin);
+    const body = req.body || {};
+    // Accept both snake_case (dashboard payload) and camelCase (API clients).
+    const deleteDns = body.deleteDns ?? body.delete_dns ?? false;
+    const deleteSiteData = body.deleteSiteData ?? body.delete_site_data ?? false;
+    const isAdmin = isAdminRequest(req);
+    const result = await safeDeleteSubdomain(
+      id,
+      req.tgId,
+      { deleteDns: Boolean(deleteDns), deleteSiteData: Boolean(deleteSiteData) },
+      isAdmin
+    );
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -283,7 +324,8 @@ router.get('/:id/requests', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const limit = parseInt(req.query.limit, 10) || 50;
-    const requests = getSubdomainWebRequests(id, req.tgId, limit);
+    const isAdmin = isAdminRequest(req);
+    const requests = getSubdomainWebRequests(id, isAdmin ? null : req.tgId, limit);
     res.json({ requests, count: requests.length });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -294,7 +336,7 @@ router.get('/:id/requests', async (req, res) => {
 router.get('/:id/aliases', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const sub = getSubdomainById(id, req.tgId);
+    const sub = getAccessibleSubdomain(req, id);
     if (!sub) return res.status(404).json({ error: 'Subdomain not found' });
 
     const db = getDb();
@@ -302,7 +344,7 @@ router.get('/:id/aliases', async (req, res) => {
       SELECT * FROM aliases
       WHERE domain = ? COLLATE NOCASE AND tg_id = ?
       ORDER BY created_at DESC
-    `).all(sub.full_domain, req.tgId);
+    `).all(sub.full_domain, sub.tg_id);
 
     res.json({ subdomain: sub.full_domain, aliases });
   } catch (err) {
@@ -310,7 +352,7 @@ router.get('/:id/aliases', async (req, res) => {
   }
 });
 
-// Create explicit alias under this subdomain (e.g. hello@mysub.commandor.my.id)
+// Create explicit alias under this subdomain (e.g. hello@mysub.example.com)
 router.post('/:id/aliases', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);

@@ -3,6 +3,8 @@ const { getDb } = require('../../database/database');
 const { getTemplateByKey } = require('./templateService');
 const { createApplication, getApplicationById, triggerApplicationDeploy, checkApplicationHealth } = require('./applicationService');
 const { deploySubdomainWizard, getSubdomainById, previewSubdomainWizard } = require('./subdomainWizardService');
+const { getAvailableBaseDomains, assertBaseDomainAllowed, validateSubdomainName } = require('./subdomainService');
+const appRunner = require('./appRunnerService');
 const logger = require('../monitoring/logger');
 const { logChange } = require('./auditLogger');
 
@@ -18,6 +20,7 @@ function formatWorkflow(row) {
 function createWorkflow({ tgId, name, serviceType = 'application', templateKey = null }) {
   if (!name || typeof name !== 'string') throw new Error('Service name is required');
   const cleanName = name.trim();
+  const defaultBaseDomain = getAvailableBaseDomains(tgId, false)[0] || '';
 
   let initialData = {
     name: cleanName,
@@ -25,9 +28,9 @@ function createWorkflow({ tgId, name, serviceType = 'application', templateKey =
     template_key: templateKey,
     step1_source: { type: 'git', git_repo: '', git_branch: 'main' },
     step2_node: { node_id: null, node_name: 'Local Node' },
-    step3_runtime: { runtime: 'nodejs', build_command: 'npm ci && npm run build', start_command: 'npm start', port: 3000, health_check_path: '/health' },
+    step3_runtime: { runtime: 'nodejs', build_command: 'npm ci && npm run build', start_command: 'npm start', port: appRunner.DEFAULT_APP_PORT, health_check_path: '/health' },
     step4_env: { env_vars: {} },
-    step5_domain: { mode: 'create_subdomain', subdomain: '', base_domain: 'commandor.my.id', enable_https: true },
+    step5_domain: { mode: 'create_subdomain', subdomain: '', base_domain: defaultBaseDomain, enable_https: true },
     step6_preview: null,
     step7_confirmation: { confirmed: false },
     step8_deployment: null,
@@ -132,7 +135,7 @@ async function updateWorkflowStep(id, stepNumber, stepData = {}, tgId) {
         runtime: stepData.runtime || 'nodejs',
         build_command: stepData.build_command || null,
         start_command: stepData.start_command || null,
-        port: parseInt(stepData.port, 10) || 3000,
+        port: parseInt(stepData.port, 10) || appRunner.DEFAULT_APP_PORT,
         health_check_path: stepData.health_check_path || '/health'
       };
       progress[3] = 'completed';
@@ -151,12 +154,14 @@ async function updateWorkflowStep(id, stepNumber, stepData = {}, tgId) {
       if (!stepData.subdomain) {
         throw new Error('Subdomain prefix is required.');
       }
+      const cleanSubdomain = validateSubdomainName(stepData.subdomain, false);
+      const baseDomain = assertBaseDomainAllowed(tgId, stepData.base_domain || '', false);
       data.step5_domain = {
         mode: stepData.mode || 'create_subdomain',
-        subdomain: stepData.subdomain.trim().toLowerCase(),
-        base_domain: (stepData.base_domain || 'commandor.my.id').trim().toLowerCase(),
+        subdomain: cleanSubdomain,
+        base_domain: baseDomain,
         enable_https: stepData.enable_https !== undefined ? !!stepData.enable_https : true,
-        full_domain: `${stepData.subdomain.trim().toLowerCase()}.${(stepData.base_domain || 'commandor.my.id').trim().toLowerCase()}`
+        full_domain: `${cleanSubdomain}.${baseDomain}`
       };
       progress[5] = 'completed';
       if (progress[6] === 'pending') progress[6] = 'in_progress';
@@ -168,7 +173,7 @@ async function updateWorkflowStep(id, stepNumber, stepData = {}, tgId) {
         subdomain: data.step5_domain.subdomain,
         baseDomain: data.step5_domain.base_domain,
         destinationType: 'internal_service',
-        destinationTarget: String(data.step3_runtime.port || 3000),
+        destinationTarget: String(data.step3_runtime.port || appRunner.DEFAULT_APP_PORT),
         nodeId: data.step2_node.node_id,
         enableDns: true,
         enableProxy: true,
@@ -245,7 +250,7 @@ async function executeLaunchpadWorkflow(id, tgId) {
         subdomain: data.step5_domain.subdomain,
         baseDomain: data.step5_domain.base_domain,
         destinationType: 'internal_service',
-        destinationTarget: String(data.step3_runtime.port || 3000),
+        destinationTarget: String(data.step3_runtime.port || appRunner.DEFAULT_APP_PORT),
         nodeId: data.step2_node.node_id,
         enableDns: isTest ? false : true,
         enableProxy: isTest ? false : true,

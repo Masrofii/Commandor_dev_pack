@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
+import { isAdmin } from '../../../lib/auth';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
 import CommandorLaunchpad from '../../../components/CommandorLaunchpad';
@@ -27,12 +28,22 @@ import {
   Square3Stack3DIcon
 } from '@heroicons/react/24/outline';
 
+// Keep this in sync with appRunnerService.DEFAULT_APP_PORT. The API and
+// dashboard ports are rejected by the backend, so new apps should not default
+// to them.
+const DEFAULT_APP_PORT = 8080;
+
 export default function ApplicationsPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('apps'); // 'apps' | 'templates'
+  const [adminUser, setAdminUser] = useState(false);
   const { data: appsData, isLoading, mutate } = useSWR('apps-list', () => api.getApplications());
-  const { data: nodesData } = useSWR('apps-nodes', () => api.getHostingNodes());
+  const { data: nodesData } = useSWR(adminUser ? 'apps-nodes' : null, () => api.getHostingNodes());
   const { data: subsData } = useSWR('apps-subs', () => api.getSubdomains({ limit: 100 }));
+
+  useEffect(() => {
+    setAdminUser(isAdmin());
+  }, []);
 
   const applications = appsData?.applications || [];
   const nodes = nodesData?.nodes || [];
@@ -54,14 +65,16 @@ export default function ApplicationsPage() {
     git_branch: 'main',
     build_command: 'npm install && npm run build',
     start_command: 'npm start',
-    port: 3000,
-    env_vars: '{\n  "NODE_ENV": "production",\n  "PORT": "3000"\n}'
+    port: DEFAULT_APP_PORT,
+    env_vars: `{\n  "NODE_ENV": "production",\n  "PORT": "${DEFAULT_APP_PORT}"\n}`
   });
 
   // Action states
   const [deployingId, setDeployingId] = useState(null);
   const [inspectApp, setInspectApp] = useState(null);
   const [activeLogs, setActiveLogs] = useState(null);
+  const [runtimeLogs, setRuntimeLogs] = useState(null);
+  const [loadingRuntimeLogs, setLoadingRuntimeLogs] = useState(false);
   const [controllingId, setControllingId] = useState(null);
 
   // Deployment History & Rollback Modal state
@@ -135,7 +148,7 @@ export default function ApplicationsPage() {
         git_branch: form.git_branch.trim() || 'main',
         build_command: form.build_command.trim() || undefined,
         start_command: form.start_command.trim() || undefined,
-        port: parseInt(form.port, 10) || 3000,
+        port: parseInt(form.port, 10) || DEFAULT_APP_PORT,
         env_vars: parsedEnv
       });
 
@@ -150,14 +163,32 @@ export default function ApplicationsPage() {
         git_branch: 'main',
         build_command: 'npm install && npm run build',
         start_command: 'npm start',
-        port: 3000,
-        env_vars: '{\n  "NODE_ENV": "production",\n  "PORT": "3000"\n}'
+        port: DEFAULT_APP_PORT,
+        env_vars: `{\n  "NODE_ENV": "production",\n  "PORT": "${DEFAULT_APP_PORT}"\n}`
       });
       mutate();
     } catch (err) {
       toast.error(err.message || 'Failed to create application');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleOpenRuntimeLogs(app) {
+    setLoadingRuntimeLogs(true);
+    setRuntimeLogs({ appName: app.name, content: '', logFile: null });
+    try {
+      const res = await api.getApplicationLogs(app.id);
+      setRuntimeLogs({
+        appName: app.name,
+        content: res?.content || 'No runtime output has been captured yet.',
+        logFile: res?.logFile || null
+      });
+    } catch (err) {
+      toast.error(err.message || 'Failed to load runtime logs');
+      setRuntimeLogs(null);
+    } finally {
+      setLoadingRuntimeLogs(false);
     }
   }
 
@@ -188,7 +219,8 @@ export default function ApplicationsPage() {
     setControllingId(`${id}-${action}`);
     try {
       await api.controlApplication(id, action);
-      toast.success(`Application ${action}ed`);
+      const pastTense = action === 'stop' ? 'stopped' : action === 'start' ? 'started' : action === 'restart' ? 'restarted' : action;
+      toast.success(`Application ${pastTense}`);
       mutate();
     } catch (err) {
       toast.error(err.message || `Failed to ${action} application`);
@@ -436,6 +468,15 @@ export default function ApplicationsPage() {
                       </button>
 
                       <button
+                        onClick={() => handleOpenRuntimeLogs(app)}
+                        disabled={loadingRuntimeLogs}
+                        title="Runtime process logs"
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-cyber-800 hover:bg-slate-100 dark:hover:bg-cyber-800 text-slate-600 dark:text-slate-300 text-xs"
+                      >
+                        <CommandLineIcon className="w-4 h-4 text-emerald-500" />
+                      </button>
+
+                      <button
                         onClick={() => {
                           setInspectApp(app);
                           setActiveLogs(app.latestDeployment ? {
@@ -643,7 +684,7 @@ export default function ApplicationsPage() {
                   <input
                     type="number"
                     required
-                    placeholder="3000"
+                    placeholder={String(DEFAULT_APP_PORT)}
                     value={form.port}
                     onChange={(e) => setForm({ ...form, port: e.target.value })}
                     className="input-cyber w-full font-mono"
@@ -786,6 +827,44 @@ export default function ApplicationsPage() {
             <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-cyber-800">
               <button
                 onClick={() => setActiveLogs(null)}
+                className="btn-secondary py-1.5 px-4 text-xs font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Runtime Process Logs Modal */}
+      {runtimeLogs && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="card max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                  <CommandLineIcon className="w-5 h-5 text-emerald-500" />
+                  <span>Runtime Logs — {runtimeLogs.appName}</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5 break-all">
+                  {runtimeLogs.logFile || 'Local runner log'}
+                </p>
+              </div>
+              <button onClick={() => setRuntimeLogs(null)} className="text-slate-400 hover:text-slate-600">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <pre className="flex-1 bg-slate-950 text-slate-200 p-4 rounded-xl font-mono text-xs overflow-y-auto whitespace-pre-wrap leading-relaxed border border-slate-800 min-h-[200px]">
+              {loadingRuntimeLogs ? 'Loading runtime output...' : runtimeLogs.content}
+            </pre>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-cyber-800">
+              <span className="text-[11px] text-slate-400">
+                Runtime logs are captured from the application process on this host.
+              </span>
+              <button
+                onClick={() => setRuntimeLogs(null)}
                 className="btn-secondary py-1.5 px-4 text-xs font-semibold"
               >
                 Close

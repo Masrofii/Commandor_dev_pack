@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
@@ -32,9 +32,17 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [previewModal, setPreviewModal] = useState(null);
   const [previewSubdomain, setPreviewSubdomain] = useState('demo-service');
-  const [previewBaseDomain, setPreviewBaseDomain] = useState('commandor.my.id');
+  const [previewBaseDomain, setPreviewBaseDomain] = useState('');
   const [previewData, setPreviewData] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const { data: basesData } = useSWR('subdomain-bases', api.getSubdomainBases);
+  const baseDomains = basesData?.baseDomains || [];
+  const defaultBaseDomain = basesData?.defaultDomain || baseDomains[0] || '';
+
+  useEffect(() => {
+    if (!previewBaseDomain && defaultBaseDomain) setPreviewBaseDomain(defaultBaseDomain);
+  }, [previewBaseDomain, defaultBaseDomain]);
 
   const { data: tplData, isLoading } = useSWR(
     ['service-templates', selectedCategory],
@@ -44,10 +52,15 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
   const templates = tplData?.templates || [];
 
   async function handleOpenPreview(template) {
+    const base = previewBaseDomain || defaultBaseDomain;
+    if (!base) {
+      toast.error('No base domain is available. Configure DOMAINS or verify a custom domain first.');
+      return;
+    }
     setPreviewModal(template);
     setPreviewSubdomain(template.template_key.replace(/[^a-z0-9]/g, '-'));
     setPreviewData(null);
-    await runPreviewCheck(template, template.template_key.replace(/[^a-z0-9]/g, '-'), previewBaseDomain);
+    await runPreviewCheck(template, template.template_key.replace(/[^a-z0-9]/g, '-'), base);
   }
 
   async function runPreviewCheck(template, sub, base) {
@@ -221,15 +234,31 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Root Domain</label>
-                  <input
-                    type="text"
-                    value={previewBaseDomain}
-                    onChange={(e) => {
-                      setPreviewBaseDomain(e.target.value);
-                      runPreviewCheck(previewModal, previewSubdomain, e.target.value);
-                    }}
-                    className="input-cyber w-full font-mono"
-                  />
+                  {baseDomains.length > 0 ? (
+                    <select
+                      value={previewBaseDomain}
+                      onChange={(e) => {
+                        setPreviewBaseDomain(e.target.value);
+                        runPreviewCheck(previewModal, previewSubdomain, e.target.value);
+                      }}
+                      className="input-cyber w-full font-mono"
+                    >
+                      {baseDomains.map((domain) => (
+                        <option key={domain} value={domain}>{domain}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={previewBaseDomain}
+                      onChange={(e) => {
+                        setPreviewBaseDomain(e.target.value);
+                        runPreviewCheck(previewModal, previewSubdomain, e.target.value);
+                      }}
+                      placeholder="Configure DOMAINS first"
+                      className="input-cyber w-full font-mono"
+                    />
+                  )}
                 </div>
               </div>
 

@@ -1,6 +1,9 @@
 'use client';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { api } from '../../../lib/api';
+import { isAdmin } from '../../../lib/auth';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
 import InfrastructureTopologyMap from '../../../components/InfrastructureTopologyMap';
@@ -21,7 +24,18 @@ import {
 
 export default function MonitoringPage() {
   const { t } = useTranslation();
-  const { data: overview, isLoading, mutate } = useSWR('monitoring-overview', () => api.getSystemOverview(), {
+  const router = useRouter();
+  const [adminUser, setAdminUser] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin()) {
+      router.replace('/');
+      return;
+    }
+    setAdminUser(true);
+  }, [router]);
+
+  const { data: overview, isLoading, mutate } = useSWR(adminUser ? 'monitoring-overview' : null, () => api.getSystemOverview(), {
     refreshInterval: 10000
   });
 

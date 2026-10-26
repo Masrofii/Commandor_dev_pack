@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
+import { isAdmin } from '../../../lib/auth';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
 import SubdomainTemplates from '../../../components/SubdomainTemplates';
@@ -34,22 +35,36 @@ import {
   LockClosedIcon,
   LockOpenIcon,
   MagnifyingGlassIcon,
-  SparklesIcon
+  SparklesIcon,
+  CpuChipIcon
 } from '@heroicons/react/24/outline';
 
-const WEB_MODES = [
-  { value: 'proxy', label: 'Reverse Proxy (Upstream URL)' },
-  { value: 'node_app', label: 'Node Application' },
-  { value: 'static', label: 'Static HTML / Web Service' },
-  { value: 'redirect', label: 'HTTP 302 Redirect' },
-  { value: 'webhook', label: 'Webhook Request Inspector' },
-  { value: 'dns_only', label: 'DNS-Only Record' }
-];
+const DEFAULT_APP_PORT = 8080;
+
+function isIPv4Address(value) {
+  const parts = String(value || '').trim().split('.');
+  return parts.length === 4 && parts.every((part) =>
+    /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255
+  );
+}
+
+function isDnsHostname(value) {
+  const clean = String(value || '').trim().toLowerCase().replace(/\.$/, '');
+  if (clean.length < 3 || clean.length > 253 || !clean.includes('.')) return false;
+  return clean.split('.').every((label) =>
+    /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(label)
+  );
+}
 
 export default function SubdomainsAndDomainsPage() {
   const { t } = useTranslation();
   const [section, setSection] = useState('subdomains'); // 'subdomains' | 'domains'
   const [searchQuery, setSearchQuery] = useState('');
+  const [adminUser, setAdminUser] = useState(false);
+
+  useEffect(() => {
+    setAdminUser(isAdmin());
+  }, []);
 
   // Subdomains data
   const { data: subData, isLoading: loadingSubs, mutate: mutateSubs } = useSWR('subdomains', () => api.getSubdomains({ limit: 100 }));
@@ -61,11 +76,24 @@ export default function SubdomainsAndDomainsPage() {
 
   // Subdomain Base Domains and Cluster Nodes for wizard
   const { data: basesData } = useSWR('subdomain-bases', api.getSubdomainBases);
-  const { data: nodesData } = useSWR('hosting-nodes-subdomains', api.getHostingNodes);
-  const baseDomains = basesData?.baseDomains || ['commandor.my.id'];
-  const defaultBase = basesData?.defaultDomain || baseDomains[0] || 'commandor.my.id';
-  const serverIp = basesData?.serverIp || '74.248.38.38';
+  const { data: nodesData } = useSWR(adminUser ? 'hosting-nodes-subdomains' : null, api.getHostingNodes);
+  const baseDomains = basesData?.baseDomains || [];
+  const defaultBase = basesData?.defaultDomain || baseDomains[0] || '';
+  const serverIp = basesData?.serverIp || '';
+  const platformBase = defaultBase || baseDomains[0] || '';
+  const mailHost = platformBase ? `mail.${platformBase}` : '';
+  const spfRecord = platformBase ? `v=spf1 include:${platformBase} ~all` : '';
   const nodes = nodesData?.nodes || [];
+  const platformReady = Boolean(basesData?.ready ?? baseDomains.length);
+
+  useEffect(() => {
+    if (!basesData) return;
+    setWizardForm((prev) => ({
+      ...prev,
+      root_domain: prev.root_domain || defaultBase,
+      dns_content: prev.dns_content || serverIp
+    }));
+  }, [basesData, defaultBase, serverIp]);
 
   // Combined root domains available for subdomains
   const allAvailableRootDomains = Array.from(new Set([...baseDomains, ...customDomains.map(d => d.domain)]));
@@ -78,9 +106,9 @@ export default function SubdomainsAndDomainsPage() {
   const [wizardForm, setWizardForm] = useState({
     root_domain: defaultBase,
     subdomain: '',
-    destination_type: 'proxy', // 'node_app' | 'internal_port' | 'proxy' | 'dns_only' | 'static'
+    destination_type: 'external_url', // 'external_url' | 'internal_service' | 'node_app' | 'static' | 'dns_only'
     destination_node_id: '',
-    internal_port: 3000,
+    internal_port: DEFAULT_APP_PORT,
     target_url: '',
     static_body: '<h1>Welcome to my edge service!</h1>\n<p>Deployed with Commandor Dev Pack.</p>',
     dns_record_type: 'A',
@@ -89,7 +117,7 @@ export default function SubdomainsAndDomainsPage() {
     security_headers: true,
     enable_https: true,
     force_https_redirect: true,
-    email_catch_all: false,
+    email_catch_all: true,
     confirmation_accepted: false
   });
 
@@ -151,30 +179,79 @@ export default function SubdomainsAndDomainsPage() {
   }
 
   // Step 7 Preview generation
+  function getWizardDestinationPayload() {
+    const type = wizardForm.destination_type;
+    if (type === 'external_url') {
+      return { destination_type: type, destination_target: wizardForm.target_url.trim() };
+    }
+    if (type === 'internal_service') {
+      return { destination_type: type, destination_target: String(wizardForm.internal_port || DEFAULT_APP_PORT) };
+    }
+    if (type === 'node_app') {
+      return { destination_type: type, node_id: wizardForm.destination_node_id || undefined };
+    }
+    return { destination_type: type };
+  }
+
+  function isDestinationReady() {
+    switch (wizardForm.destination_type) {
+      case 'external_url':
+        return /^https?:\/\/[^\s]+$/i.test(wizardForm.target_url.trim());
+      case 'internal_service': {
+        const port = Number(wizardForm.internal_port);
+        return Number.isInteger(port) && port >= 1 && port <= 65535;
+      }
+      case 'node_app':
+        return Boolean(wizardForm.destination_node_id);
+      case 'static':
+        return Boolean(wizardForm.static_body.trim());
+      case 'dns_only':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  function getDestinationSummary() {
+    switch (wizardForm.destination_type) {
+      case 'external_url':
+        return wizardForm.target_url.trim() || 'External URL (not set)';
+      case 'internal_service':
+        return `127.0.0.1:${wizardForm.internal_port || DEFAULT_APP_PORT}`;
+      case 'node_app': {
+        const node = nodes.find((n) => String(n.id) === String(wizardForm.destination_node_id));
+        return node ? `${node.name} (${node.host})` : 'Cluster node (not selected)';
+      }
+      case 'static':
+        return 'Static edge response';
+      case 'dns_only':
+        return 'DNS only (no reverse proxy)';
+      default:
+        return wizardForm.destination_type;
+    }
+  }
+
+  function isDnsContentReady() {
+    return wizardForm.dns_record_type === 'A'
+      ? isIPv4Address(wizardForm.dns_content)
+      : isDnsHostname(wizardForm.dns_content);
+  }
+
   async function fetchPreview() {
     setPreviewLoading(true);
     setPreviewData(null);
     try {
-      let target = wizardForm.target_url;
-      if (wizardForm.destination_type === 'internal_port') {
-        target = `http://127.0.0.1:${wizardForm.internal_port || 3000}`;
-      } else if (wizardForm.destination_type === 'node_app' && wizardForm.destination_node_id) {
-        const found = nodes.find(n => String(n.id) === String(wizardForm.destination_node_id));
-        if (found) {
-          target = found.public_url || `http://${found.host}:${found.http_port || 8080}`;
-        }
-      }
-
       const res = await api.previewSubdomainWizard({
         subdomain: wizardForm.subdomain.trim(),
         base_domain: wizardForm.root_domain,
-        destination_type: wizardForm.destination_type,
-        web_target: target || undefined,
+        ...getWizardDestinationPayload(),
         dns_record_type: wizardForm.dns_record_type,
         dns_content: wizardForm.dns_content,
         enable_https: wizardForm.enable_https,
         enable_websocket: wizardForm.enable_websocket,
-        security_headers: wizardForm.security_headers
+        security_headers: wizardForm.security_headers,
+        force_https_redirect: wizardForm.force_https_redirect,
+        web_custom_body: wizardForm.destination_type === 'static' ? wizardForm.static_body : undefined
       });
       setPreviewData(res);
     } catch (err) {
@@ -190,30 +267,27 @@ export default function SubdomainsAndDomainsPage() {
       toast.error('Please confirm the deployment authorization checkbox');
       return;
     }
+    if (!previewData) {
+      toast.error('Generate and review the deployment preview before deploying');
+      return;
+    }
+    if (previewData.dns?.hasConflict) {
+      toast.error('Resolve the reported DNS conflict before deploying');
+      return;
+    }
     setPreviewLoading(true);
     try {
-      let target = wizardForm.target_url;
-      if (wizardForm.destination_type === 'internal_port') {
-        target = `http://127.0.0.1:${wizardForm.internal_port || 3000}`;
-      } else if (wizardForm.destination_type === 'node_app' && wizardForm.destination_node_id) {
-        const found = nodes.find(n => String(n.id) === String(wizardForm.destination_node_id));
-        if (found) {
-          target = found.public_url || `http://${found.host}:${found.http_port || 8080}`;
-        }
-      }
-
       const payload = {
         subdomain: wizardForm.subdomain.trim(),
         base_domain: wizardForm.root_domain,
-        destination_type: wizardForm.destination_type,
-        web_mode: wizardForm.destination_type === 'static' ? 'static' : wizardForm.destination_type === 'dns_only' ? 'dns_only' : 'proxy',
-        web_target: target || undefined,
-        web_custom_body: wizardForm.destination_type === 'static' ? wizardForm.static_body : undefined,
+        ...getWizardDestinationPayload(),
         dns_record_type: wizardForm.dns_record_type,
         dns_content: wizardForm.dns_content,
         enable_https: wizardForm.enable_https,
         enable_websocket: wizardForm.enable_websocket,
         security_headers: wizardForm.security_headers,
+        force_https_redirect: wizardForm.force_https_redirect,
+        web_custom_body: wizardForm.destination_type === 'static' ? wizardForm.static_body : undefined,
         email_catch_all: wizardForm.email_catch_all,
         confirmation_accepted: true
       };
@@ -241,7 +315,7 @@ export default function SubdomainsAndDomainsPage() {
     try {
       const res = await api.verifySubdomainRoute(id);
       setVerificationResult(res);
-      if (res.overallStatus === 'healthy') {
+      if (res.overallHealth === 'healthy') {
         toast.success('All routing, DNS, and TLS checks passed!');
       } else {
         toast('Verification finished with diagnostics notice', { icon: 'ℹ️' });
@@ -404,7 +478,8 @@ export default function SubdomainsAndDomainsPage() {
       (s.full_domain || '').toLowerCase().includes(q) ||
       (s.subdomain || '').toLowerCase().includes(q) ||
       (s.base_domain || '').toLowerCase().includes(q) ||
-      (s.web_target || '').toLowerCase().includes(q)
+      (s.web_target || '').toLowerCase().includes(q) ||
+      (s.destination_target || '').toLowerCase().includes(q)
     );
   });
 
@@ -469,6 +544,8 @@ export default function SubdomainsAndDomainsPage() {
                 setVerificationResult(null);
               }}
               className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold flex items-center gap-1.5"
+              disabled={!platformReady}
+              title={platformReady ? undefined : 'Configure a base domain first'}
             >
               <SparklesIcon className="w-4 h-4" />
               <span>{t('subdomains.wizard_btn', 'Subdomain Wizard')}</span>
@@ -484,6 +561,15 @@ export default function SubdomainsAndDomainsPage() {
           )}
         </div>
       </div>
+
+      {basesData && !platformReady && (
+        <div className="card p-3 border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-300">
+          {t(
+            'subdomains.no_base_domain',
+            'No base domain is available for this account. Ask an administrator to configure DOMAINS, or add and verify a custom domain in the Domain Inventory tab.'
+          )}
+        </div>
+      )}
 
       {/* SECTION 1: SUBDOMAINS */}
       {section === 'subdomains' && (
@@ -571,10 +657,10 @@ export default function SubdomainsAndDomainsPage() {
                           {/* Destination */}
                           <td className="py-3.5 px-4">
                             <div className="font-mono text-slate-700 dark:text-slate-300 truncate max-w-xs">
-                              {sub.web_target || sub.web_mode}
+                              {sub.destination_target || sub.web_target || sub.web_mode}
                             </div>
                             <div className="text-[10px] text-slate-400 capitalize">
-                              Mode: {sub.web_mode}
+                              Mode: {sub.destination_type || sub.web_mode}
                             </div>
                           </td>
 
@@ -847,11 +933,12 @@ export default function SubdomainsAndDomainsPage() {
                           <tr>
                             <td className="py-2.5 font-bold text-indigo-600 dark:text-cyan-400">MX</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300">@ (Priority 10)</td>
-                            <td className="py-2.5 text-slate-700 dark:text-slate-300">mail.commandor.my.id</td>
+                            <td className="py-2.5 text-slate-700 dark:text-slate-300">{mailHost || 'Configure DOMAINS first'}</td>
                             <td className="py-2.5 text-right">
                               <button
-                                onClick={() => copyToClipboard('mail.commandor.my.id', 'MX host')}
-                                className="p-1 text-slate-400 hover:text-indigo-600"
+                                onClick={() => mailHost && copyToClipboard(mailHost, 'MX host')}
+                                disabled={!mailHost}
+                                className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-40"
                                 title="Copy MX value"
                               >
                                 <ClipboardDocumentIcon className="w-4 h-4" />
@@ -861,11 +948,12 @@ export default function SubdomainsAndDomainsPage() {
                           <tr>
                             <td className="py-2.5 font-bold text-indigo-600 dark:text-cyan-400">TXT (SPF)</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300">@</td>
-                            <td className="py-2.5 text-slate-700 dark:text-slate-300">v=spf1 include:commandor.my.id ~all</td>
+                            <td className="py-2.5 text-slate-700 dark:text-slate-300">{spfRecord || 'Configure DOMAINS first'}</td>
                             <td className="py-2.5 text-right">
                               <button
-                                onClick={() => copyToClipboard('v=spf1 include:commandor.my.id ~all', 'SPF record')}
-                                className="p-1 text-slate-400 hover:text-indigo-600"
+                                onClick={() => spfRecord && copyToClipboard(spfRecord, 'SPF record')}
+                                disabled={!spfRecord}
+                                className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-40"
                                 title="Copy SPF value"
                               >
                                 <ClipboardDocumentIcon className="w-4 h-4" />
@@ -891,8 +979,8 @@ export default function SubdomainsAndDomainsPage() {
               ...prev,
               subdomain: tpl.template_key.replace(/[^a-z0-9]/g, '-'),
               internal_port: tpl.default_port,
-              target_url: `http://127.0.0.1:${tpl.default_port}`,
-              destination_type: 'proxy'
+              target_url: '',
+              destination_type: 'internal_service'
             }));
             setShowWizard(true);
             setWizardStep(1);
@@ -1009,7 +1097,7 @@ export default function SubdomainsAndDomainsPage() {
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="e.g. app, api, panel, git, status"
+                      placeholder="e.g. my-app, docs, shop, portal"
                       value={wizardForm.subdomain}
                       onChange={(e) => {
                         const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
@@ -1083,27 +1171,27 @@ export default function SubdomainsAndDomainsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {[
                     {
-                      type: 'proxy',
+                      type: 'external_url',
                       title: t('subdomain_wizard.dest_proxy_title', 'Reverse Proxy Upstream'),
-                      desc: t('subdomain_wizard.dest_proxy_desc', 'Forward traffic to any external URL or HTTP backend.'),
+                      desc: t('subdomain_wizard.dest_proxy_desc', 'Forward traffic to a public HTTP backend by URL.'),
                       icon: RocketLaunchIcon
                     },
                     {
-                      type: 'internal_port',
+                      type: 'internal_service',
                       title: t('subdomain_wizard.dest_port_title', 'Internal Service & Port'),
-                      desc: t('subdomain_wizard.dest_port_desc', 'Route to localhost:port (e.g. 127.0.0.1:3000).'),
+                      desc: t('subdomain_wizard.dest_port_desc', `Route to localhost:port (e.g. 127.0.0.1:${DEFAULT_APP_PORT}).`),
                       icon: ServerStackIcon
                     },
-                    {
+                    ...(adminUser ? [{
                       type: 'node_app',
                       title: t('subdomain_wizard.dest_node_title', 'Cluster Node Application'),
                       desc: t('subdomain_wizard.dest_node_desc', 'Route to a service running on one of your enrolled nodes.'),
                       icon: CpuChipIcon
-                    },
+                    }] : []),
                     {
                       type: 'static',
                       title: t('subdomain_wizard.dest_static_title', 'Static Site / Edge Response'),
-                      desc: t('subdomain_wizard.dest_static_desc', 'Serve high-speed HTML, CSS, or custom JSON from edge.'),
+                      desc: t('subdomain_wizard.dest_static_desc', 'Serve a small HTML or JSON response directly from the edge router.'),
                       icon: CodeBracketIcon
                     },
                     {
@@ -1132,34 +1220,42 @@ export default function SubdomainsAndDomainsPage() {
                 </div>
 
                 {/* Destination Inputs */}
-                {wizardForm.destination_type === 'proxy' && (
+                {wizardForm.destination_type === 'external_url' && (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       {t('subdomain_wizard.upstream_url', 'Upstream Target URL')}
                     </label>
                     <input
                       type="url"
-                      placeholder="http://10.0.0.5:8080 or https://external-app.internal"
+                      placeholder="https://app.example.com"
                       value={wizardForm.target_url}
                       onChange={(e) => setWizardForm({ ...wizardForm, target_url: e.target.value })}
                       className="input font-mono text-xs w-full"
                       required
                     />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Public http(s) origin only — no path, query, or private/loopback address. Use Internal Service for local apps.
+                    </p>
                   </div>
                 )}
 
-                {wizardForm.destination_type === 'internal_port' && (
+                {wizardForm.destination_type === 'internal_service' && (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       {t('subdomain_wizard.internal_port', 'Internal Port (127.0.0.1:port)')}
                     </label>
                     <input
                       type="number"
-                      placeholder="3000"
+                      min="1"
+                      max="65535"
+                      placeholder={String(DEFAULT_APP_PORT)}
                       value={wizardForm.internal_port}
-                      onChange={(e) => setWizardForm({ ...wizardForm, internal_port: parseInt(e.target.value, 10) || 3000 })}
+                      onChange={(e) => setWizardForm({ ...wizardForm, internal_port: parseInt(e.target.value, 10) || '' })}
                       className="input font-mono text-xs w-full"
                     />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Traffic is proxied to 127.0.0.1 on this server. The app must be listening on the port.
+                    </p>
                   </div>
                 )}
 
@@ -1178,6 +1274,11 @@ export default function SubdomainsAndDomainsPage() {
                         <option key={n.id} value={n.id}>{n.name} ({n.host})</option>
                       ))}
                     </select>
+                    {nodes.length === 0 && (
+                      <p className="text-[11px] text-amber-500 mt-1">
+                        No cluster nodes are enrolled yet. Add one from the Nodes page first.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -1187,11 +1288,15 @@ export default function SubdomainsAndDomainsPage() {
                       {t('subdomain_wizard.static_payload', 'Static HTML or JSON Payload')}
                     </label>
                     <textarea
-                      rows={3}
+                      rows={4}
+                      maxLength={262144}
                       value={wizardForm.static_body}
                       onChange={(e) => setWizardForm({ ...wizardForm, static_body: e.target.value })}
                       className="input font-mono text-[11px] w-full"
                     />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Served by the edge router with an HTML content type. Keep responses under 256 KB.
+                    </p>
                   </div>
                 )}
 
@@ -1206,8 +1311,9 @@ export default function SubdomainsAndDomainsPage() {
                   </button>
                   <button
                     type="button"
+                    disabled={!isDestinationReady()}
                     onClick={() => setWizardStep(4)}
-                    className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
+                    className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>{t('subdomain_wizard.next_dns', 'Next: Configure DNS')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
@@ -1226,7 +1332,14 @@ export default function SubdomainsAndDomainsPage() {
                     </label>
                     <select
                       value={wizardForm.dns_record_type}
-                      onChange={(e) => setWizardForm({ ...wizardForm, dns_record_type: e.target.value })}
+                      onChange={(e) => {
+                        const nextType = e.target.value;
+                        const current = wizardForm.dns_content;
+                        const nextContent = nextType === 'A'
+                          ? (isIPv4Address(current) ? current : (serverIp || ''))
+                          : (isDnsHostname(current) ? current : '');
+                        setWizardForm({ ...wizardForm, dns_record_type: nextType, dns_content: nextContent });
+                      }}
                       className="input text-xs w-full"
                     >
                       <option value="A">A (IPv4)</option>
@@ -1240,10 +1353,16 @@ export default function SubdomainsAndDomainsPage() {
                     </label>
                     <input
                       type="text"
+                      placeholder={wizardForm.dns_record_type === 'A' ? '203.0.113.10' : 'origin.example.com'}
                       value={wizardForm.dns_content}
-                      onChange={(e) => setWizardForm({ ...wizardForm, dns_content: e.target.value })}
+                      onChange={(e) => setWizardForm({ ...wizardForm, dns_content: e.target.value.trim() })}
                       className="input font-mono text-xs w-full"
                     />
+                    <p className={`text-[11px] mt-1 ${isDnsContentReady() ? 'text-slate-400' : 'text-amber-500'}`}>
+                      {wizardForm.dns_record_type === 'A'
+                        ? 'Enter the IPv4 address clients should resolve to, usually this server\'s public IP.'
+                        : 'Enter a canonical hostname (not an IP address) for the CNAME target.'}
+                    </p>
                   </div>
                 </div>
 
@@ -1279,8 +1398,9 @@ export default function SubdomainsAndDomainsPage() {
                   </button>
                   <button
                     type="button"
+                    disabled={!isDnsContentReady()}
                     onClick={() => setWizardStep(5)}
-                    className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1"
+                    className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>{t('subdomain_wizard.next_proxy', 'Next: Reverse Proxy')}</span>
                     <ArrowRightIcon className="w-3.5 h-3.5" />
@@ -1296,33 +1416,39 @@ export default function SubdomainsAndDomainsPage() {
                   {t('subdomain_wizard.proxy_params', 'Nginx Reverse Proxy Parameters')}
                 </label>
 
-                <div className="space-y-2.5">
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200 dark:border-cyber-800 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={wizardForm.enable_websocket}
-                      onChange={(e) => setWizardForm({ ...wizardForm, enable_websocket: e.target.checked })}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_ws', 'Enable WebSocket Upgrades')}</span>
-                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.enable_ws_desc', 'Injects Upgrade and Connection headers for Socket.IO / WS endpoints')}</span>
-                    </div>
-                  </label>
+                {wizardForm.destination_type === 'dns_only' ? (
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200 dark:border-cyber-800 text-slate-500">
+                    DNS-only destinations do not create an Nginx route. These proxy options will be ignored for this deployment.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200 dark:border-cyber-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={wizardForm.enable_websocket}
+                        onChange={(e) => setWizardForm({ ...wizardForm, enable_websocket: e.target.checked })}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_ws', 'Enable WebSocket Upgrades')}</span>
+                        <span className="text-[11px] text-slate-500">{t('subdomain_wizard.enable_ws_desc', 'Injects Upgrade and Connection headers for Socket.IO / WS endpoints')}</span>
+                      </div>
+                    </label>
 
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200 dark:border-cyber-800 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={wizardForm.security_headers}
-                      onChange={(e) => setWizardForm({ ...wizardForm, security_headers: e.target.checked })}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.security_headers', 'Security & Privacy Headers')}</span>
-                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.security_headers_desc', 'Adds X-Frame-Options, X-Content-Type-Options, and Referrer-Policy')}</span>
-                    </div>
-                  </label>
-                </div>
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200 dark:border-cyber-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={wizardForm.security_headers}
+                        onChange={(e) => setWizardForm({ ...wizardForm, security_headers: e.target.checked })}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.security_headers', 'Security & Privacy Headers')}</span>
+                        <span className="text-[11px] text-slate-500">{t('subdomain_wizard.security_headers_desc', 'Adds X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy')}</span>
+                      </div>
+                    </label>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center pt-2">
                   <button
@@ -1361,8 +1487,8 @@ export default function SubdomainsAndDomainsPage() {
                       className="rounded text-indigo-600 focus:ring-indigo-500"
                     />
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_tls', 'Enable Automated TLS (HTTPS)')}</span>
-                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.enable_tls_desc', 'Binds ACME TLS certificates and enables port 443 listeners')}</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_tls_v2', 'Enable HTTPS / TLS')}</span>
+                      <span className="text-[11px] text-slate-500">{t('subdomain_wizard.enable_tls_desc_v2', 'Adds a 443 listener when a certificate exists in TLS_CERT_DIR. Provision certificates with your ACME client first.')}</span>
                     </div>
                   </label>
 
@@ -1429,26 +1555,49 @@ export default function SubdomainsAndDomainsPage() {
                         </div>
                         <div>
                           <span className="text-slate-400 block text-[10px]">Destination:</span>
-                          <span className="truncate block">
-                            {wizardForm.destination_type === 'internal_port' ? `127.0.0.1:${wizardForm.internal_port}` : wizardForm.target_url || wizardForm.destination_type}
+                          <span className="truncate block" title={getDestinationSummary()}>
+                            {getDestinationSummary()}
                           </span>
                         </div>
                         <div>
                           <span className="text-slate-400 block text-[10px]">DNS Action:</span>
-                          <span>{wizardForm.dns_record_type} &rarr; {wizardForm.dns_content}</span>
+                          <span>{previewData?.dns?.recordType || wizardForm.dns_record_type} &rarr; {previewData?.dns?.content || wizardForm.dns_content}</span>
                         </div>
                         <div>
                           <span className="text-slate-400 block text-[10px]">HTTPS / TLS:</span>
-                          <span className={wizardForm.enable_https ? 'text-emerald-500 font-bold' : 'text-slate-400'}>
-                            {wizardForm.enable_https ? 'Enabled (Auto ACME)' : 'Disabled'}
+                          <span className={
+                            previewData?.https?.enabled
+                              ? 'text-emerald-500 font-bold'
+                              : previewData?.https?.requested
+                                ? 'text-amber-500 font-bold'
+                                : 'text-slate-400'
+                          }>
+                            {previewData?.https?.enabled
+                              ? 'Enabled (certificate found)'
+                              : previewData?.https?.requested
+                                ? 'Pending certificate'
+                                : 'Disabled'}
                           </span>
                         </div>
                       </div>
 
+                      {!previewData && (
+                        <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 font-sans text-[11px]">
+                          The deployment preview is unavailable. Go back, adjust the configuration, and generate it again.
+                        </div>
+                      )}
+
                       {previewData?.conflictWarning && (
-                        <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 font-sans text-[11px] flex items-center gap-1.5">
-                          <ExclamationTriangleIcon className="w-4 h-4 text-amber-500 shrink-0" />
+                        <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 font-sans text-[11px] flex items-start gap-1.5">
+                          <ExclamationTriangleIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                           <span>{previewData.conflictWarning}</span>
+                        </div>
+                      )}
+
+                      {previewData?.https?.warning && (
+                        <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 font-sans text-[11px] flex items-start gap-1.5">
+                          <ShieldExclamationIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <span>{previewData.https.warning}</span>
                         </div>
                       )}
                     </div>
@@ -1482,9 +1631,9 @@ export default function SubdomainsAndDomainsPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={!wizardForm.confirmation_accepted}
+                        disabled={!wizardForm.confirmation_accepted || !previewData || Boolean(previewData.dns?.hasConflict)}
                         onClick={handleDeployWizard}
-                        className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1.5"
+                        className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <CheckCircleIcon className="w-4 h-4" />
                         <span>{t('subdomain_wizard.deploy_btn', 'Deploy Subdomain Now')}</span>
@@ -1514,6 +1663,13 @@ export default function SubdomainsAndDomainsPage() {
                   </div>
                 ) : verificationResult ? (
                   <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-cyber-800 bg-slate-50 dark:bg-cyber-850 px-3 py-2">
+                      <span className="font-bold text-slate-700 dark:text-slate-200">Overall health</span>
+                      <span className={`badge-${verificationResult.overallHealth === 'healthy' ? 'green' : verificationResult.overallHealth === 'degraded' ? 'yellow' : 'cyan'} text-[10px] uppercase font-mono`}>
+                        {verificationResult.overallHealth || 'unknown'}
+                      </span>
+                    </div>
+
                     {/* Stage 1: DNS Resolution */}
                     <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-1">
                       <div className="flex items-center justify-between font-bold">
@@ -1521,11 +1677,15 @@ export default function SubdomainsAndDomainsPage() {
                           <GlobeAltIcon className="w-4 h-4 text-indigo-500" />
                           <span>{t('subdomain_wizard.stage_dns', '1. DNS Resolution')}</span>
                         </span>
-                        <span className={verificationResult.dns?.status === 'valid' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
-                          {verificationResult.dns?.status === 'valid' ? `✓ ${t('subdomain_wizard.dns_resolved', 'Resolved')}` : '⚠️ Pending'}
+                        <span className={verificationResult.dns?.status === 'passed' ? 'text-emerald-500 font-bold' : verificationResult.dns?.status === 'failed' ? 'text-rose-500 font-bold' : 'text-amber-500 font-bold'}>
+                          {verificationResult.dns?.status === 'passed'
+                            ? `✓ ${t('subdomain_wizard.dns_resolved', 'Resolved')}`
+                            : verificationResult.dns?.status === 'failed'
+                              ? `✗ ${t('subdomain_wizard.dns_failed', 'Not resolved')}`
+                              : '⚠️ Pending'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">{verificationResult.dns?.message || 'DNS resolution check complete'}</p>
+                      <p className="text-[11px] text-slate-500">{verificationResult.dns?.guidance || verificationResult.dns?.error || 'DNS resolution check complete'}</p>
                     </div>
 
                     {/* Stage 2: Reverse Proxy Reachability */}
@@ -1535,11 +1695,15 @@ export default function SubdomainsAndDomainsPage() {
                           <ServerStackIcon className="w-4 h-4 text-cyan-500" />
                           <span>{t('subdomain_wizard.stage_http', '2. Reverse Proxy Reachability')}</span>
                         </span>
-                        <span className={verificationResult.http?.status === 'reachable' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
-                          {verificationResult.http?.status === 'reachable' ? `✓ ${t('subdomain_wizard.http_reachable', 'Reachable')} (${verificationResult.http?.statusCode || 200})` : '⚠️ Check upstream'}
+                        <span className={verificationResult.routing?.status === 'passed' ? 'text-emerald-500 font-bold' : verificationResult.routing?.status === 'failed' ? 'text-rose-500 font-bold' : 'text-amber-500 font-bold'}>
+                          {verificationResult.routing?.status === 'passed'
+                            ? `✓ ${t('subdomain_wizard.http_reachable', 'Reachable')} (${verificationResult.routing?.statusCode || 200})`
+                            : verificationResult.routing?.status === 'skipped'
+                              ? `↷ ${t('subdomain_wizard.http_skipped', 'Skipped')}`
+                              : `⚠️ ${t('subdomain_wizard.http_check', 'Check upstream')}`}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">{verificationResult.http?.message || 'Reverse proxy routing check complete'}</p>
+                      <p className="text-[11px] text-slate-500">{verificationResult.routing?.guidance || verificationResult.routing?.error || 'Reverse proxy routing check complete'}</p>
                     </div>
 
                     {/* Stage 3: HTTPS & TLS Handshake */}
@@ -1549,17 +1713,23 @@ export default function SubdomainsAndDomainsPage() {
                           <ShieldCheckIcon className="w-4 h-4 text-emerald-500" />
                           <span>{t('subdomain_wizard.stage_tls', '3. HTTPS & TLS Handshake')}</span>
                         </span>
-                        <span className={verificationResult.tls?.valid ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
-                          {verificationResult.tls?.valid ? `✓ ${t('subdomain_wizard.tls_valid', 'Valid ACME Certificate')}` : '⚠️ Cert Pending'}
+                        <span className={verificationResult.https?.status === 'passed' ? 'text-emerald-500 font-bold' : verificationResult.https?.status === 'failed' ? 'text-rose-500 font-bold' : 'text-slate-400 font-bold'}>
+                          {verificationResult.https?.status === 'passed'
+                            ? `✓ ${t('subdomain_wizard.tls_valid', 'Valid certificate')}`
+                            : verificationResult.https?.status === 'failed'
+                              ? '⚠️ Cert warning'
+                              : verificationResult.https?.status === 'disabled'
+                                ? 'Disabled'
+                                : 'Pending'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">{verificationResult.tls?.message || 'TLS certificate handshake verified'}</p>
+                      <p className="text-[11px] text-slate-500">{verificationResult.https?.guidance || verificationResult.https?.error || 'TLS certificate handshake not required'}</p>
                     </div>
 
                     {/* Remediation Tips if not healthy */}
                     {verificationResult.remediation && (
                       <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 space-y-1">
-                        <span className="font-bold block flex items-center gap-1">
+                        <span className="font-bold flex items-center gap-1">
                           <InformationCircleIcon className="w-4 h-4" /> Remediation Guidance:
                         </span>
                         <p className="text-[11px]">{verificationResult.remediation}</p>
@@ -1619,37 +1789,54 @@ export default function SubdomainsAndDomainsPage() {
               </div>
             ) : modalVerificationResult ? (
               <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-cyber-800 bg-slate-50 dark:bg-cyber-850 px-3 py-2">
+                  <span className="font-bold text-slate-700 dark:text-slate-200">Overall health</span>
+                  <span className={`badge-${modalVerificationResult.overallHealth === 'healthy' ? 'green' : modalVerificationResult.overallHealth === 'degraded' ? 'yellow' : 'cyan'} text-[10px] uppercase font-mono`}>
+                    {modalVerificationResult.overallHealth || 'unknown'}
+                  </span>
+                </div>
+
                 {/* 1. DNS */}
                 <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-1">
                   <div className="flex items-center justify-between font-bold">
                     <span>1. Authoritative DNS Resolution</span>
-                    <span className={modalVerificationResult.dns?.status === 'valid' ? 'text-emerald-500' : 'text-amber-500'}>
-                      {modalVerificationResult.dns?.status === 'valid' ? '✓ Resolved' : '⚠️ Pending'}
+                    <span className={modalVerificationResult.dns?.status === 'passed' ? 'text-emerald-500' : modalVerificationResult.dns?.status === 'failed' ? 'text-rose-500' : 'text-amber-500'}>
+                      {modalVerificationResult.dns?.status === 'passed' ? '✓ Resolved' : modalVerificationResult.dns?.status === 'failed' ? '✗ Not resolved' : '⚠️ Pending'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">{modalVerificationResult.dns?.message}</p>
+                  <p className="text-[11px] text-slate-500">{modalVerificationResult.dns?.guidance || modalVerificationResult.dns?.error}</p>
                 </div>
 
                 {/* 2. Proxy Reachability */}
                 <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-1">
                   <div className="flex items-center justify-between font-bold">
                     <span>2. Reverse Proxy Reachability</span>
-                    <span className={modalVerificationResult.http?.status === 'reachable' ? 'text-emerald-500' : 'text-amber-500'}>
-                      {modalVerificationResult.http?.status === 'reachable' ? `✓ Reachable (${modalVerificationResult.http?.statusCode || 200})` : '⚠️ Down'}
+                    <span className={modalVerificationResult.routing?.status === 'passed' ? 'text-emerald-500' : modalVerificationResult.routing?.status === 'failed' ? 'text-rose-500' : 'text-amber-500'}>
+                      {modalVerificationResult.routing?.status === 'passed'
+                        ? `✓ Reachable (${modalVerificationResult.routing?.statusCode || 200})`
+                        : modalVerificationResult.routing?.status === 'skipped'
+                          ? '↷ Skipped'
+                          : '⚠️ Down'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">{modalVerificationResult.http?.message}</p>
+                  <p className="text-[11px] text-slate-500">{modalVerificationResult.routing?.guidance || modalVerificationResult.routing?.error}</p>
                 </div>
 
                 {/* 3. HTTPS */}
                 <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-1">
                   <div className="flex items-center justify-between font-bold">
                     <span>3. HTTPS &amp; TLS Handshake</span>
-                    <span className={modalVerificationResult.tls?.valid ? 'text-emerald-500' : 'text-amber-500'}>
-                      {modalVerificationResult.tls?.valid ? `✓ Valid (${modalVerificationResult.tls?.daysRemaining || 0}d left)` : '⚠️ Cert Warning'}
+                    <span className={modalVerificationResult.https?.status === 'passed' ? 'text-emerald-500' : modalVerificationResult.https?.status === 'failed' ? 'text-rose-500' : 'text-slate-400'}>
+                      {modalVerificationResult.https?.status === 'passed'
+                        ? `✓ Valid (${modalVerificationResult.https?.daysRemaining ?? 0}d left)`
+                        : modalVerificationResult.https?.status === 'failed'
+                          ? '⚠️ Cert warning'
+                          : modalVerificationResult.https?.status === 'disabled'
+                            ? 'Disabled'
+                            : 'Pending'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">{modalVerificationResult.tls?.message}</p>
+                  <p className="text-[11px] text-slate-500">{modalVerificationResult.https?.guidance || modalVerificationResult.https?.error}</p>
                 </div>
 
                 {modalVerificationResult.remediation && (
@@ -1722,7 +1909,7 @@ export default function SubdomainsAndDomainsPage() {
                   onChange={(e) => setDeleteOptions({ ...deleteOptions, delete_site_data: e.target.checked })}
                   className="rounded text-rose-600 focus:ring-rose-500"
                 />
-                <span className="text-slate-700 dark:text-slate-300">Also delete associated static files and application data</span>
+                <span className="text-slate-700 dark:text-slate-300">Also delete linked aliases and captured web requests</span>
               </label>
             </div>
 

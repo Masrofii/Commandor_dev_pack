@@ -144,7 +144,7 @@ router.post('/sites', upload.single('zipFile'), async (req, res) => {
 router.delete('/sites/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const success = await deleteSite(id, req.tgId);
+    const success = await deleteSite(id, req.tgId, checkIsAdmin(req.tgId));
     if (!success) return res.status(404).json({ error: 'Site not found or unauthorized' });
     res.json({ status: 'deleted', id });
   } catch (err) {

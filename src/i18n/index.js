@@ -111,6 +111,11 @@ function isRtl(lang) {
   return ['ar', 'ur'].includes(lang);
 }
 
+function validateLanguage(code) {
+  if (typeof code !== 'string') return false;
+  return SUPPORTED_CODES.has(code.toLowerCase().trim());
+}
+
 function getLanguageMeta(code) {
   return SUPPORTED_LANGUAGES.find(l => l.code === code) || SUPPORTED_LANGUAGES[0];
 }
@@ -178,6 +183,7 @@ function detectLanguage(ctx) {
 module.exports = {
   t,
   isRtl,
+  validateLanguage,
   getLanguageMeta,
   detectLanguage,
   SUPPORTED_LANGUAGES,

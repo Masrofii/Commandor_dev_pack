@@ -26,6 +26,8 @@ const {
   getHostSystemMetrics,
   getSystemOverview
 } = require('../../src/services/monitoringService');
+const appRunner = require('../../src/services/appRunnerService');
+const config = require('../../config/config');
 
 beforeAll(() => {
   initDatabase();
@@ -142,6 +144,111 @@ describe('Developer Applications & Git Deployment Platform', () => {
 
     // Clean up
     deleteApplication(appA.id, USER_A, false);
+  });
+
+  test('validates application inputs and detects duplicate ports', () => {
+    const repo = 'https://github.com/tenant-a/validation.git';
+    expect(() => createApplication({ name: 'bad-git', gitRepo: 'file:///etc/passwd' }))
+      .toThrow(/Unsupported Git URL protocol/i);
+    expect(() => createApplication({ name: 'bad-branch', gitRepo: repo, gitBranch: '-main' }))
+      .toThrow(/invalid characters/i);
+    expect(() => createApplication({ name: 'bad-port', gitRepo: repo, port: 70000 }))
+      .toThrow(/port must be an integer/i);
+    expect(() => createApplication({ name: 'reserved-api-port', gitRepo: repo, port: 3000 }))
+      .toThrow(/reserved/i);
+    expect(() => createApplication({ name: 'reserved-http-port', gitRepo: repo, port: 80 }))
+      .toThrow(/reserved/i);
+    expect(() => createApplication({ name: 'bad-health', gitRepo: repo, healthCheckPath: 'health' }))
+      .toThrow(/must start with/i);
+    expect(() => createApplication({ name: 'bad-command', gitRepo: repo, startCommand: 'npm start\nrm -rf /' }))
+      .toThrow(/single line/i);
+    expect(() => createApplication({ name: 'bad-env', gitRepo: repo, envVars: '{"bad-key":"x"}' }))
+      .toThrow(/Invalid environment variable name/i);
+
+    const first = createApplication({
+      name: 'port-owner', gitRepo: repo, port: 7005, userTgId: 1001
+    });
+    expect(() => createApplication({
+      name: 'port-conflict', gitRepo: repo, port: 7005, userTgId: 1001
+    })).toThrow(/already assigned/i);
+    deleteApplication(first.id, 1001, false);
+  });
+
+  test('keeps the previous running process when a deployment fails before replacement', async () => {
+    const originalAllow = config.apps.allowUserDeployments;
+    config.apps.allowUserDeployments = true;
+    const mockMode = jest.spyOn(appRunner, 'isMockRunner').mockReturnValue(false);
+    const deploy = jest.spyOn(appRunner, 'deployApplication').mockResolvedValue({
+      success: false,
+      runner: 'local',
+      commitHash: null,
+      workspacePath: null,
+      error: 'build failed',
+      previousStillRunning: true,
+      logs: ['Build failed']
+    });
+
+    try {
+      const app = createApplication({
+        name: 'preserve-previous',
+        gitRepo: 'https://github.com/tenant-a/preserve.git',
+        port: 7011,
+        userTgId: 1001
+      });
+      getDb().prepare("UPDATE applications SET status='running', runtime_pid=? WHERE id=?").run(54321, app.id);
+
+      const result = await triggerApplicationDeploy(app.id, 1001, false);
+      expect(result.status).toBe('failed');
+
+      const updated = getApplicationById(app.id);
+      expect(updated.status).toBe('running');
+      expect(updated.runtime_pid).toBe(54321);
+      expect(updated.last_error).toMatch(/previous version is still running/i);
+      deleteApplication(app.id, 1001, true);
+    } finally {
+      deploy.mockRestore();
+      mockMode.mockRestore();
+      config.apps.allowUserDeployments = originalAllow;
+    }
+  });
+
+  test('links application subdomains as internal services and checks ownership', () => {
+    const db = getDb();
+    db.prepare("INSERT OR IGNORE INTO users(tg_id, username, role) VALUES(2002, 'other', 'user')").run();
+    const subA = db.prepare(`
+      INSERT INTO subdomains (tg_id, subdomain, full_domain, base_domain, destination_type, destination_target)
+      VALUES (?, ?, ?, ?, 'internal_service', '127.0.0.1:7001')
+    `).run(1001, 'app-linked', 'app-linked.example.com', 'example.com');
+
+    const app = createApplication({
+      name: 'linked-app',
+      gitRepo: 'https://github.com/tenant-a/linked.git',
+      subdomainId: Number(subA.lastInsertRowid),
+      port: 7002,
+      userTgId: 1001
+    });
+
+    let linked = db.prepare('SELECT * FROM subdomains WHERE id=?').get(subA.lastInsertRowid);
+    expect(linked.application_id).toBe(app.id);
+    expect(linked.destination_type).toBe('internal_service');
+    expect(linked.destination_target).toBe('127.0.0.1:7002');
+    expect(linked.web_target).toBe('http://127.0.0.1:7002');
+
+    updateApplication(app.id, { port: 7003, status: 'running' }, 1001, false);
+    linked = db.prepare('SELECT * FROM subdomains WHERE id=?').get(subA.lastInsertRowid);
+    expect(linked.destination_target).toBe('127.0.0.1:7003');
+    expect(db.prepare('SELECT status FROM applications WHERE id=?').get(app.id).status).toBe('stopped');
+
+    expect(() => createApplication({
+      name: 'stolen-subdomain',
+      gitRepo: 'https://github.com/tenant-b/stolen.git',
+      subdomainId: Number(subA.lastInsertRowid),
+      port: 7004,
+      userTgId: 2002
+    })).toThrow(/Unauthorized/);
+
+    deleteApplication(app.id, 1001, false);
+    db.prepare('DELETE FROM subdomains WHERE id=?').run(subA.lastInsertRowid);
   });
 });
 

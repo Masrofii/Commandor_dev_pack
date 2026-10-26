@@ -2,12 +2,13 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuthOrApiKey } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
 const { getSystemOverview, getHostSystemMetrics, getInfrastructureTopology } = require('../services/monitoringService');
 
 router.use(requireAuthOrApiKey());
 
 // Platform overview metrics (Real data across nodes, apps, domains, hosts)
-router.get('/overview', (req, res) => {
+router.get('/overview', requireAdmin, (req, res) => {
   try {
     const overview = getSystemOverview();
     res.json(overview);
@@ -17,7 +18,7 @@ router.get('/overview', (req, res) => {
 });
 
 // Visual infrastructure topology relationship map
-router.get('/topology', (req, res) => {
+router.get('/topology', requireAdmin, (req, res) => {
   try {
     const topology = getInfrastructureTopology();
     res.json(topology);
@@ -27,7 +28,7 @@ router.get('/topology', (req, res) => {
 });
 
 // Host hardware & OS metrics
-router.get('/host', (req, res) => {
+router.get('/host', requireAdmin, (req, res) => {
   try {
     const host = getHostSystemMetrics();
     res.json(host);
