@@ -208,11 +208,14 @@ We welcome community contributions! Please review our community guidelines befor
 ## 👑 Credits & Attribution
 
 - **Project Owner & Creator**: [@xpT_T](https://t.me/xpT_T)
+- **Project Contributor**: [fut0r](https://github.com/fut0r)
 - **Official Telegram Bot**: [@CommandorDevBot](https://t.me/CommandorDevBot)
 - **Platform**: **Commandor Dev Pack** — Modern Self-Hosted Infrastructure, Domain & Developer Management Platform
 - **GitHub Repository**: [Masrofii/Commandor_dev_pack](https://github.com/Masrofii/Commandor_dev_pack)
 
 Special thanks to **@xpT_T** for stewardship, product design, and architectural vision of the Commandor platform.
+
+Special thanks also to **fut0r** for contributing and fixing bugs.
 
 ---
 
