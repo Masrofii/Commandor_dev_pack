@@ -24,7 +24,7 @@ Commandor Dev Pack transforms multi-cloud, VPS, and edge servers into a cohesive
                         │        Safe Nginx Reverse Proxy & TLS         │
                         │    (Syntax Validated, Backups & Rollback)     │
                         └───────┬───────────────────────────────┬───────┘
-                                │                               │
+                                │                               │   
                 ┌───────────────┴──────────────┐ ┌──────────────┴──────────────┐
                 ▼                              ▼ ▼                             ▼
       ┌──────────────────┐           ┌──────────────────┐            ┌──────────────────┐
