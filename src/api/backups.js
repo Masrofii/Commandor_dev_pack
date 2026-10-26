@@ -11,7 +11,9 @@ const {
   getBackupById,
   restoreDatabaseBackup,
   verifyBackupIntegrity,
-  testRestoreBackup
+  testRestoreBackup,
+  deleteBackup,
+  pruneBackups
 } = require('../services/backupService');
 
 router.use(requireAuth);
@@ -39,6 +41,16 @@ router.post('/', async (req, res) => {
       backup = await createDatabaseBackup(notes || 'Manual database backup', req.tgId);
     }
     res.status(201).json(backup);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Apply the configured retention policy now
+router.post('/prune', async (req, res) => {
+  try {
+    const result = await pruneBackups();
+    res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -72,6 +84,18 @@ router.post('/:id/restore', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const { confirmation_accepted } = req.body;
     const result = await restoreDatabaseBackup(id, Boolean(confirmation_accepted), req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Delete a backup (the newest requires force=true)
+router.delete('/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const force = req.query.force === 'true' || req.body?.force === true;
+    const result = await deleteBackup(id, { force, userTgId: req.tgId });
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
@@ -37,15 +38,20 @@ import {
 
 export default function NodesPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [adminUser, setAdminUser] = useState(false);
 
   useEffect(() => {
-    setAdminUser(isAdmin());
-  }, []);
+    if (!isAdmin()) {
+      router.replace('/');
+      return;
+    }
+    setAdminUser(true);
+  }, [router]);
 
   // Fetch nodes
   const { data: nodesData, isLoading: loadingNodes, mutate: mutateNodes } = useSWR(
-    'hosting-nodes',
+    adminUser ? 'hosting-nodes' : null,
     api.getHostingNodes,
     { refreshInterval: 15000 }
   );
@@ -1498,7 +1504,7 @@ export default function NodesPage() {
                   </label>
                   <textarea
                     rows={6}
-                    placeholder={`192.168.1.10:22:root:SecretPassword#Node-Alpha\nnode2.mycloud.com:2222:ubuntu:Pass123#Node-Beta\nroot:pass@74.248.38.38:22#Node-Gamma`}
+                    placeholder={`192.168.1.10:22:root:SecretPassword#Node-Alpha\nnode2.mycloud.com:2222:ubuntu:Pass123#Node-Beta\nroot:pass@203.0.113.10:22#Node-Gamma`}
                     value={bulkText}
                     onChange={(e) => {
                       setBulkText(e.target.value);

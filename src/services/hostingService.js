@@ -3,7 +3,7 @@ const AdmZip = require('adm-zip');
 const { getDb } = require('../../database/database');
 const { scanFiles, logSecurityViolation } = require('./fileScannerService');
 const { getAvailableNode, getNodeById, deployFilesToNode, removeSiteFromNode } = require('./nodeManagerService');
-const { claimSubdomain, updateSubdomain, deleteSubdomain, getSubdomainByFullDomain } = require('./subdomainService');
+const { claimSubdomain, updateSubdomain, deleteSubdomain, getSubdomainByFullDomain, getPlatformBaseDomains } = require('./subdomainService');
 const config = require('../../config/config');
 const logger = require('../monitoring/logger');
 const { logChange } = require('./auditLogger');
@@ -67,7 +67,7 @@ function getSiteById(id, tgId = null, isAdmin = false) {
     WHERE s.id = ?
   `;
   const params = [id];
-  if (tgId !== null) {
+  if (tgId !== null && !isAdmin) {
     q += ' AND s.tg_id = ?';
     params.push(tgId);
   }
@@ -229,7 +229,11 @@ async function deploySite({
   const deployResult = await deployFilesToNode(node, cleanName, filesToScan);
 
   // 6. Subdomain Routing Gateway Integration
-  const baseDomain = config.domains?.defaultDomain || (config.domains?.list && config.domains.list[0]) || 'commandor.my.id';
+  const platformDomains = getPlatformBaseDomains();
+  if (!platformDomains.length) {
+    throw new Error('No base domain is configured. Set DOMAINS (or DEFAULT_DOMAIN) before deploying hosted sites.');
+  }
+  const baseDomain = config.domains?.defaultDomain || platformDomains[0];
   const fullDomain = `${cleanName}.${baseDomain}`.toLowerCase();
   const upstreamProxyUrl = `${node.public_url}/sites/${cleanName}/`;
 
@@ -315,8 +319,13 @@ async function deploySite({
 
 async function deleteSite(id, tgId = null, isAdmin = false) {
   const db = getDb();
-  const site = getSiteById(id, isAdmin ? null : tgId, isAdmin);
+  // Use the admin projection internally so node identifiers are available for
+  // cleanup, then enforce ownership explicitly for non-admin callers.
+  const site = getSiteById(id, null, true);
   if (!site) return false;
+  if (!isAdmin && (site.tg_id === null || site.tg_id === undefined || String(site.tg_id) !== String(tgId))) {
+    return false;
+  }
 
   const node = getNodeById(site.node_id);
   if (node) {

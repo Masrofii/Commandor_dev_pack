@@ -2,6 +2,38 @@
 const helmet=require('helmet');
 const cors=require('cors');
 const config=require('../../config/config');
+function normalizeOrigin(value) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+function getAllowedOrigins() {
+  const allowed = new Set();
+  for (const value of config.server.corsOrigins || []) {
+    const origin = normalizeOrigin(value);
+    if (origin) allowed.add(origin);
+  }
+  // The dashboard web URL and the public API URL are first-party origins even
+  // when the operator has not repeated them in CORS_ORIGINS.
+  for (const value of [config.server.webUrl, config.server.baseUrl]) {
+    const origin = normalizeOrigin(value);
+    if (origin) allowed.add(origin);
+  }
+  return allowed;
+}
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (getAllowedOrigins().has(origin)) return true;
+  // Local development convenience only. Production relies exclusively on
+  // configured origins so a random local process cannot call the API.
+  return !config.isProduction &&
+    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin);
+}
+
 function applySecurity(app){
   app.use(helmet({
     contentSecurityPolicy: false,
@@ -9,13 +41,7 @@ function applySecurity(app){
     hsts: config.isProduction ? {maxAge: 31536000, includeSubDomains: true} : false
   }));
   app.use(cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (config.server.corsOrigins.includes(origin)) return cb(null, true);
-      if (/^https?:\/\/(localhost|127\.0\.0\.1|74\.248\.38\.38)(:\d+)?$/.test(origin)) return cb(null, true);
-      if (/^https?:\/\/(.+\.)?commandor\.my\.id(:\d+)?$/.test(origin)) return cb(null, true);
-      cb(null, false);
-    },
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
   }));
@@ -26,4 +52,4 @@ function applySecurity(app){
   app.use(express.json({limit:'2mb'}));
   app.use(express.urlencoded({extended:true,limit:'2mb'}));
 }
-module.exports={applySecurity};
+module.exports={applySecurity,isAllowedOrigin};

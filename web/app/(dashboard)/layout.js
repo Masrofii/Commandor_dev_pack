@@ -34,15 +34,16 @@ import {
 
 const NAV_ITEMS = [
   { href: '/', key: 'nav.overview', defaultLabel: 'Overview', icon: Squares2X2Icon, exact: true },
-  { href: '/nodes', key: 'nav.nodes', defaultLabel: 'Nodes & Servers', icon: ServerStackIcon },
+  { href: '/nodes', key: 'nav.nodes', defaultLabel: 'Nodes & Servers', icon: ServerStackIcon, adminOnly: true },
   { href: '/subdomains', key: 'nav.subdomains', defaultLabel: 'Domains & Subdomains', icon: GlobeAltIcon },
   { href: '/applications', key: 'nav.applications', defaultLabel: 'Applications', icon: CommandLineIcon },
-  { href: '/monitoring', key: 'nav.monitoring', defaultLabel: 'Monitoring & Logs', icon: SignalIcon },
-  { href: '/backups', key: 'nav.backups', defaultLabel: 'Backups & Recovery', icon: CircleStackIcon },
+  { href: '/monitoring', key: 'nav.monitoring', defaultLabel: 'Monitoring & Logs', icon: SignalIcon, adminOnly: true },
+  { href: '/backups', key: 'nav.backups', defaultLabel: 'Backups & Recovery', icon: CircleStackIcon, adminOnly: true },
   { href: '/hosting', key: 'nav.hosting', defaultLabel: 'Edge Static Hosting', icon: ComputerDesktopIcon },
   { href: '/inbox', key: 'nav.inbox', defaultLabel: 'Inbox', icon: InboxIcon },
   { href: '/aliases', key: 'nav.aliases', defaultLabel: 'Email Aliases', icon: AtSymbolIcon },
   { href: '/api-keys', key: 'nav.api_keys', defaultLabel: 'API Keys & Tools', icon: KeyIcon },
+  { href: '/webhooks', key: 'nav.webhooks', defaultLabel: 'Webhooks', icon: LinkIcon },
   { href: '/sessions', key: 'nav.sessions', defaultLabel: 'Sessions & Auth', icon: ShieldCheckIcon },
   { href: '/settings', key: 'nav.settings', defaultLabel: 'Settings & Logs', icon: Cog6ToothIcon },
 ];
@@ -55,6 +56,8 @@ export default function DashboardLayout({ children }) {
   const [isDark, setIsDark] = useState(false);
   const [quickCreating, setQuickCreating] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
+  const [botUsername, setBotUsername] = useState(process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot');
 
   const { t, lang, setLanguage, isRtl, meta, languages } = useTranslation();
 
@@ -95,6 +98,13 @@ export default function DashboardLayout({ children }) {
     // Initialize language & RTL/LTR direction
     const savedLang = getSavedLanguage();
     applyLanguage(savedLang);
+
+    api.getAuthConfig()
+      .then((cfg) => {
+        setTelegramEnabled(Boolean(cfg?.telegramEnabled));
+        if (cfg?.botUsername) setBotUsername(cfg.botUsername);
+      })
+      .catch(() => setTelegramEnabled(false));
   }, [router]);
 
   function toggleTheme() {
@@ -223,7 +233,7 @@ export default function DashboardLayout({ children }) {
 
         {/* Navigation Items */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map((i) => {
+          {NAV_ITEMS.filter((i) => !i.adminOnly || user?.role === 'admin').map((i) => {
             const Icon = i.icon;
             const active = i.exact ? pathname === i.href : pathname.startsWith(i.href);
             const isInbox = i.href === '/inbox';
@@ -271,23 +281,25 @@ export default function DashboardLayout({ children }) {
         </nav>
 
         {/* Sidebar Bot Quick Help Card */}
-        <div className="px-3 py-3 border-t border-slate-100 dark:border-cyber-800">
-          <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800 text-xs">
-            <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-200 mb-1">
-              <span>🤖 {t('nav.bot_card_title', 'Telegram Bot')}</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+        {telegramEnabled && (
+          <div className="px-3 py-3 border-t border-slate-100 dark:border-cyber-800">
+            <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800 text-xs">
+              <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                <span>🤖 {t('nav.bot_card_title', 'Telegram Bot')}</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 mb-2">{t('nav.bot_card_desc', 'Sync emails directly with your Telegram client.')}</p>
+              <a
+                href={`https://t.me/${botUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
+              >
+                {t('nav.bot_card_btn', 'Open Bot ↗')}
+              </a>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 mb-2">{t('nav.bot_card_desc', 'Sync emails directly with your Telegram client.')}</p>
-            <a
-              href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot'}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
-            >
-              {t('nav.bot_card_btn', 'Open Bot ↗')}
-            </a>
           </div>
-        </div>
+        )}
 
         {/* User Card in Footer */}
         <div className="px-4 py-3.5 border-t border-slate-100 dark:border-cyber-800 flex items-center gap-3">

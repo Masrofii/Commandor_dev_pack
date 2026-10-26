@@ -266,7 +266,7 @@ export default function InfrastructureTopologyMap() {
                     {BADGE_ICONS[n.healthState]}
                   </div>
                   <div className="text-[10px] font-mono mt-1 flex items-center justify-between opacity-80">
-                    <span>Port: {n.data?.port || 3000}</span>
+                    <span>Port: {n.data?.port || 8080}</span>
                     <span className="uppercase font-bold">{n.status}</span>
                   </div>
                 </div>

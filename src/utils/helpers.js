@@ -61,7 +61,7 @@ function formatCustomAliasLocalPart(rawName, isAdmin = false) {
     throw new Error('Alias name cannot be empty');
   }
 
-  // Non-admins must strictly end with -ca (e.g. example-ca@commandor.my.id)
+  // Non-admins must strictly end with -ca (e.g. example-ca@example.com)
   if (!isAdmin && !clean.endsWith('-ca')) {
     clean = `${clean}-ca`;
   }

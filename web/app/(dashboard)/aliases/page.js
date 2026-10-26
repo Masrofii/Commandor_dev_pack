@@ -48,7 +48,11 @@ export default function AliasesPage() {
   const domains = domainsData?.domains || [];
 
   const handleCreateAlias = async (isBurner = false) => {
-    const domain = selDomain || domains[0] || 'commandor.my.id';
+    const domain = selDomain || domains[0];
+    if (!domain) {
+      toast.error('No email domain is configured. Ask an administrator to configure DOMAINS.');
+      return;
+    }
     setCreating(true);
     try {
       if (isBurner) {

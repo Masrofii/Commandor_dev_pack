@@ -27,7 +27,7 @@ function isSystemOrMainHost(host) {
   const defaultDomain = (config.domains?.defaultDomain || '').toLowerCase();
   const allBases = new Set([defaultDomain, ...baseList].map(d => d.toLowerCase()).filter(Boolean));
 
-  // If host is the exact base domain (e.g. commandor.my.id) or system prefix (mail., api.)
+  // If host is the exact base domain (e.g. example.com) or system prefix (mail., api.)
   for (const base of allBases) {
     if (clean === base || clean === `mail.${base}` || clean === `api.${base}` || clean === `api.mail.${base}`) {
       return true;

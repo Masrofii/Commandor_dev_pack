@@ -1,9 +1,33 @@
 'use strict';
 const crypto = require('crypto');
+const config = require('../../config/config');
+
+let cachedKey = null;
+let cachedSecret = null;
+
+function resolveSecret() {
+  const explicit = process.env.ENCRYPTION_KEY || config.encryption?.key;
+  if (explicit) return explicit;
+
+  if (config.isProduction) {
+    throw new Error(
+      'ENCRYPTION_KEY is not configured. Refusing to start with an insecure default key. ' +
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+
+  // Development and test environments may run without an explicit key. The
+  // derived key is deterministic so local data remains readable across
+  // restarts, but it is never used in production.
+  return 'development-only-encryption-key-do-not-use-in-production';
+}
 
 function getEncryptionKey() {
-  const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'commandor-dev-pack-secure-default-key-32b';
-  return crypto.createHash('sha256').update(secret).digest();
+  const secret = resolveSecret();
+  if (cachedKey && cachedSecret === secret) return cachedKey;
+  cachedSecret = secret;
+  cachedKey = crypto.createHash('sha256').update(secret).digest();
+  return cachedKey;
 }
 
 /**
@@ -23,28 +47,34 @@ function encrypt(plaintext) {
 
 /**
  * Decrypt a ciphertext produced by encrypt().
+ * Returns null when the payload cannot be authenticated with the active key.
+ * Legacy plaintext values (without the iv:tag:ciphertext shape) are returned
+ * unchanged for backward compatibility with records written by older builds.
  */
 function decrypt(encryptedText) {
   if (!encryptedText || typeof encryptedText !== 'string') return null;
   const parts = encryptedText.split(':');
-  if (parts.length !== 3) {
-    // Return raw text if not encrypted in expected format (backward compatibility)
+  if (parts.length !== 3 || !/^[0-9a-f]+$/i.test(parts[0]) || !/^[0-9a-f]+$/i.test(parts[1])) {
     return encryptedText;
   }
   try {
     const key = getEncryptionKey();
     const iv = Buffer.from(parts[0], 'hex');
     const tag = Buffer.from(parts[1], 'hex');
-    const ciphertext = parts[2];
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(tag);
-    let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+    let decrypted = decipher.update(parts[2], 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
-  } catch (err) {
-    // If decryption fails, return null or throw
+  } catch {
     return null;
   }
+}
+
+function isEncrypted(value) {
+  if (typeof value !== 'string') return false;
+  const parts = value.split(':');
+  return parts.length === 3 && /^[0-9a-f]+$/i.test(parts[0]) && /^[0-9a-f]+$/i.test(parts[1]);
 }
 
 /**
@@ -52,7 +82,7 @@ function decrypt(encryptedText) {
  */
 function maskSecret(secret, visiblePrefix = 4, visibleSuffix = 4) {
   if (!secret || typeof secret !== 'string') return '••••••••';
-  if (secret.length <= (visiblePrefix + visibleSuffix)) {
+  if (secret.length <= visiblePrefix + visibleSuffix) {
     return '••••••••';
   }
   return `${secret.slice(0, visiblePrefix)}••••••••${secret.slice(-visibleSuffix)}`;
@@ -61,5 +91,6 @@ function maskSecret(secret, visiblePrefix = 4, visibleSuffix = 4) {
 module.exports = {
   encrypt,
   decrypt,
+  isEncrypted,
   maskSecret
 };

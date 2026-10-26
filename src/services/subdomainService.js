@@ -34,30 +34,85 @@ function validateSubdomainName(name, isAdmin = false) {
   return clean;
 }
 
-function getAvailableBaseDomains(tgId = null) {
+function normalizeBaseDomain(domain) {
+  return String(domain || '').trim().toLowerCase().replace(/\.$/, '');
+}
+
+function getPlatformBaseDomains() {
   const bases = new Set();
-  const list = config.domains?.list || [];
-  list.forEach(d => {
-    if (d && typeof d === 'string') bases.add(d.toLowerCase().trim());
-  });
-  if (config.domains?.defaultDomain) {
-    bases.add(config.domains.defaultDomain.toLowerCase().trim());
+  for (const domain of config.domains?.list || []) {
+    const clean = normalizeBaseDomain(domain);
+    if (clean) bases.add(clean);
   }
-  if (bases.size === 0) {
-    bases.add('commandor.my.id');
-  }
+  const defaultDomain = normalizeBaseDomain(config.domains?.defaultDomain);
+  if (defaultDomain) bases.add(defaultDomain);
+  return Array.from(bases);
+}
+
+/**
+ * Base domains a tenant may create subdomains under. Platform-wide domains
+ * come from configuration; custom domains only count for their owner and only
+ * after ownership verification. Admins may use any verified domain.
+ */
+function getAvailableBaseDomains(tgId = null, isAdmin = false) {
+  const bases = new Set(getPlatformBaseDomains());
 
   if (tgId) {
     try {
       const db = getDb();
-      const verified = db.prepare('SELECT domain FROM custom_domains WHERE (tg_id=? OR verified=1) AND active=1').all(tgId);
-      verified.forEach(r => {
-        if (r.domain) bases.add(r.domain.toLowerCase().trim());
-      });
-    } catch {}
+      const rows = isAdmin
+        ? db.prepare('SELECT domain FROM custom_domains WHERE verified=1 AND active=1').all()
+        : db.prepare('SELECT domain FROM custom_domains WHERE tg_id=? AND verified=1 AND active=1').all(tgId);
+      for (const row of rows) {
+        const clean = normalizeBaseDomain(row.domain);
+        if (clean) bases.add(clean);
+      }
+    } catch {
+      // The database may not be initialized yet (for example during config
+      // checks); platform domains are still returned.
+    }
   }
 
   return Array.from(bases);
+}
+
+function assertBaseDomainAllowed(tgId, baseDomain, isAdmin = false) {
+  const clean = normalizeBaseDomain(baseDomain);
+  const allowed = getAvailableBaseDomains(tgId, isAdmin);
+  if (!clean) {
+    if (allowed.length === 0) {
+      throw new Error('No base domains are configured. Add DOMAINS in the environment or verify a custom domain first.');
+    }
+    return allowed[0];
+  }
+  if (!allowed.includes(clean)) {
+    throw new Error(
+      allowed.length
+        ? `Base domain '${clean}' is not available to this account. Allowed: ${allowed.join(', ')}`
+        : `Base domain '${clean}' is not available. Configure DOMAINS or verify a custom domain first.`
+    );
+  }
+  return clean;
+}
+
+function validateWebhookUrl(rawUrl) {
+  if (rawUrl === null || rawUrl === undefined || rawUrl === '') return null;
+  if (typeof rawUrl !== 'string' || rawUrl.length > 2048) {
+    throw new Error('Webhook URL must be a string of at most 2048 characters');
+  }
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error('Webhook URL must be a valid absolute URL');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Webhook URL must use http:// or https://');
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error('Webhook URL must not contain embedded credentials');
+  }
+  return parsed.toString();
 }
 
 function claimSubdomain({
@@ -81,13 +136,9 @@ function claimSubdomain({
   const isAdmin = (user.role === 'admin') || (config.telegram?.adminId && (String(tgId) === String(config.telegram.adminId)));
   const cleanSub = validateSubdomainName(subdomain, isAdmin);
 
-  const allowedBases = getAvailableBaseDomains(tgId);
-  const targetBase = baseDomain ? baseDomain.toLowerCase().trim() : allowedBases[0];
-  if (!allowedBases.includes(targetBase)) {
-    throw new Error(`Base domain '${targetBase}' is not supported. Allowed: ${allowedBases.join(', ')}`);
-  }
-
+  const targetBase = assertBaseDomainAllowed(tgId, baseDomain, isAdmin);
   const fullDomain = `${cleanSub}.${targetBase}`.toLowerCase();
+  const safeWebhookUrl = validateWebhookUrl(emailWebhookUrl);
 
   const existing = db.prepare('SELECT id, tg_id FROM subdomains WHERE full_domain=? COLLATE NOCASE').get(fullDomain);
   if (existing) {
@@ -131,7 +182,7 @@ function claimSubdomain({
     fullDomain,
     targetBase,
     emailCatchAll ? 1 : 0,
-    emailWebhookUrl || null,
+    safeWebhookUrl,
     webEnabled ? 1 : 0,
     webMode,
     webTarget || null,
@@ -218,6 +269,10 @@ function updateSubdomain(id, tgId, updates = {}) {
     if (!VALID_WEB_MODES.has(updates.web_mode)) {
       throw new Error(`Invalid web mode '${updates.web_mode}'. Allowed: ${Array.from(VALID_WEB_MODES).join(', ')}`);
     }
+  }
+
+  if (updates.email_webhook_url !== undefined) {
+    updates.email_webhook_url = validateWebhookUrl(updates.email_webhook_url);
   }
 
   if (updates.web_target !== undefined && updates.web_target !== null && updates.web_target !== '') {
@@ -374,6 +429,9 @@ module.exports = {
   VALID_WEB_MODES,
   validateSubdomainName,
   getAvailableBaseDomains,
+  getPlatformBaseDomains,
+  assertBaseDomainAllowed,
+  validateWebhookUrl,
   claimSubdomain,
   getUserSubdomains,
   getSubdomainById,

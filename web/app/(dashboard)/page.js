@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
+import { isAdmin } from '../../lib/auth';
 import { extractVerificationCode, formatTimeAgo } from '../../lib/helpers';
 import { useTranslation } from '../../lib/i18n';
 import InfrastructureTopologyMap from '../../components/InfrastructureTopologyMap';
@@ -30,6 +31,12 @@ import {
 export default function OverviewDashboardPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const [quickCreating, setQuickCreating] = useState(false);
+  const [adminUser, setAdminUser] = useState(false);
+
+  useEffect(() => {
+    setAdminUser(isAdmin());
+  }, []);
 
   // Fetch real data from backend
   const { data: aliasesData, isLoading: loadingAliases, mutate: mutateAliases } = useSWR('overview-aliases', () => api.getAliases({ limit: 100 }));
@@ -37,12 +44,10 @@ export default function OverviewDashboardPage() {
   const { data: subdomainsData } = useSWR('overview-subdomains', () => api.getSubdomains({ limit: 50 }));
   const { data: domainsData } = useSWR('overview-domains', () => api.getDomains());
   const { data: hostingData } = useSWR('overview-hosting', () => api.getHostingSites());
-  const { data: nodesData } = useSWR('overview-nodes', () => api.getHostingNodes());
+  const { data: nodesData } = useSWR(adminUser ? 'overview-nodes' : null, () => api.getHostingNodes());
   const { data: apiKeysData } = useSWR('overview-api-keys', () => api.getApiKeys());
   const { data: appsData } = useSWR('overview-apps', () => api.getApplications());
-  const { data: backupsData } = useSWR('overview-backups', () => api.getBackups());
-
-  const [quickCreating, setQuickCreating] = useState(false);
+  const { data: backupsData } = useSWR(adminUser ? 'overview-backups' : null, () => api.getBackups());
 
   const aliases = aliasesData?.aliases || [];
   const activeAliases = aliases.filter(a => a.active);
@@ -63,7 +68,8 @@ export default function OverviewDashboardPage() {
   async function handleQuickInstantAlias() {
     setQuickCreating(true);
     try {
-      const domain = domains[0] || 'commandor.my.id';
+      const domain = domains[0];
+      if (!domain) throw new Error('No email domain is configured. Ask an administrator to configure DOMAINS.');
       const created = await api.createAlias({ domain });
       toast.success(`New Alias Created:\n${created.address}`, { duration: 5000 });
       mutateAliases();
@@ -77,7 +83,8 @@ export default function OverviewDashboardPage() {
   async function handleQuickBurner() {
     setQuickCreating(true);
     try {
-      const domain = domains[0] || 'commandor.my.id';
+      const domain = domains[0];
+      if (!domain) throw new Error('No email domain is configured. Ask an administrator to configure DOMAINS.');
       const created = await api.createBurner(domain);
       toast.success(`1-Hour Burner Created:\n${created.address}`, { duration: 5000 });
       mutateAliases();
@@ -107,13 +114,15 @@ export default function OverviewDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 flex-shrink-0">
-            <Link
-              href="/nodes"
-              className="btn bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-cyan-300 border border-indigo-200 dark:border-indigo-900/60 py-2.5 px-4 text-xs sm:text-sm font-semibold flex items-center gap-1.5"
-            >
-              <ServerStackIcon className="w-4 h-4 text-indigo-500" />
-              <span>{t('nav.nodes', 'Server Nodes')} ({nodes.length})</span>
-            </Link>
+            {adminUser && (
+              <Link
+                href="/nodes"
+                className="btn bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-cyan-300 border border-indigo-200 dark:border-indigo-900/60 py-2.5 px-4 text-xs sm:text-sm font-semibold flex items-center gap-1.5"
+              >
+                <ServerStackIcon className="w-4 h-4 text-indigo-500" />
+                <span>{t('nav.nodes', 'Server Nodes')} ({nodes.length})</span>
+              </Link>
+            )}
             <button
               onClick={handleQuickInstantAlias}
               disabled={quickCreating}
@@ -211,27 +220,48 @@ export default function OverviewDashboardPage() {
           </div>
         </Link>
 
-        {/* Metric 4: Cloud Edge & Nodes */}
-        <Link href="/nodes" className="card-hover p-5 space-y-3 group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              {t('overview.stat_nodes', 'Servers & Nodes')}
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/60 border border-violet-100 dark:border-violet-900/50 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-105 transition-transform">
-              <ServerStackIcon className="w-5 h-5" />
+        {/* Metric 4: Cloud Edge (admin sees node counts, users see their own sites) */}
+        {adminUser ? (
+          <Link href="/nodes" className="card-hover p-5 space-y-3 group">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                {t('overview.stat_nodes', 'Servers & Nodes')}
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/60 border border-violet-100 dark:border-violet-900/50 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-105 transition-transform">
+                <ServerStackIcon className="w-5 h-5" />
+              </div>
             </div>
-          </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-              {nodes.length}
+            <div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                {nodes.length}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+                <span>{sites.length} deployed sites</span>
+                <span>•</span>
+                <span className="text-emerald-500 font-medium">Cluster ready</span>
+              </div>
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-              <span>{sites.length} deployed sites</span>
-              <span>•</span>
-              <span className="text-emerald-500 font-medium">Cluster ready</span>
+          </Link>
+        ) : (
+          <Link href="/hosting" className="card-hover p-5 space-y-3 group">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                {t('overview.stat_sites', 'Hosted Sites')}
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/60 border border-violet-100 dark:border-violet-900/50 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-105 transition-transform">
+                <GlobeAltIcon className="w-5 h-5" />
+              </div>
             </div>
-          </div>
-        </Link>
+            <div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                {sites.length}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {t('overview.stat_sites_desc', 'Static sites deployed on the edge network')}
+              </div>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Platform Infrastructure & Developer Tools Banner */}
@@ -255,43 +285,47 @@ export default function OverviewDashboardPage() {
           <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-cyan-400 transition-colors rtl:rotate-180" />
         </Link>
 
-        <Link
-          href="/monitoring"
-          className="card p-4 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
-              <SignalIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>{t('nav.monitoring', 'Telemetry')}</span>
-                <span className="badge-green text-[10px] py-0 px-1.5">{t('common.online', 'Live')}</span>
+        {adminUser && (
+          <Link
+            href="/monitoring"
+            className="card p-4 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+                <SignalIcon className="w-5 h-5" />
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">CPU, Memory, Logs &amp; Events</div>
+              <div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>{t('nav.monitoring', 'Telemetry')}</span>
+                  <span className="badge-green text-[10px] py-0 px-1.5">{t('common.online', 'Live')}</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">CPU, Memory, Logs &amp; Events</div>
+              </div>
             </div>
-          </div>
-          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors rtl:rotate-180" />
-        </Link>
+            <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors rtl:rotate-180" />
+          </Link>
+        )}
 
-        <Link
-          href="/backups"
-          className="card p-4 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
-              <CircleStackIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>{t('nav.backups', 'Disaster Recovery')}</span>
-                <span className="badge text-[10px] py-0 px-1.5 bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">{backups.length} {t('backups.title', 'Snapshots')}</span>
+        {adminUser && (
+          <Link
+            href="/backups"
+            className="card p-4 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
+                <CircleStackIcon className="w-5 h-5" />
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">SQLite WAL &amp; Full System Zip</div>
+              <div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>{t('nav.backups', 'Disaster Recovery')}</span>
+                  <span className="badge text-[10px] py-0 px-1.5 bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">{backups.length} {t('backups.title', 'Snapshots')}</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">SQLite WAL &amp; Full System Zip</div>
+              </div>
             </div>
-          </div>
-          <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors rtl:rotate-180" />
-        </Link>
+            <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors rtl:rotate-180" />
+          </Link>
+        )}
       </div>
 
       {/* Main Grid: Recent Activity Feed + System Status */}
@@ -464,7 +498,7 @@ export default function OverviewDashboardPage() {
       </div>
 
       {/* Visual Infrastructure Relationship Map (Phase 5) */}
-      <InfrastructureTopologyMap />
+      {adminUser && <InfrastructureTopologyMap />}
     </div>
   );
 }

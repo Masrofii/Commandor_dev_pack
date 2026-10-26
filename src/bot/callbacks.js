@@ -380,7 +380,7 @@ function setupCallbacks(bot) {
           } else if (param === 'new') {
             const shortName = `TG-Key-${Date.now().toString().slice(-4)}`;
             const created = createApiKey({ tgId: ctx.from.id, name: shortName, scopes: VALID_SCOPES });
-            const baseUrl = config.server.webUrl || 'https://commandor.my.id';
+            const baseUrl = config.server.webUrl;
             const msg = `🎉 <b>New API Key Generated!</b>\n──────────────────\n🔑 <b>API Token:</b>\n<code>${created.rawKey}</code>\n<i>(Tap key above to copy)</i>\n\n⚠️ <b>Important:</b> Store this key safely. It will never be shown again!\n\n📌 <b>Example cURL Request:</b>\n<code>curl -H "Authorization: Bearer ${created.rawKey}" ${baseUrl}/api/emails</code>\n\n⚙️ <b>Scopes:</b> Full Access (${created.scopes.length} permissions)\n──────────────────`;
             await replyHtml(ctx, msg, {
               reply_markup: {

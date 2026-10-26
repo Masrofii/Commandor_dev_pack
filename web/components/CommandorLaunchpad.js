@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import { isAdmin } from '../lib/auth';
 import { useTranslation } from '../lib/i18n';
 import {
   RocketLaunchIcon,
@@ -24,6 +25,8 @@ import {
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
+const DEFAULT_APP_PORT = 8080;
+
 const STEPS = [
   { num: 1, title: 'Source', desc: 'Git Repo / Service' },
   { num: 2, title: 'Node', desc: 'Compute Cluster' },
@@ -43,6 +46,11 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
   const [workflowId, setWorkflowId] = useState(null);
   const [executing, setExecuting] = useState(false);
   const [workflowState, setWorkflowState] = useState(null);
+  const [adminUser, setAdminUser] = useState(false);
+
+  useEffect(() => {
+    setAdminUser(isAdmin());
+  }, []);
 
   // Form State
   const [name, setName] = useState('');
@@ -60,7 +68,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
   const [runtime, setRuntime] = useState(initialTemplate?.runtime || 'nodejs');
   const [buildCommand, setBuildCommand] = useState(initialTemplate?.recommended_build || 'npm ci && npm run build');
   const [startCommand, setStartCommand] = useState(initialTemplate?.recommended_start || 'npm start');
-  const [port, setPort] = useState(initialTemplate?.default_port || 3000);
+  const [port, setPort] = useState(initialTemplate?.default_port || DEFAULT_APP_PORT);
   const [healthCheckPath, setHealthCheckPath] = useState(initialTemplate?.health_check_endpoint || '/health');
 
   // Step 4: Secrets
@@ -70,7 +78,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
 
   // Step 5: Domain
   const [subdomain, setSubdomain] = useState('');
-  const [baseDomain, setBaseDomain] = useState('commandor.my.id');
+  const [baseDomain, setBaseDomain] = useState('');
   const [enableHttps, setEnableHttps] = useState(true);
 
   // Step 6: Preview
@@ -81,14 +89,18 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
   const [confirmed, setConfirmed] = useState(false);
 
   // Fetch Nodes & Domains
-  const { data: nodesData } = useSWR(isOpen ? 'launchpad-nodes' : null, () => api.getHostingNodes());
+  const { data: nodesData } = useSWR(isOpen && adminUser ? 'launchpad-nodes' : null, () => api.getHostingNodes());
   const { data: domainsData } = useSWR(isOpen ? 'launchpad-domains' : null, () => api.getDomainList());
   const { data: basesData } = useSWR(isOpen ? 'launchpad-bases' : null, () => api.getSubdomainBases());
 
   const nodes = nodesData?.nodes || [];
   const customDomains = Array.isArray(domainsData) ? domainsData : [];
-  const baseDomains = basesData?.baseDomains || ['commandor.my.id'];
+  const baseDomains = basesData?.baseDomains || [];
   const allDomains = Array.from(new Set([...baseDomains, ...customDomains.map(d => d.domain)]));
+
+  useEffect(() => {
+    if (!baseDomain && allDomains.length > 0) setBaseDomain(allDomains[0]);
+  }, [allDomains, baseDomain]);
 
   // Initialize from initialTemplate if provided
   useEffect(() => {
@@ -97,7 +109,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
       setRuntime(initialTemplate.runtime || 'nodejs');
       setBuildCommand(initialTemplate.recommended_build || '');
       setStartCommand(initialTemplate.recommended_start || '');
-      setPort(initialTemplate.default_port || 3000);
+      setPort(initialTemplate.default_port || DEFAULT_APP_PORT);
       setHealthCheckPath(initialTemplate.health_check_endpoint || '/health');
       if (initialTemplate.default_env) {
         setEnvVars(JSON.stringify(initialTemplate.default_env, null, 2));
@@ -144,7 +156,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           runtime,
           build_command: buildCommand,
           start_command: startCommand,
-          port: parseInt(port, 10) || 3000,
+          port: parseInt(port, 10) || DEFAULT_APP_PORT,
           health_check_path: healthCheckPath
         });
       } else if (activeStep === 4) {
@@ -159,6 +171,10 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
       } else if (activeStep === 5) {
         if (!subdomain.trim()) {
           toast.error('Subdomain is required');
+          return;
+        }
+        if (!baseDomain.trim()) {
+          toast.error('No base domain is available. Configure DOMAINS or verify a custom domain first.');
           return;
         }
         await api.updateLaunchpadStep(wfId, 5, {

@@ -90,6 +90,10 @@ const { getDatabaseStats, getProcessStats, getCounters } = require('../monitorin
 const config = require('../../config/config');
 const logger = require('../monitoring/logger');
 
+function getPrimaryBaseDomain() {
+  return config.domains?.defaultDomain || config.domains?.list?.[0] || 'your-domain.com';
+}
+
 function getLang(ctx) {
   try {
     const u = getDb().prepare('SELECT language FROM users WHERE tg_id=?').get(ctx.from.id);
@@ -304,7 +308,7 @@ Stay updated with latest improvements, security patches, and releases.
 • Instant live site deployment with custom subdomain bindings.
 
 🌐 <b>v2.3.0 — Subdomain Service & Web Routing</b>
-• Custom subdomains under <code>*.commandor.my.id</code>.
+• Custom subdomains under <code>*.${getPrimaryBaseDomain()}</code>.
 • HTTP Reverse Proxy, Redirect, Static, and Webhook Collector modes.
 • Catch-all email routing directly to Telegram inbox.
 
@@ -700,8 +704,8 @@ async function showApiKeys(ctx) {
 }
 
 async function showApiDocs(ctx) {
-  const baseUrl = config.server.webUrl || 'https://commandor.my.id';
-  const text = `📖 <b>Commandor Dev Pack REST API Documentation</b>\n─────────────────────────────\nAutomate Commandor Dev Pack from scripts, bots, or applications.\n\n🌐 <b>Base URL:</b> <code>${baseUrl}</code>\n🔐 <b>Header:</b> <code>Authorization: Bearer &lt;YOUR_API_KEY&gt;</code>\n\n📬 <b>Common Endpoints:</b>\n\n<b>1. List All Emails</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails</code>\n\n<b>2. Read Specific Email</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n\n<b>3. List Your Aliases</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/aliases</code>\n\n<b>4. Create Custom Alias</b>\n<code>curl -X POST -H "Authorization: Bearer &lt;KEY&gt;" -H "Content-Type: application/json" -d '{"domain":"commandor.my.id","customName":"mytest"}' ${baseUrl}/api/aliases</code>\n\n<b>5. Delete an Email</b>\n<code>curl -X DELETE -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n─────────────────────────────`;
+  const baseUrl = config.server.webUrl;
+  const text = `📖 <b>Commandor Dev Pack REST API Documentation</b>\n─────────────────────────────\nAutomate Commandor Dev Pack from scripts, bots, or applications.\n\n🌐 <b>Base URL:</b> <code>${baseUrl}</code>\n🔐 <b>Header:</b> <code>Authorization: Bearer &lt;YOUR_API_KEY&gt;</code>\n\n📬 <b>Common Endpoints:</b>\n\n<b>1. List All Emails</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails</code>\n\n<b>2. Read Specific Email</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n\n<b>3. List Your Aliases</b>\n<code>curl -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/aliases</code>\n\n<b>4. Create Custom Alias</b>\n<code>curl -X POST -H "Authorization: Bearer &lt;KEY&gt;" -H "Content-Type: application/json" -d '{"domain":"${getPrimaryBaseDomain()}","customName":"mytest"}' ${baseUrl}/api/aliases</code>\n\n<b>5. Delete an Email</b>\n<code>curl -X DELETE -H "Authorization: Bearer &lt;KEY&gt;" ${baseUrl}/api/emails/123</code>\n─────────────────────────────`;
 
   return send(ctx, text, {
     reply_markup: {
@@ -771,7 +775,7 @@ async function showAdminDashboard(ctx) {
   const auditStats = getAuditStats();
   const text = `👑 <b>Platform Owner & Admin Control Center</b>\n─────────────────────────────\n📊 <b>System Overview:</b>\n• 👥 <b>Total Users:</b> <b>${dbStats.users}</b> (Joined today: <b>+${usersToday}</b>)\n• 📧 <b>Active Aliases:</b> <b>${dbStats.aliases}</b> (Custom: <b>${customCount}</b>)\n• 📬 <b>Emails Received:</b> <b>${dbStats.emails}</b> (Today: <b>${dbStats.emailsToday}</b>)\n• 🔵 <b>Unread Emails:</b> <b>${dbStats.unreadEmails}</b>\n• 🛡 <b>Spam Blocked:</b> <b>${dbStats.spamToday}</b> today\n• 🔑 <b>Active API Keys:</b> <b>${activeKeysCount}</b>\n• 📜 <b>Changes Logged:</b> <b>${auditStats.total}</b> (Today: <b>+${auditStats.today}</b>)\n\n🖥 <b>Server & Node Health:</b>\n• ⏱ <b>Uptime:</b> ${uptimeStr}\n• 🧠 <b>RAM (Heap / RSS):</b> ${heapMb} MB / ${rssMb} MB\n• 💾 <b>DB Size:</b> ${formatBytes(dbSizeBytes)}\n• ⚙️ <b>Node.js:</b> ${procStats.nodeVersion} (PID: ${procStats.pid})\n\n🔍 <b>Recent Live Incoming Emails (Last 5):</b>\n${emailSnippets}\n\n👥 <b>Recent Users Registered (Last 5):</b>\n${userSnippets}\n─────────────────────────────\n💡 <i>Live statistics refreshed instantly.</i>`;
 
-  return send(ctx, text, adminDashboardKeyboard(config.server.webUrl || 'https://commandor.my.id', lang));
+  return send(ctx, text, adminDashboardKeyboard(config.server.webUrl, lang));
 }
 
 async function showAdminEmailFeed(ctx, page = 1) {
@@ -1493,7 +1497,7 @@ function setupCommands(bot) {
       reply_markup: {
         inline_keyboard: [
           [{ text: '🎟️ Redeem Code', callback_data: 'user:redeem_prompt' }],
-          [{ text: '🌐 Web Dashboard', url: config.webUrl || 'http://localhost:3001' }]
+          [{ text: '🌐 Web Dashboard', url: config.server.webUrl }]
         ]
       }
     });
@@ -1882,8 +1886,8 @@ async function showSubdomains(ctx, page = 1) {
   const { subdomains, total } = getUserSubdomains(ctx.from.id, { page, limit: 8 });
 
   let text = `🌐 <b>Subdomain Service</b>\n\n`;
-  text += `Claim your own personal subdomains under <code>commandor.my.id</code>!\n`;
-  text += `• <b>Email Routing:</b> Automatic catch-all (<code>*@yoursub.commandor.my.id</code>) delivers directly to your Telegram inbox.\n`;
+  text += `Claim your own personal subdomains under <code>${getPrimaryBaseDomain()}</code>!\n`;
+  text += `• <b>Email Routing:</b> Automatic catch-all (<code>*@yoursub.${getPrimaryBaseDomain()}</code>) delivers directly to your Telegram inbox.\n`;
   text += `• <b>Web Routing:</b> Reverse proxy to any server/port, redirect, static HTML, or webhook request inspector.\n\n`;
 
   if (subdomains.length === 0) {
@@ -1938,7 +1942,7 @@ async function showClaimSubdomainPrompt(ctx) {
   setSubdomain(ctx.from.id, { step: 'claim' });
   let text = `🌐 <b>Claim Your Subdomain:</b>\n\n`;
   text += `Choose a subdomain name (3 to 63 letters, numbers, or hyphens).\n`;
-  text += `Your domain will be: <b><code>&lt;name&gt;.commandor.my.id</code></b>\n\n`;
+  text += `Your domain will be: <b><code>&lt;name&gt;.${getPrimaryBaseDomain()}</code></b>\n\n`;
   text += `Example: send <code>mybot</code> or <code>myproject</code>\n\n`;
   text += `<i>Reply with your chosen name below (or send /cancel to abort):</i>`;
   return replyHtml(ctx, text);
@@ -2054,7 +2058,7 @@ async function showDeploySitePrompt(ctx) {
   setDeploySite(ctx.from.id, { step: 'name' });
   let text = `🚀 <b>Deploy a New Site:</b>\n\n`;
   text += `Choose a name for your website (3 to 30 characters, letters, numbers, hyphens).\n`;
-  text += `Your site will be available at: <b><code>&lt;name&gt;.commandor.my.id</code></b>\n\n`;
+  text += `Your site will be available at: <b><code>&lt;name&gt;.${getPrimaryBaseDomain()}</code></b>\n\n`;
   text += `<i>Reply with your chosen name below (or send /cancel):</i>`;
   return replyHtml(ctx, text);
 }
@@ -2268,7 +2272,7 @@ async function handleDeploySiteName(ctx, name) {
   }
 
   setSiteHtml(ctx.from.id, { siteName: cleanName });
-  let text = `📝 <b>Website Content for <code>${escapeHtml(cleanName)}.commandor.my.id</code></b>\n\n`;
+  let text = `📝 <b>Website Content for <code>${escapeHtml(cleanName)}.${getPrimaryBaseDomain()}</code></b>\n\n`;
   text += `Choose how to provide your website:\n`;
   text += `1. <b>Reply with HTML code:</b> send your HTML markup directly in text!\n`;
   text += `2. <b>Send a .zip file:</b> attach a zip archive containing your HTML, CSS, images, and JS files!\n\n`;

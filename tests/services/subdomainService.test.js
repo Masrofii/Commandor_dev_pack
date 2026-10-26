@@ -21,7 +21,10 @@ const {
   deleteSubdomain,
   recordSubdomainEmail,
   recordWebRequest,
-  getSubdomainWebRequests
+  getSubdomainWebRequests,
+  getAvailableBaseDomains,
+  assertBaseDomainAllowed,
+  validateWebhookUrl
 } = require('../../src/services/subdomainService');
 const { createAlias, getAllowedDomains } = require('../../src/services/aliasService');
 
@@ -29,6 +32,7 @@ beforeAll(() => {
   initDatabase();
   runMigrations();
   getDb().prepare("INSERT INTO users(tg_id, username, role) VALUES(1001, 'user1', 'user')").run();
+  getDb().prepare("INSERT INTO users(tg_id, username, role) VALUES(1002, 'user2', 'user')").run();
   getDb().prepare("INSERT INTO users(tg_id, username, role) VALUES(9999, 'admin1', 'admin')").run();
 });
 
@@ -39,6 +43,7 @@ afterEach(() => {
   db.prepare('DELETE FROM subdomains').run();
   db.prepare('DELETE FROM subdomain_web_requests').run();
   db.prepare('DELETE FROM aliases').run();
+  db.prepare('DELETE FROM custom_domains').run();
 });
 
 describe('Subdomain Service', () => {
@@ -154,5 +159,74 @@ describe('Subdomain Service', () => {
 
     const remainingAliases = getDb().prepare('SELECT * FROM aliases WHERE domain=?').all(sub.full_domain);
     expect(remainingAliases.length).toBe(0);
+  });
+});
+
+describe('Subdomain tenancy and base-domain authorization', () => {
+  const addCustomDomain = ({ tgId, domain, verified = 1, active = 1 }) => {
+    return getDb().prepare(`
+      INSERT INTO custom_domains (tg_id, domain, verification_token, verified, active)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(tgId, domain, `token-${domain}`, verified, active).lastInsertRowid;
+  };
+
+  test('only exposes platform domains and the account\'s own verified domains', () => {
+    addCustomDomain({ tgId: 1001, domain: 'verified-one.example.net' });
+    addCustomDomain({ tgId: 1001, domain: 'pending.example.net', verified: 0 });
+    addCustomDomain({ tgId: 1002, domain: 'other-user.example.net' });
+
+    const userBases = getAvailableBaseDomains(1001, false);
+    expect(userBases).toContain('test.example.com');
+    expect(userBases).toContain('verified-one.example.net');
+    expect(userBases).not.toContain('pending.example.net');
+    expect(userBases).not.toContain('other-user.example.net');
+
+    const adminBases = getAvailableBaseDomains(9999, true);
+    expect(adminBases).toContain('verified-one.example.net');
+    expect(adminBases).toContain('other-user.example.net');
+    expect(adminBases).not.toContain('pending.example.net');
+  });
+
+  test('rejects claims under another tenant\'s or an unverified domain', () => {
+    addCustomDomain({ tgId: 1002, domain: 'other-user.example.net' });
+    addCustomDomain({ tgId: 1001, domain: 'pending.example.net', verified: 0 });
+
+    expect(() => assertBaseDomainAllowed(1001, 'other-user.example.net')).toThrow(/not available to this account/i);
+    expect(() => assertBaseDomainAllowed(1001, 'pending.example.net')).toThrow(/not available to this account/i);
+    expect(() => claimSubdomain({ tgId: 1001, subdomain: 'cross', baseDomain: 'other-user.example.net' }))
+      .toThrow(/not available to this account/i);
+  });
+
+  test('allows claims under a verified custom domain for its owner', () => {
+    addCustomDomain({ tgId: 1001, domain: 'verified-one.example.net' });
+    const sub = claimSubdomain({ tgId: 1001, subdomain: 'shop', baseDomain: 'verified-one.example.net' });
+    expect(sub.full_domain).toBe('shop.verified-one.example.net');
+    expect(sub.base_domain).toBe('verified-one.example.net');
+  });
+
+  test('enforces ownership on updates, deletes and request inspection', () => {
+    const sub = claimSubdomain({ tgId: 1001, subdomain: 'private' });
+
+    expect(() => updateSubdomain(sub.id, 1002, { active: 0 })).toThrow(/not found or unauthorized/i);
+    expect(deleteSubdomain(sub.id, 1002)).toBe(false);
+    expect(() => getSubdomainWebRequests(sub.id, 1002)).toThrow(/not found or unauthorized/i);
+
+    expect(getSubdomainById(sub.id, 1002)).toBeUndefined();
+    expect(getSubdomainById(sub.id, 1001).id).toBe(sub.id);
+  });
+
+  test('validates webhook URLs before storing them', () => {
+    expect(validateWebhookUrl('https://hooks.example.com/inbox')).toBe('https://hooks.example.com/inbox');
+    expect(validateWebhookUrl(null)).toBeNull();
+    expect(() => validateWebhookUrl('ftp://hooks.example.com')).toThrow(/http:\/\/ or https:\/\//i);
+    expect(() => validateWebhookUrl('https://user:pass@hooks.example.com')).toThrow(/embedded credentials/i);
+    expect(() => validateWebhookUrl('not-a-url')).toThrow(/valid absolute URL/i);
+
+    const sub = claimSubdomain({
+      tgId: 1001,
+      subdomain: 'hooktarget',
+      emailWebhookUrl: 'https://hooks.example.com/inbox'
+    });
+    expect(sub.email_webhook_url).toBe('https://hooks.example.com/inbox');
   });
 });

@@ -12,6 +12,8 @@ logs/
 exports/
 storage/
 coverage/
+nginx/routes/
+nginx/backups/
 .DS_Store
 Thumbs.db
 *.swp

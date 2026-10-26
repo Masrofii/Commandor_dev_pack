@@ -85,28 +85,35 @@ A guided wizard that simplifies complex routing into an intuitive step-by-step w
 ### 5. 🚀 Developer Platform & Application Deployments
 - **Application Inventory**: Git repository tracking, branch selection, and port allocation.
 - **Environment & Secret Management**: Store application environment variables securely encrypted with automated masking in API responses.
-- **Controlled Deployment Jobs**: Track deployment build logs, execution runtimes, and commit hashes.
-- **Health Checks & Rollback**: Monitor HTTP endpoints and quickly restore previous successful releases.
+- **Real Local Runner**: Clone/fetch the repository, install dependencies, run the build, start a supervised process, and verify health (`APP_RUNNER=local`).
+- **Honest Simulated Mode**: `APP_RUNNER=mock` keeps deterministic demo deployments for tests and tours, with clearly labelled simulated logs.
+- **Runtime Control & Logs**: Start, stop, restart, inspect captured stdout/stderr, and roll back to a recorded commit.
+- **Safety Gate**: Local execution is admin-only unless `APP_ALLOW_USER_DEPLOYMENTS=true`; build and start commands run with the API process's privileges.
 
 ### 6. 💾 Verified Backups & Disaster Recovery
-- **Database Snapshots**: Online SQLite WAL-safe hot backups.
-- **Configuration & Route Archives**: Zip archives of active platform configs, routes, and metadata.
-- **Integrity Verification**: Automatic SQLite header validation and byte-size checks before confirming backups as healthy.
-- **Retention Policies**: Configurable retention periods and automated pruning.
-- **Safe Restore Workflows**: Confirmation gates and pre-restore safety snapshots.
+- **Database Snapshots**: Online SQLite WAL-safe hot backups with millisecond-unique names.
+- **Full System Archives**: A single ZIP containing the verified database, Nginx routes, configuration examples, package metadata, and migrations.
+- **Deep Verification**: Checksum, SQLite header, `integrity_check`, and isolated dry-run restore tests.
+- **Tiered Retention**: Keep recent backups, daily/weekly recovery points, the newest backup, and pre-restore safety snapshots.
+- **Safe Restore Workflows**: Confirmation gates, automatic pre-restore snapshot, and protected deletion of the newest recovery point.
+- **Lifecycle Controls**: Verify, test-restore, download, restore, prune, and delete from the dashboard or API.
 
 ### 7. 🛡️ Enterprise Security & Auditing
 - **RBAC & Token Security**: Role-based access control (Admin / Developer) and HMAC/JWT sessions.
+- **Local Administrator Login**: Optional bcrypt-backed username/password sign-in for installations that do not use Telegram, with rate limiting and audit logging.
+- **SSRF Protection**: Outbound webhook and routing URLs are resolved and checked against private, loopback, link-local, metadata, 6to4, and IPv4-mapped IPv6 ranges.
 - **Secret Redaction**: Zero credential exposure in frontend payloads, logs, or error responses.
-- **Comprehensive Audit Trail**: Every sensitive operation (node addition, DNS mutation, route update, deployment) is recorded in immutable audit logs.
+- **Production Validation**: Startup refuses insecure default secrets in production and warns about risky runner/domain settings.
+- **Comprehensive Audit Trail**: Every sensitive operation (node addition, DNS mutation, route update, deployment, login) is recorded in immutable audit logs.
 
 ---
 
 ## 🚀 Quick Start
 
 ### 1. Prerequisites
-- **Node.js**: v20.x or v22.x LTS
-- **Nginx**: v1.18+ (optional for native proxy generation)
+- **Node.js**: v22.x or newer (tested on Node 22 and 24; required by `better-sqlite3` 13)
+- **Nginx**: v1.18+ (optional with `PROXY_MODE=auto`; missing Nginx stores pending route files)
+- **Git**: Required only for real application deployments
 - **OpenSSL**: For cryptographic secret generation
 
 ### 2. Installation
@@ -135,8 +142,45 @@ node -e "console.log('ENCRYPTION_KEY=' + require('crypto').randomBytes(32).toStr
 Edit `.env` and fill in:
 - `JWT_SECRET`
 - `ENCRYPTION_KEY`
+- `SESSION_SECRET`
 - `BASE_URL` (e.g. `http://localhost:3000`)
+- `WEB_URL` (e.g. `http://localhost:3001`)
+- `DOMAINS` and `DEFAULT_DOMAIN` (required for aliases and subdomain routing)
 - `CLOUDFLARE_API_TOKEN` (optional for automated DNS management)
+
+#### Sign in without Telegram
+To use the dashboard without a Telegram bot, set a local administrator password:
+
+```bash
+# Generate a strong password and add it to .env
+LOCAL_AUTH_ENABLED=true
+LOCAL_ADMIN_USERNAME=admin
+LOCAL_ADMIN_PASSWORD=<strong-random-password>
+LOCAL_ADMIN_TG_ID=900000001
+```
+
+At startup the account is created (or its password synchronized) with the `admin`
+role. The login page automatically offers the username/password form. Successful
+and failed attempts are rate-limited and written to the audit log.
+
+> **Upgrading note:** production now requires `SESSION_SECRET`, `JWT_SECRET`,
+> `ENCRYPTION_KEY`, and at least one login method (`TELEGRAM_BOT_TOKEN` or
+> `LOCAL_ADMIN_PASSWORD`). Missing values fail fast instead of silently using
+> insecure defaults.
+
+#### Application runner
+`APP_RUNNER=local` is the default and performs real Git/install/build/process
+supervision on the host. Because this is equivalent to granting shell access:
+
+- keep local deployments admin-only (default), or explicitly set
+  `APP_ALLOW_USER_DEPLOYMENTS=true` only on a trusted single-tenant host;
+- use `APP_RUNNER=mock` for demos and tests;
+- prefer a container or dedicated VM for untrusted repositories.
+
+`PROXY_MODE=auto` validates and reloads system Nginx when available. If Nginx is
+not installed, generated routes are stored with `pending` status so an external
+reloader can apply them later. Use `PROXY_MODE=nginx` to require Nginx, or
+`PROXY_MODE=pending` to always render without reloading.
 
 ### 4. Run Migrations
 ```bash
@@ -182,15 +226,21 @@ pm2 start ecosystem.config.js
 | `GET` | `/api/domains` | List domain inventory with DNS & TLS statuses |
 | `POST` | `/api/domains` | Add domain to inventory |
 | `GET` | `/api/domains/:id/health` | Comprehensive DNS & authoritative health check |
+| `POST` | `/api/auth/local/login` | Username/password login when local auth is enabled |
+| `GET` | `/api/auth/config` | Available login methods and platform branding |
 | `POST` | `/api/subdomains/wizard/preview` | Preview planned DNS, proxy, and TLS changes |
 | `POST` | `/api/subdomains/wizard/deploy` | Atomic deploy of subdomain route & DNS |
 | `POST` | `/api/subdomains/:id/verify` | Multi-stage verification (DNS, Route, HTTPS) |
 | `GET` | `/api/applications` | List applications with health & deployment state |
 | `POST` | `/api/applications` | Create application record |
-| `POST` | `/api/applications/:id/deploy` | Trigger Git deployment job |
-| `GET` | `/api/monitoring/overview` | Real aggregate metrics across nodes and services |
-| `GET` | `/api/backups` | List verified database and config backups |
-| `POST` | `/api/backups` | Trigger on-demand verified backup |
+| `POST` | `/api/applications/:id/deploy` | Trigger a local or simulated deployment job |
+| `POST` | `/api/applications/:id/control` | Start, stop, or restart a local process |
+| `GET` | `/api/applications/:id/logs` | Read recent runtime stdout/stderr |
+| `GET` | `/api/monitoring/overview` | Admin-only aggregate metrics across nodes and services |
+| `GET` | `/api/backups` | Admin-only list of verified database and full backups |
+| `POST` | `/api/backups` | Trigger an on-demand verified backup |
+| `POST` | `/api/backups/prune` | Apply the retention policy now |
+| `DELETE` | `/api/backups/:id` | Delete a backup (newest requires `force=true`) |
 
 ---
 

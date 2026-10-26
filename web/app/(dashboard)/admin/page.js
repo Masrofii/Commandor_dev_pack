@@ -99,6 +99,9 @@ export default function AdminPage() {
   const [cleaningDb, setCleaningDb] = useState(false);
 
   // SWR Data Fetching (Enabled only if authorized)
+  const { data: basesData } = useSWR('subdomain-bases', api.getSubdomainBases);
+  const platformBase = basesData?.defaultDomain || basesData?.baseDomains?.[0] || '';
+
   const { data: statsData, mutate: mutateStats, isLoading: loadingStats } = useSWR(
     authorized ? 'admin-stats' : null,
     api.getAdminStats,
@@ -571,7 +574,9 @@ export default function AdminPage() {
               <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
                 {overview.subdomains || 0}
               </div>
-              <div className="text-[11px] text-emerald-600 mt-1 font-medium">*.commandor.my.id</div>
+              <div className="text-[11px] text-emerald-600 mt-1 font-medium">
+                {platformBase ? `*.${platformBase}` : 'No platform domain configured'}
+              </div>
             </div>
 
             <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">

@@ -128,12 +128,22 @@ describe('Subdomain API & Web Router', () => {
     expect(res.text).toContain('not claimed');
   });
 
-  test('DELETE /api/subdomains/:id deletes subdomain', async () => {
+  test('DELETE /api/subdomains/:id accepts dashboard snake_case options and removes site data', async () => {
+    getDb().prepare(`
+      INSERT INTO aliases (address, tg_id, domain, alias_type)
+      VALUES ('portal@mysite.test.example.com', 1001, 'mysite.test.example.com', 'custom')
+    `).run();
+
     const res = await request(app)
       .delete(`/api/subdomains/${createdSubdomainId}`)
-      .set('Authorization', `Bearer ${userToken}`);
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ delete_dns: false, delete_site_data: true });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('deleted');
+    expect(res.body.deletedAliases).toBe(1);
+    expect(getDb().prepare(
+      "SELECT address FROM aliases WHERE domain='mysite.test.example.com'"
+    ).get()).toBeUndefined();
   });
 });

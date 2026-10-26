@@ -11,6 +11,7 @@ const {
   previewTemplateApplication
 } = require('../services/templateService');
 const { body, validationResult } = require('express-validator');
+const { assertBaseDomainAllowed } = require('../services/subdomainService');
 
 router.use(requireAuthOrApiKey());
 
@@ -41,10 +42,13 @@ router.post('/preview', (req, res) => {
       return res.status(400).json({ error: 'template_key and subdomain are required' });
     }
 
+    const isAdmin = req.user?.role === 'admin';
+    const baseDomain = assertBaseDomainAllowed(req.tgId, base_domain || '', isAdmin);
+
     const preview = previewTemplateApplication({
       templateKey: template_key,
       subdomain,
-      baseDomain: base_domain || 'commandor.my.id',
+      baseDomain,
       targetHost: target_host || '127.0.0.1',
       targetPort: target_port,
       enableHttps: !!enable_https
