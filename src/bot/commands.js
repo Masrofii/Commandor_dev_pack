@@ -2080,24 +2080,20 @@ async function showDeploySitePrompt(ctx) {
 async function showAddNodePrompt(ctx) {
   if (!isOwnerOrAdmin(ctx.from.id)) return replyHtml(ctx, t('admin.denied', getLang(ctx)));
   setAddNode(ctx.from.id, { step: 'connect' });
-  let text = `🖥️ <b>Add Cloud Server Nodes (Single or Bulk SSH):</b>\n\n`;
-  text += `Reply with your SSH connection string, or <b>paste multiple nodes (one per line)</b> to bulk import!\n\n`;
+  let text = `🖥️ <b>Add Cloud Server Nodes (SSH, SFTP & FTP):</b>\n\n`;
+  text += `Reply with your connection string, or <b>paste multiple nodes (one per line)</b> to bulk import!\n\n`;
   text += `<b>Supported Formats:</b>\n`;
   text += `• <code>host:port:user:pass</code>\n`;
-  text += `• <code>host:user:pass</code> (default port 22)\n`;
+  text += `• <code>host:user:pass</code> (default port 22 or 21)\n`;
   text += `• <code>user:pass@host:port</code>\n`;
   text += `• <code>host:port:user:pass # Node Name</code>\n\n`;
   text += `<i>Example Single:</i>\n<code>198.51.100.25:22:root:mypassword</code>\n\n`;
   text += `<i>Example Bulk Import:</i>\n`;
   text += `<code>198.51.100.25:22:root:pass1 # Node-US-1\n`;
-  text += `198.51.100.26:22:root:pass2 # Node-EU-1\n`;
-  text += `user:pass3@198.51.100.27:2222</code>\n\n`;
-  text += `⚡ <b>The system will automatically:</b>\n`;
-  text += `1. Test SSH connectivity\n`;
-  text += `2. Detect CPU, RAM, and Disk specifications\n`;
-  text += `3. Configure remote <code>/var/www/nodesites</code> directory\n`;
-  text += `4. Start the multi-site web runner daemon\n`;
-  text += `5. Connect all nodes into the hosting pool!\n\n`;
+  text += `198.51.100.26:2022:user:pass2 # Node-SFTP\n`;
+  text += `user:pass3@198.51.100.27:21 # Node-FTP</code>\n\n`;
+  text += `⚡ <b>Auto-Detection & Enrollment:</b>\n`;
+  text += `The system automatically detects whether each server is an <b>SSH Compute Node</b>, <b>SFTP Storage Node</b>, or <b>FTP Server</b> on its own, verifies authentication, and connects it into your cluster!\n\n`;
   text += `<i>Send your connection strings below (or /cancel):</i>`;
   return replyHtml(ctx, text);
 }
@@ -2204,7 +2200,7 @@ async function handleAddNodeConnection(ctx, connectionText) {
   // If single node
   if (parsedList.length === 1 && !parsedList[0].error) {
     const item = parsedList[0];
-    await replyHtml(ctx, `⏳ <b>Connecting to Server Node via SSH...</b>\n• Host: <code>${escapeHtml(item.host)}:${item.port}</code>\n• Verifying credentials\n• Probing system specs\n• Installing site runner...`);
+    await replyHtml(ctx, `⏳ <b>Connecting to Server Node...</b>\n• Host: <code>${escapeHtml(item.host)}:${item.port}</code>\n• Verifying credentials\n• Probing protocol (SSH / SFTP / FTP)\n• Testing connection specs...`);
     try {
       const node = await testAndProvisionNode({
         host: item.host,
@@ -2215,14 +2211,27 @@ async function handleAddNodeConnection(ctx, connectionText) {
         name: item.name
       });
 
+      const isSftp = node.system_info?.sftpOnly || node.system_info?.protocol === 'sftp';
+      const isFtp = node.system_info?.ftpOnly || node.system_info?.protocol === 'ftp' || (node.ftp_status === 'online' && node.auth_method === 'ftp');
       const cpus = node.system_info?.cpus || 1;
       const ram = formatMemoryMb(node.system_info?.ramTotalMb || node.system_info?.ramMb);
+
+      let typeBadge = '🖥️ SSH Compute Node';
+      let hwText = `${cpus} vCPU | ${ram} RAM | Free: ${node.system_info?.freeDisk || 'OK'}`;
+      if (isSftp) {
+        typeBadge = '🔒 SFTP Storage Node (SFTP Subsystem)';
+        hwText = `SFTP Service | Latency: ${node.system_info?.latencyMs || 'N/A'}ms`;
+      } else if (isFtp) {
+        typeBadge = `📁 FTP Server (${node.ftp_server_type || 'Standard'})`;
+        hwText = `Port: ${node.ftp_port || 21} | Latency: ${node.system_info?.latencyMs || 'N/A'}ms`;
+      }
 
       let text = `🎉 <b>Server Node Connected!</b>\n\n`;
       text += `• <b>Node Name:</b> <code>${escapeHtml(node.name)}</code>\n`;
       text += `• <b>Host:</b> <code>${escapeHtml(node.host)}:${node.port}</code>\n`;
+      text += `• <b>Protocol:</b> ${typeBadge}\n`;
       text += `• <b>Status:</b> 🟢 Online\n`;
-      text += `• <b>Hardware:</b> ${cpus} vCPU | ${ram} RAM | Free: ${node.system_info?.freeDisk || 'OK'}\n`;
+      text += `• <b>Specs:</b> ${hwText}\n`;
       text += `• <b>Sites Capacity:</b> Up to ${node.max_sites} sites\n\n`;
       text += `<i>The server node is active and ready in the hosting cluster!</i>`;
 
@@ -2241,12 +2250,12 @@ async function handleAddNodeConnection(ctx, connectionText) {
 
   // Bulk nodes handling
   const validCount = parsedList.filter(p => !p.error).length;
-  await replyHtml(ctx, `⏳ <b>Bulk Provisioning ${parsedList.length} Server Node(s)...</b>\n• Detected ${validCount} valid SSH entries\n• Connecting in parallel (concurrency: 3)\n• Testing specs and configuring site runners...`);
+  await replyHtml(ctx, `⏳ <b>Bulk Provisioning ${parsedList.length} Server Node(s)...</b>\n• Detected ${validCount} valid server entries\n• Connecting in parallel (concurrency: 3)\n• Auto-detecting protocol (SSH / SFTP / FTP) & testing specs...`);
 
   try {
     const summary = await provisionNodesBulk(parsedList, { concurrency: 3 });
 
-    let text = `🚀 <b>Bulk SSH Provisioning Complete!</b>\n`;
+    let text = `🚀 <b>Bulk Server Node Provisioning Complete!</b>\n`;
     text += `──────────────────────────────\n`;
     text += `• <b>Total Nodes:</b> ${summary.total}\n`;
     text += `• <b>Online & Ready:</b> 🟢 <b>${summary.successful}</b>\n`;
@@ -2256,9 +2265,20 @@ async function handleAddNodeConnection(ctx, connectionText) {
     for (const r of summary.results) {
       const hostLabel = r.host ? `${escapeHtml(r.host)}:${r.port || 22}` : escapeHtml(r.input);
       if (r.status === 'success') {
-        const cpus = r.node?.system_info?.cpus || 1;
-        const ram = formatMemoryMb(r.node?.system_info?.ramTotalMb || r.node?.system_info?.ramMb);
-        text += `🟢 <b>${hostLabel}</b> — <code>${escapeHtml(r.name || r.node?.name)}</code> (${cpus} vCPU, ${ram})\n`;
+        const isSftp = r.sftpOnly || r.node?.system_info?.sftpOnly || r.node?.system_info?.protocol === 'sftp';
+        const isFtp = r.protocol === 'ftp' || r.node?.system_info?.ftpOnly || r.node?.system_info?.protocol === 'ftp' || (r.node?.ftp_status === 'online' && r.node?.auth_method === 'ftp');
+        let detail = '';
+        if (isSftp) {
+          detail = '🔒 SFTP Storage Node';
+        } else if (isFtp) {
+          const type = r.node?.ftp_server_type || 'FTP';
+          detail = `📁 FTP Server (${type})`;
+        } else {
+          const cpus = r.node?.system_info?.cpus || 1;
+          const ram = formatMemoryMb(r.node?.system_info?.ramTotalMb || r.node?.system_info?.ramMb);
+          detail = `${cpus} vCPU, ${ram}`;
+        }
+        text += `🟢 <b>${hostLabel}</b> — <code>${escapeHtml(r.name || r.node?.name)}</code> (${detail})\n`;
       } else {
         text += `🔴 <b>${hostLabel}</b> — <i>${escapeHtml(r.error || 'Failed')}</i>\n`;
       }

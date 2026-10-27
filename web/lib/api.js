@@ -224,7 +224,18 @@ export const api = {
   addHostingNode: (data) => apiFetch('/api/hosting/nodes', { method: 'POST', body: JSON.stringify(data) }),
   addHostingNodesBulk: (data) => apiFetch('/api/hosting/nodes/bulk', { method: 'POST', body: JSON.stringify(data) }),
   deleteHostingNode: (id) => apiFetch(`/api/hosting/nodes/${id}`, { method: 'DELETE' }),
-  getHostingSecurityLogs: (p = {}) => apiFetch('/api/hosting/security-logs' + toQueryString(p))
+  getHostingSecurityLogs: (p = {}) => apiFetch('/api/hosting/security-logs' + toQueryString(p)),
+
+  // Node FTP & File Management
+  getNodeFtp: (id) => apiFetch(`/api/hosting/nodes/${id}/ftp`),
+  detectNodeFtp: (id) => apiFetch(`/api/hosting/nodes/${id}/ftp/detect`, { method: 'POST' }),
+  provisionNodeFtp: (id, data) => apiFetch(`/api/hosting/nodes/${id}/ftp/provision`, { method: 'POST', body: JSON.stringify(data || {}) }),
+  controlNodeFtp: (id, action) => apiFetch(`/api/hosting/nodes/${id}/ftp/control`, { method: 'POST', body: JSON.stringify({ action }) }),
+  testNodeFtp: (id, data) => apiFetch(`/api/hosting/nodes/${id}/ftp/test`, { method: 'POST', body: JSON.stringify(data || {}) }),
+  getNodeFtpUsers: (id) => apiFetch(`/api/hosting/nodes/${id}/ftp/users`),
+  createNodeFtpUser: (id, data) => apiFetch(`/api/hosting/nodes/${id}/ftp/users`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteNodeFtpUser: (id, userId) => apiFetch(`/api/hosting/nodes/${id}/ftp/users/${userId}`, { method: 'DELETE' }),
+  bulkDetectFtp: (nodeIds) => apiFetch('/api/hosting/nodes/bulk/ftp/detect', { method: 'POST', body: JSON.stringify({ node_ids: nodeIds }) })
 };
 
 export default api;

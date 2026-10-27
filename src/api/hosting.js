@@ -29,7 +29,16 @@ const {
   getNodeById,
   getNodeWithSites,
   pingNode,
-  executeNodeCommand
+  executeNodeCommand,
+  detectNodeFtp,
+  provisionNodeFtp,
+  controlNodeFtp,
+  getNodeFtpInfo,
+  createNodeFtpUser,
+  deleteNodeFtpUser,
+  listNodeFtpUsers,
+  testNodeFtpCredentials,
+  bulkDetectFtp
 } = require('../services/nodeManagerService');
 
 const upload = multer({
@@ -322,7 +331,10 @@ router.post('/nodes/bulk', async (req, res) => {
       return res.status(400).json({ error: 'Connection strings or nodes array is required' });
     }
 
-    const result = await provisionNodesBulk(input);
+    const result = await provisionNodesBulk(input, {
+      autoProvisionFtp: req.body.auto_provision_ftp || req.body.autoProvisionFtp || false,
+      detectFtp: req.body.detect_ftp !== false
+    });
     res.status(200).json(result);
   } catch (err) {
     res.status(500).json({ error: `Bulk node provisioning failed: ${err.message}` });
@@ -370,6 +382,131 @@ router.post('/nodes/:id/exec', async (req, res) => {
       return res.status(400).json({ error: 'command is required' });
     }
     const result = await executeNodeCommand(id, command, req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Node FTP Management Endpoints
+router.post('/nodes/bulk/ftp/detect', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const results = await bulkDetectFtp(req.body.node_ids);
+    res.json({ results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/nodes/:id/ftp', (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const info = getNodeFtpInfo(id);
+    res.json(info);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/detect', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const node = getNodeById(id);
+    if (!node) return res.status(404).json({ error: 'Node not found' });
+    const result = await detectNodeFtp({
+      host: node.host,
+      port: node.ftp_port || 21,
+      nodeId: id
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/provision', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const result = await provisionNodeFtp(id, req.body, req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/control', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const { action } = req.body;
+    const result = await controlNodeFtp(id, action, req.tgId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/test', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const result = await testNodeFtpCredentials(id, req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/nodes/:id/ftp/users', (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const users = listNodeFtpUsers(id);
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/users', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const user = await createNodeFtpUser(id, req.body, req.tgId);
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/nodes/:id/ftp/users/:userId', async (req, res) => {
+  try {
+    if (!checkIsAdmin(req.tgId)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const userId = parseInt(req.params.userId, 10);
+    const result = await deleteNodeFtpUser(id, userId, req.tgId);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
