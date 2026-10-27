@@ -881,11 +881,12 @@ export default function NodesPage() {
             return (
               <div
                 key={node.id}
-                className={`card p-5 space-y-4 hover:border-brand-300 dark:hover:border-cyber-700 transition-all shadow-xs ${
+                className={`card p-5 flex flex-col justify-between hover:border-brand-300 dark:hover:border-cyber-700 transition-all shadow-xs ${
                   !isActive ? 'opacity-70 border-dashed' : ''
                 }`}
               >
-                {/* Header */}
+                <div className="space-y-4">
+                  {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -1133,9 +1134,10 @@ export default function NodesPage() {
                     </div>
                   </div>
                 </div>
+              </div>
 
                 {/* Grounded Card Footer Bar */}
-                <div className="-mx-5 -mb-5 mt-3 px-4 py-2.5 bg-cf-50/80 dark:bg-cyber-900 border-t border-cf-200 dark:border-cyber-800 rounded-b-xl flex items-center justify-between gap-2">
+                <div className="-mx-5 -mb-5 mt-4 px-4 py-2.5 bg-cf-50/80 dark:bg-cyber-900 border-t border-cf-200 dark:border-cyber-800 rounded-b-xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 min-w-0">
                     <ClockIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="truncate">Pinged {node.last_ping_at ? formatTimeAgo(node.last_ping_at) : 'never'}</span>
@@ -1146,11 +1148,11 @@ export default function NodesPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end">
                     {!isSftpStorage && !isFtpOnly && (
                       <button
                         onClick={() => handleOpenTerminal(node)}
-                        className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5 shadow-xs hover:border-brand-500 hover:text-brand-600 transition-all"
+                        className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs hover:border-brand-500 hover:text-brand-600 transition-all flex-1 sm:flex-initial"
                         title="Open SSH Web Terminal"
                       >
                         <CommandLineIcon className="w-3.5 h-3.5 text-brand-500" />
@@ -1159,7 +1161,7 @@ export default function NodesPage() {
                     )}
                     <button
                       onClick={() => handleOpenFtpModal(node)}
-                      className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-xs"
+                      className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-xs flex-1 sm:flex-initial"
                       title="Manage Files, FTP & SFTP Users"
                     >
                       <FolderArrowDownIcon className="w-3.5 h-3.5" />
