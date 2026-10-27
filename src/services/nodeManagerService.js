@@ -465,13 +465,22 @@ function parseNodeConnectionString(input) {
   throw new Error('Invalid connection format. Expected: host:port:user:pass (e.g. 192.168.1.10:22:root:password)');
 }
 
-function executeSshCommand(conn, cmd) {
+function executeSshCommand(conn, cmd, timeoutMs = 7000) {
   return new Promise((resolve, reject) => {
+    let timer = setTimeout(() => {
+      timer = null;
+      reject(new Error(`SSH command timed out after ${timeoutMs}ms: ${cmd.slice(0, 40)}`));
+    }, timeoutMs);
+
     conn.exec(cmd, (err, stream) => {
-      if (err) return reject(err);
+      if (err) {
+        if (timer) clearTimeout(timer);
+        return reject(err);
+      }
       let stdout = '';
       let stderr = '';
       stream.on('close', (code) => {
+        if (timer) clearTimeout(timer);
         resolve({ code, stdout: stdout.trim(), stderr: stderr.trim() });
       });
       stream.on('data', (data) => { stdout += data.toString(); });
@@ -486,7 +495,7 @@ function executeSshCommand(conn, cmd) {
 function connectSsh(node, options = {}) {
   return new Promise((resolve, reject) => {
     const conn = new Client();
-    const timeoutMs = options.timeoutMs || 15000;
+    const timeoutMs = options.timeoutMs || 8000;
     let capturedFingerprint = null;
 
     const timeout = setTimeout(() => {
@@ -1210,11 +1219,31 @@ async function testNodeConnection({
     };
   }
 
+  // Fast bail-out on explicit SSH authentication or key verification failure
+  const isAuthFailure = sshError && (
+    sshError.level === 'client-authentication' ||
+    /authentication failure/i.test(sshError.message) ||
+    /all configured authentication methods failed/i.test(sshError.message) ||
+    /host key verification failed/i.test(sshError.message)
+  );
+
+  if (isAuthFailure) {
+    let msg = `Authentication failed for user "${username}" on ${host}:${cleanPort}. Check password or private key.`;
+    if (sshError.message?.includes('Host key verification failed')) {
+      msg = `Security Alert: ${sshError.message}`;
+    }
+    return {
+      success: false,
+      protocol: 'ssh',
+      error: msg
+    };
+  }
+
   // 3. SSH connection failed. Check if this port or port 21 is FTP!
-  // Check cleanPort first
-  const probeTarget = await probeFtpSocket(host, cleanPort, 2000);
+  // Fast probe target port first
+  const probeTarget = await probeFtpSocket(host, cleanPort, 1200);
   if (probeTarget.isFtp) {
-    const ftpLogin = await testFtpLogin(host, cleanPort, username, password, 4000);
+    const ftpLogin = await testFtpLogin(host, cleanPort, username, password, 2500);
     const latencyMs = Date.now() - startTime;
     if (ftpLogin.success) {
       const serverType = detectFtpServerType(ftpLogin.banner || probeTarget.banner);
@@ -1252,9 +1281,9 @@ async function testNodeConnection({
 
   // Check port 21 if cleanPort was not 21
   if (cleanPort !== 21) {
-    const probe21 = await probeFtpSocket(host, 21, 2000);
+    const probe21 = await probeFtpSocket(host, 21, 1200);
     if (probe21.isFtp) {
-      const ftpLogin21 = await testFtpLogin(host, 21, username, password, 4000);
+      const ftpLogin21 = await testFtpLogin(host, 21, username, password, 2500);
       const latencyMs = Date.now() - startTime;
       if (ftpLogin21.success) {
         const serverType = detectFtpServerType(ftpLogin21.banner || probe21.banner);
