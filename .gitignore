@@ -7,7 +7,7 @@ web/.next/
 web/out/
 data/
 uploads/
-backups/
+/backups/
 logs/
 exports/
 storage/
@@ -21,4 +21,5 @@ Thumbs.db
 *.bak
 *.log
 .pm2/
+/*.png
 

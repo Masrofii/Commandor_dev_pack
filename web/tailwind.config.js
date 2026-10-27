@@ -88,8 +88,12 @@ module.exports = {
       },
       keyframes: {
         'fade-in': {
-          from: { opacity: '0', transform: 'translateY(4px)' },
-          to: { opacity: '1', transform: 'translateY(0)' }
+          from: { opacity: '0' },
+          to: { opacity: '1' }
+        },
+        'scale-in': {
+          from: { opacity: '0', transform: 'scale(0.96)' },
+          to: { opacity: '1', transform: 'scale(1)' }
         },
         'slide-up': {
           from: { opacity: '0', transform: 'translateY(12px) scale(0.99)' },
@@ -108,7 +112,8 @@ module.exports = {
         }
       },
       animation: {
-        'fade-in': 'fade-in 180ms ease-out both',
+        'fade-in': 'fade-in 180ms ease-out',
+        'scale-in': 'scale-in 150ms ease-out',
         'slide-up': 'slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'enter': 'enter 180ms ease-out both',
         'leave': 'leave 140ms ease-in both',

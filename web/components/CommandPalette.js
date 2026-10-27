@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MagnifyingGlassIcon, ArrowRightIcon, CommandLineIcon } from '@heroicons/react/24/outline';
+import Portal from './Portal';
 
 export default function CommandPalette({
   open,
@@ -100,7 +101,8 @@ export default function CommandPalette({
   let flatIndex = -1;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[8vh] sm:pt-[12vh]" role="presentation">
+    <Portal>
+      <div className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[8vh] sm:pt-[12vh]" role="presentation">
       <div
         className="absolute inset-0 bg-cf-950/35 dark:bg-black/60 backdrop-blur-[2px] animate-fade-in"
         onClick={onClose}
@@ -223,5 +225,6 @@ export default function CommandPalette({
         </div>
       </div>
     </div>
+  </Portal>
   );
 }

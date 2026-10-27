@@ -18,6 +18,7 @@ import {
   XMarkIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
+import Portal from './Portal';
 
 const CATEGORY_ICONS = {
   application: <CommandLineIcon className="w-5 h-5 text-brand-500" />,
@@ -203,8 +204,9 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
 
       {/* Preview Modal */}
       {previewModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-2xl w-full p-6 space-y-4 my-auto max-h-[90vh] flex flex-col animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
@@ -320,6 +322,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
             </div>
           </div>
         </div>
+      </Portal>
       )}
     </div>
   );

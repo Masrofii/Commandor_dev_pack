@@ -23,6 +23,7 @@ import {
   MagnifyingGlassIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
+import Portal from '../../../components/Portal';
 
 export default function AliasesPage() {
   const { t } = useTranslation();
@@ -559,144 +560,148 @@ export default function AliasesPage() {
 
       {/* QR Code Modal */}
       {qrModalAlias && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setQrModalAlias(null)}
-        >
+        <Portal>
           <div
-            className="card p-6 max-w-sm w-full text-center space-y-4"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setQrModalAlias(null)}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
-              <div className="text-left">
-                <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <QrCodeIcon className="w-4 h-4 text-brand-500" />
-                  Alias QR Code
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Scan with your phone camera to compose or copy</p>
+            <div
+              className="card p-6 max-w-sm w-full text-center space-y-4 my-auto max-h-[90vh] overflow-y-auto animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
+                <div className="text-left">
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <QrCodeIcon className="w-4 h-4 text-brand-500" />
+                    Alias QR Code
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Scan with your phone camera to compose or copy</p>
+                </div>
+                <button onClick={() => setQrModalAlias(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={() => setQrModalAlias(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                <XMarkIcon className="w-4 h-4" />
-              </button>
-            </div>
 
-            <div className="p-4 bg-white rounded-xl inline-flex items-center justify-center shadow-sm relative min-w-[208px] min-h-[208px] mx-auto">
-              {qrLoading && !qrError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 rounded-xl z-10">
-                  <ArrowPathIcon className="w-6 h-6 text-brand-600 animate-spin" />
-                  <span className="text-[11px] font-medium text-slate-600 mt-2">Generating QR...</span>
-                </div>
-              )}
-              {qrError ? (
-                <div className="p-4 text-center text-rose-500">
-                  <p className="text-xs font-semibold mb-2">Failed to load QR code</p>
-                  <button
-                    onClick={() => { setQrError(false); setQrLoading(true); }}
-                    className="text-xs text-brand-600 dark:text-brand-400 underline font-medium"
-                  >
-                    Tap to retry
-                  </button>
-                </div>
-              ) : (
-                <img
-                  src={api.getAliasQr(qrModalAlias, { format: qrFormat })}
-                  alt={`QR code for ${qrModalAlias}`}
-                  className={`w-48 h-48 mx-auto object-contain transition-opacity duration-200 ${qrLoading ? 'opacity-0' : 'opacity-100'}`}
-                  onLoad={() => setQrLoading(false)}
-                  onError={() => { setQrLoading(false); setQrError(true); }}
-                />
-              )}
-            </div>
+              <div className="p-4 bg-white rounded-xl inline-flex items-center justify-center shadow-sm relative min-w-[208px] min-h-[208px] mx-auto">
+                {qrLoading && !qrError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 rounded-xl z-10">
+                    <ArrowPathIcon className="w-6 h-6 text-brand-600 animate-spin" />
+                    <span className="text-[11px] font-medium text-slate-600 mt-2">Generating QR...</span>
+                  </div>
+                )}
+                {qrError ? (
+                  <div className="p-4 text-center text-rose-500">
+                    <p className="text-xs font-semibold mb-2">Failed to load QR code</p>
+                    <button
+                      onClick={() => { setQrError(false); setQrLoading(true); }}
+                      className="text-xs text-brand-600 dark:text-brand-400 underline font-medium"
+                    >
+                      Tap to retry
+                    </button>
+                  </div>
+                ) : (
+                  <img
+                    src={api.getAliasQr(qrModalAlias, { format: qrFormat })}
+                    alt={`QR code for ${qrModalAlias}`}
+                    className={`w-48 h-48 mx-auto object-contain transition-opacity duration-200 ${qrLoading ? 'opacity-0' : 'opacity-100'}`}
+                    onLoad={() => setQrLoading(false)}
+                    onError={() => { setQrLoading(false); setQrError(true); }}
+                  />
+                )}
+              </div>
 
-            {/* Format toggle: mailto vs raw address */}
-            <div className="flex items-center justify-center gap-2 text-xs">
-              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Payload:</span>
-              <button
-                type="button"
-                onClick={() => { setQrFormat('mailto'); setQrLoading(true); setQrError(false); }}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                  qrFormat === 'mailto'
-                    ? 'bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                Mailto Link
-              </button>
-              <button
-                type="button"
-                onClick={() => { setQrFormat('plain'); setQrLoading(true); setQrError(false); }}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                  qrFormat === 'plain'
-                    ? 'bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                Plain Address
-              </button>
-            </div>
+              {/* Format toggle: mailto vs raw address */}
+              <div className="flex items-center justify-center gap-2 text-xs">
+                <span className="text-slate-500 dark:text-slate-400 text-[11px]">Payload:</span>
+                <button
+                  type="button"
+                  onClick={() => { setQrFormat('mailto'); setQrLoading(true); setQrError(false); }}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                    qrFormat === 'mailto'
+                      ? 'bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  Mailto Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setQrFormat('plain'); setQrLoading(true); setQrError(false); }}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                    qrFormat === 'plain'
+                      ? 'bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  Plain Address
+                </button>
+              </div>
 
-            <p className="font-mono text-xs text-slate-700 dark:text-slate-300 break-all select-all bg-slate-50 dark:bg-cyber-900/50 p-2 rounded-lg border border-slate-100 dark:border-cyber-800">
-              {qrModalAlias}
-            </p>
+              <p className="font-mono text-xs text-slate-700 dark:text-slate-300 break-all select-all bg-slate-50 dark:bg-cyber-900/50 p-2 rounded-lg border border-slate-100 dark:border-cyber-800">
+                {qrModalAlias}
+              </p>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                onClick={() => {
-                  handleCopy(qrModalAlias);
-                }}
-                className="btn-secondary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
-              >
-                <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-                Copy Address
-              </button>
-              <a
-                href={api.getAliasQr(qrModalAlias, { format: qrFormat })}
-                download={`${qrModalAlias}-qr.png`}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
-              >
-                <ArrowDownTrayIcon className="w-3.5 h-3.5" />
-                Download PNG
-              </a>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    handleCopy(qrModalAlias);
+                  }}
+                  className="btn-secondary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
+                >
+                  <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                  Copy Address
+                </button>
+                <a
+                  href={api.getAliasQr(qrModalAlias, { format: qrFormat })}
+                  download={`${qrModalAlias}-qr.png`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
+                >
+                  <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                  Download PNG
+                </a>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmAlias && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setDeleteConfirmAlias(null)}
-        >
+        <Portal>
           <div
-            className="card p-6 max-w-md w-full space-y-4"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setDeleteConfirmAlias(null)}
           >
-            <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Delete Email Alias?
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Are you sure you want to permanently delete <code className="text-rose-600 dark:text-rose-400 font-mono font-bold">{deleteConfirmAlias}</code>? Any incoming emails sent to this address in the future will be rejected.
-            </p>
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-cyber-800">
-              <button
-                onClick={() => setDeleteConfirmAlias(null)}
-                className="btn-secondary py-1.5 px-3.5 text-xs font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={deleting}
-                className="btn bg-rose-600 hover:bg-rose-500 text-white py-1.5 px-4 text-xs font-semibold shadow-sm shadow-rose-500/20"
-              >
-                {deleting ? 'Deleting...' : 'Delete Alias'}
-              </button>
+            <div
+              className="card p-6 max-w-md w-full space-y-4 my-auto max-h-[90vh] overflow-y-auto animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                Delete Email Alias?
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Are you sure you want to permanently delete <code className="text-rose-600 dark:text-rose-400 font-mono font-bold">{deleteConfirmAlias}</code>? Any incoming emails sent to this address in the future will be rejected.
+              </p>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-cyber-800">
+                <button
+                  onClick={() => setDeleteConfirmAlias(null)}
+                  className="btn-secondary py-1.5 px-3.5 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="btn bg-rose-600 hover:bg-rose-500 text-white py-1.5 px-4 text-xs font-semibold shadow-sm shadow-rose-500/20"
+                >
+                  {deleting ? 'Deleting...' : 'Delete Alias'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

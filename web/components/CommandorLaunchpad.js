@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { isAdmin } from '../lib/auth';
 import { useTranslation } from '../lib/i18n';
+import Portal from './Portal';
 import {
   RocketLaunchIcon,
   CommandLineIcon,
@@ -246,8 +247,9 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="card max-w-4xl w-full p-5 sm:p-7 space-y-6 max-h-[92vh] flex flex-col border-brand-300 dark:border-cyber-700 shadow-2xl">
+    <Portal>
+      <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <div className="card max-w-4xl w-full p-5 sm:p-7 space-y-6 my-auto max-h-[92vh] flex flex-col border-brand-300 dark:border-cyber-700 shadow-2xl animate-scale-in">
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-4">
           <div className="flex items-center gap-3">
@@ -803,5 +805,6 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
         </div>
       </div>
     </div>
+  </Portal>
   );
 }

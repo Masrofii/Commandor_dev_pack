@@ -39,6 +39,7 @@ import {
   SparklesIcon,
   CpuChipIcon
 } from '@heroicons/react/24/outline';
+import Portal from '../../../components/Portal';
 
 const DEFAULT_APP_PORT = 8080;
 
@@ -965,8 +966,9 @@ export default function SubdomainsAndDomainsPage() {
 
       {/* 8-STEP SUBDOMAIN GUIDED WIZARD MODAL */}
       {showWizard && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in max-h-[92vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[92vh] overflow-y-auto">
             {/* Wizard Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
@@ -1735,12 +1737,14 @@ export default function SubdomainsAndDomainsPage() {
             )}
           </div>
         </div>
+      </Portal>
       )}
 
       {/* INSPECT MULTI-STAGE VERIFICATION MODAL (FROM TABLE) */}
       {inspectVerifySub && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -1843,12 +1847,14 @@ export default function SubdomainsAndDomainsPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* SAFE DELETE MODAL */}
       {deleteTargetSub && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl border-rose-200 dark:border-rose-950 animate-scale-in">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl border-rose-200 dark:border-rose-950 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2 text-rose-600">
                 <ExclamationTriangleIcon className="w-5 h-5" />
@@ -1907,12 +1913,14 @@ export default function SubdomainsAndDomainsPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* ADD ROOT DOMAIN MODAL */}
       {showAddDomain && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -2047,18 +2055,20 @@ export default function SubdomainsAndDomainsPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* CAPTURED REQUESTS INSPECTOR MODAL */}
       {inspectSub && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setInspectSub(null)}
-        >
+        <Portal>
           <div
-            className="card p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setInspectSub(null)}
           >
+            <div
+              className="card p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl my-auto animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
@@ -2094,6 +2104,7 @@ export default function SubdomainsAndDomainsPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
     </div>
   );

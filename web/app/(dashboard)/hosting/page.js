@@ -27,6 +27,7 @@ import {
   ExclamationCircleIcon,
   ListBulletIcon
 } from '@heroicons/react/24/outline';
+import Portal from '../../../components/Portal';
 
 export default function HostingPage() {
   const { t } = useTranslation();
@@ -613,8 +614,9 @@ export default function HostingPage() {
 
       {/* Deploy Site Modal */}
       {showDeploy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 my-auto max-h-[90vh] overflow-y-auto animate-scale-in">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <GlobeAltIcon className="h-5 w-5 text-brand-500" />
@@ -724,12 +726,14 @@ export default function HostingPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* Add Node Modal (Owner/Admin Only) */}
       {showAddNode && adminUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 my-auto max-h-[90vh] overflow-y-auto animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <ServerStackIcon className="h-5 w-5 text-brand-500" />
@@ -952,6 +956,7 @@ export default function HostingPage() {
             )}
           </div>
         </div>
+      </Portal>
       )}
     </div>
   );

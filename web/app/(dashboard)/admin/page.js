@@ -35,6 +35,7 @@ import {
   GiftIcon,
   ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
+import Portal from '../../../components/Portal';
 
 export default function AdminPage() {
   const { t } = useTranslation();
@@ -1631,8 +1632,9 @@ export default function AdminPage() {
           MODAL: EDIT USER MODAL
       ────────────────────────────────────────────────────────────────────── */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto my-auto animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <AdjustmentsHorizontalIcon className="h-5 w-5 text-rose-500" />
@@ -1744,14 +1746,16 @@ export default function AdminPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* ────────────────────────────────────────────────────────────────────
           MODAL: ADD SERVER NODE
       ────────────────────────────────────────────────────────────────────── */}
       {showAddNode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto my-auto animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <ServerStackIcon className="h-5 w-5 text-brand-500" />
@@ -1974,13 +1978,15 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      </Portal>
       )}
       {/* ────────────────────────────────────────────────────────────────────
           MODAL: BAN USER & PURGE SESSIONS
       ────────────────────────────────────────────────────────────────────── */}
       {banningUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200 dark:border-red-900/50">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200 dark:border-red-900/50 max-h-[90vh] overflow-y-auto my-auto animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
                 <ShieldExclamationIcon className="h-5 w-5" />
@@ -2034,14 +2040,16 @@ export default function AdminPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* ────────────────────────────────────────────────────────────────────
           MODAL: SET USER SUBSCRIPTION
       ────────────────────────────────────────────────────────────────────── */}
       {subscribingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto my-auto animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <SparklesIcon className="h-5 w-5 text-brand-500" />
@@ -2130,14 +2138,16 @@ export default function AdminPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* ────────────────────────────────────────────────────────────────────
           MODAL: CREATE VOUCHER / REDEEM CODE
       ────────────────────────────────────────────────────────────────────── */}
       {showCreateCodeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto my-auto animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <TicketIcon className="h-5 w-5 text-rose-500" />
@@ -2315,6 +2325,7 @@ export default function AdminPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
     </div>
   );

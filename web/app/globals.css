@@ -251,7 +251,7 @@
   }
 
   .page-enter {
-    animation: fade-in 160ms ease-out both;
+    animation: fade-in 160ms ease-out;
   }
 
   .stat-value {

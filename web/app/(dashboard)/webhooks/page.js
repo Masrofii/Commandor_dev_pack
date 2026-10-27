@@ -18,6 +18,7 @@ import {
   EyeIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
+import Portal from '../../../components/Portal';
 
 const EVENTS = [
   'email.received',
@@ -300,94 +301,96 @@ export default function WebhooksPage() {
 
       {/* DELIVERIES & RETRY INSPECTOR MODAL */}
       {inspectWebhook && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-3xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col border-brand-200 dark:border-cyber-800 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
-              <div>
-                <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <ArrowPathIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
-                  <span>Webhook Delivery Log &amp; Retry Inspector</span>
-                </h3>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">
-                  Target: {inspectWebhook.name} ({inspectWebhook.url})
-                </p>
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-3xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col border-brand-200 dark:border-cyber-800 shadow-2xl my-auto animate-scale-in">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    <ArrowPathIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
+                    <span>Webhook Delivery Log &amp; Retry Inspector</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">
+                    Target: {inspectWebhook.name} ({inspectWebhook.url})
+                  </p>
+                </div>
+                <button onClick={() => setInspectWebhook(null)} className="text-slate-400 hover:text-slate-600">
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
               </div>
-              <button onClick={() => setInspectWebhook(null)} className="text-slate-400 hover:text-slate-600">
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2.5 text-xs pr-1">
-              {loadingDeliveries ? (
-                <div className="p-8 text-center text-slate-400 font-mono animate-pulse">
-                  Loading delivery attempts...
-                </div>
-              ) : deliveries.length === 0 ? (
-                <div className="p-8 text-center text-slate-400">
-                  No dispatch attempts recorded for this webhook yet.
-                </div>
-              ) : (
-                deliveries.map((d) => (
-                  <div
-                    key={d.id}
-                    className="p-3.5 rounded-xl border border-slate-200 dark:border-cyber-800 bg-slate-50 dark:bg-cyber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border ${
-                          d.status === 'delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-300' :
-                          d.status === 'retrying' || d.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-300' :
-                          'bg-rose-50 text-rose-600 border-rose-300'
-                        }`}>
-                          {d.status}
-                        </span>
-
-                        <span className="badge-cyan text-[10px] font-mono">{d.event_type}</span>
-
-                        <span className="font-mono text-slate-500 text-[11px]">
-                          Attempt #{d.attempt_number}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 font-mono">
-                        {d.http_status && <span>HTTP {d.http_status}</span>}
-                        {d.response_time_ms !== null && <span>Latency: {d.response_time_ms}ms</span>}
-                        <span>{formatTimeAgo(d.created_at)}</span>
-                        {d.next_retry_at && (
-                          <span className="text-amber-600 dark:text-amber-400 font-bold">
-                            Next Retry: {d.next_retry_at}
+              <div className="flex-1 overflow-y-auto space-y-2.5 text-xs pr-1">
+                {loadingDeliveries ? (
+                  <div className="p-8 text-center text-slate-400 font-mono animate-pulse">
+                    Loading delivery attempts...
+                  </div>
+                ) : deliveries.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400">
+                    No dispatch attempts recorded for this webhook yet.
+                  </div>
+                ) : (
+                  deliveries.map((d) => (
+                    <div
+                      key={d.id}
+                      className="p-3.5 rounded-xl border border-slate-200 dark:border-cyber-800 bg-slate-50 dark:bg-cyber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border ${
+                            d.status === 'delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-300' :
+                            d.status === 'retrying' || d.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-300' :
+                            'bg-rose-50 text-rose-600 border-rose-300'
+                          }`}>
+                            {d.status}
                           </span>
+
+                          <span className="badge-cyan text-[10px] font-mono">{d.event_type}</span>
+
+                          <span className="font-mono text-slate-500 text-[11px]">
+                            Attempt #{d.attempt_number}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 font-mono">
+                          {d.http_status && <span>HTTP {d.http_status}</span>}
+                          {d.response_time_ms !== null && <span>Latency: {d.response_time_ms}ms</span>}
+                          <span>{formatTimeAgo(d.created_at)}</span>
+                          {d.next_retry_at && (
+                            <span className="text-amber-600 dark:text-amber-400 font-bold">
+                              Next Retry: {d.next_retry_at}
+                            </span>
+                          )}
+                        </div>
+
+                        {d.error && (
+                          <p className="text-[11px] text-rose-500 font-mono">{d.error}</p>
                         )}
                       </div>
 
-                      {d.error && (
-                        <p className="text-[11px] text-rose-500 font-mono">{d.error}</p>
-                      )}
+                      <button
+                        onClick={() => handleRetryDelivery(d.id)}
+                        disabled={retryingId === d.id}
+                        className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 self-start sm:self-auto font-semibold"
+                      >
+                        <ArrowPathIcon className={`w-3.5 h-3.5 ${retryingId === d.id ? 'animate-spin' : ''}`} />
+                        <span>{retryingId === d.id ? 'Retrying...' : 'Retry Now'}</span>
+                      </button>
                     </div>
+                  ))
+                )}
+              </div>
 
-                    <button
-                      onClick={() => handleRetryDelivery(d.id)}
-                      disabled={retryingId === d.id}
-                      className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 self-start sm:self-auto font-semibold"
-                    >
-                      <ArrowPathIcon className={`w-3.5 h-3.5 ${retryingId === d.id ? 'animate-spin' : ''}`} />
-                      <span>{retryingId === d.id ? 'Retrying...' : 'Retry Now'}</span>
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-cyber-800">
-              <button
-                onClick={() => setInspectWebhook(null)}
-                className="btn-secondary py-1.5 px-4 text-xs font-semibold"
-              >
-                Close
-              </button>
+              <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-cyber-800">
+                <button
+                  onClick={() => setInspectWebhook(null)}
+                  className="btn-secondary py-1.5 px-4 text-xs font-semibold"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

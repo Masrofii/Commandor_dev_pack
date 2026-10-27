@@ -39,6 +39,7 @@ import {
   BoltIcon,
   StopIcon
 } from '@heroicons/react/24/outline';
+import Portal from '../../../components/Portal';
 
 export default function NodesPage() {
   const { t } = useTranslation();
@@ -1177,8 +1178,9 @@ export default function NodesPage() {
 
       {/* Terminal / Exec Modal */}
       {showTerminal && selectedNode && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2">
                 <CommandLineIcon className="w-5 h-5 text-brand-500" />
@@ -1297,12 +1299,14 @@ export default function NodesPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* Edit Node Modal */}
       {editingNode && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2">
                 <PencilSquareIcon className="w-5 h-5 text-brand-500" />
@@ -1403,12 +1407,14 @@ export default function NodesPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* Inspect Hosted Sites Modal */}
       {inspectNode && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -1477,12 +1483,14 @@ export default function NodesPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* Add / Bulk Node Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in max-h-[90vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -1953,11 +1961,13 @@ export default function NodesPage() {
             )}
           </div>
         </div>
+      </Portal>
       )}
       {/* FTP Management Modal */}
       {showFtpModal && selectedFtpNode && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="card max-w-3xl w-full p-5 sm:p-6 space-y-5 shadow-2xl border-emerald-200 dark:border-cyber-800 animate-scale-in my-8 max-h-[90vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-3xl w-full p-5 sm:p-6 space-y-5 shadow-2xl border-emerald-200 dark:border-cyber-800 animate-scale-in my-auto max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2">
@@ -2338,6 +2348,7 @@ export default function NodesPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
     </div>
   );

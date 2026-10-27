@@ -9,6 +9,7 @@ import { useTranslation } from '../../../lib/i18n';
 import CommandorLaunchpad from '../../../components/CommandorLaunchpad';
 import SubdomainTemplates from '../../../components/SubdomainTemplates';
 import PageHeader, { PageTab } from '../../../components/PageHeader';
+import Portal from '../../../components/Portal';
 import {
   CommandLineIcon,
   PlusIcon,
@@ -509,8 +510,9 @@ export default function ApplicationsPage() {
 
       {/* DEPLOYMENT HISTORY & ROLLBACK MODAL */}
       {historyApp && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-3xl w-full p-6 space-y-5 max-h-[88vh] flex flex-col border-brand-300 dark:border-cyber-700 shadow-2xl">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-3xl w-full p-6 space-y-5 my-auto max-h-[88vh] flex flex-col border-brand-300 dark:border-cyber-700 shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -638,12 +640,14 @@ export default function ApplicationsPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* Manual Create Application Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-xl w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <CommandLineIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
@@ -790,12 +794,14 @@ export default function ApplicationsPage() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* Inspect & Logs Modal */}
       {activeLogs && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-2xl w-full p-6 space-y-4 my-auto max-h-[85vh] flex flex-col animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -823,12 +829,14 @@ export default function ApplicationsPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
 
       {/* Runtime Process Logs Modal */}
       {runtimeLogs && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col">
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="card max-w-2xl w-full p-6 space-y-4 my-auto max-h-[85vh] flex flex-col animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -861,6 +869,7 @@ export default function ApplicationsPage() {
             </div>
           </div>
         </div>
+      </Portal>
       )}
     </div>
   );
