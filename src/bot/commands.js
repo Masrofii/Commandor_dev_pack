@@ -46,7 +46,8 @@ const {
   updateSubdomain,
   deleteSubdomain,
   getSubdomainWebRequests,
-  getAllSubdomainsAdmin
+  getAllSubdomainsAdmin,
+  autoProvisionCloudflareDns
 } = require('../services/subdomainService');
 const {
   getTOS,
@@ -1917,7 +1918,8 @@ async function showSubdomainDetails(ctx, id) {
 
   let text = `🌐 <b>Subdomain Management</b>\n\n`;
   text += `Domain: <b><code>${escapeHtml(sub.full_domain)}</code></b>\n`;
-  text += `Status: ${sub.active ? '🟢 Active' : '🔴 Paused'}\n\n`;
+  text += `Status: ${sub.active ? '🟢 Active' : '🔴 Paused'}\n`;
+  text += `DNS & SSL: ${sub.dns_status === 'active' ? '🟢 Cloudflare Proxied (SSL Active)' : '⚡ Active'}\n\n`;
   text += `<b>📧 Email Routing:</b>\n`;
   text += `• Catch-All: ${catchAllText}\n`;
   if (sub.email_webhook_url) {
@@ -1955,8 +1957,20 @@ async function handleSubdomainClaim(ctx, name) {
       tgId: ctx.from.id,
       subdomain: name
     });
+    let dnsNote = '';
+    if (process.env.CLOUDFLARE_API_TOKEN) {
+      try {
+        const dnsRes = await autoProvisionCloudflareDns(sub.id, sub.full_domain, sub.base_domain);
+        if (dnsRes) {
+          dnsNote = `• 🌐 <b>Cloudflare DNS:</b> Automated & Active (Proxied with SSL 🔒)\n`;
+        }
+      } catch {}
+    }
     let text = `🎉 <b>Subdomain Claimed Successfully!</b>\n\n`;
     text += `Your full domain: <b><code>${escapeHtml(sub.full_domain)}</code></b>\n\n`;
+    if (dnsNote) {
+      text += dnsNote;
+    }
     text += `• <b>Catch-All Email is ACTIVE:</b> Send emails to <code>anything@${escapeHtml(sub.full_domain)}</code> and they will arrive directly in your bot!\n`;
     text += `• <b>Web Routing is READY:</b> You can configure proxy, redirect, or inspect webhooks below.`;
     return replyHtml(ctx, text, subdomainActionsKeyboard(sub, lang));

@@ -149,7 +149,7 @@ function handleProxyRequest(req, res, sub) {
       ...clientHeaders,
       host: targetUrl.host
     },
-    timeout: 30000
+    timeout: 300000
   };
 
   const proxyReq = transport.request(proxyOpts, (proxyRes) => {
@@ -171,7 +171,13 @@ function handleProxyRequest(req, res, sub) {
     }
   });
 
-  if (req.body && Object.keys(req.body).length > 0) {
+  req.on('close', () => {
+    proxyReq.destroy();
+  });
+
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    proxyReq.end();
+  } else if (req.body && Object.keys(req.body).length > 0) {
     if (Buffer.isBuffer(req.body)) {
       proxyReq.write(req.body);
     } else if (typeof req.body === 'object') {
@@ -182,6 +188,8 @@ function handleProxyRequest(req, res, sub) {
     } else if (typeof req.body === 'string') {
       proxyReq.write(req.body);
     }
+    proxyReq.end();
+  } else if (req.readableEnded) {
     proxyReq.end();
   } else {
     req.pipe(proxyReq);

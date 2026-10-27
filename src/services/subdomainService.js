@@ -193,6 +193,7 @@ function claimSubdomain({
   );
 
   logger.info({ tgId, fullDomain, subdomainId: info.lastInsertRowid }, 'Subdomain claimed successfully');
+  autoProvisionCloudflareDns(info.lastInsertRowid, fullDomain, targetBase).catch(() => {});
   logChange({
     tgId,
     category: 'subdomain',
@@ -316,10 +317,84 @@ function updateSubdomain(id, tgId, updates = {}) {
   return getSubdomainById(id, tgId);
 }
 
+async function autoProvisionCloudflareDns(subdomainId, fullDomain, baseDomain) {
+  try {
+    const token = process.env.CLOUDFLARE_API_TOKEN;
+    if (!token) return null;
+
+    const { getProvider } = require('./dns/DnsManager');
+    const provider = getProvider('cloudflare', token);
+    const targetBase = baseDomain || config.domains?.defaultDomain || 'commandor.my.id';
+
+    const zone = await provider.getZone(targetBase);
+    if (!zone || !zone.id) return null;
+
+    const existing = await provider.listRecords(zone.id, { name: fullDomain });
+    let rec;
+    if (existing && existing.length > 0) {
+      rec = existing[0];
+    } else {
+      const serverIp = process.env.SERVER_IP || '74.248.38.38';
+      rec = await provider.createRecord(zone.id, {
+        type: 'A',
+        name: fullDomain,
+        content: serverIp,
+        proxied: true,
+        ttl: 1
+      });
+    }
+
+    if (rec && rec.id) {
+      const db = getDb();
+      db.prepare(`
+        UPDATE subdomains
+        SET dns_record_id = ?, dns_status = 'active', dns_record_type = 'A', dns_record_value = ?
+        WHERE id = ?
+      `).run(rec.id, rec.content || '74.248.38.38', subdomainId);
+      logger.info({ subdomainId, fullDomain, recordId: rec.id }, 'Cloudflare DNS auto-provisioned successfully');
+      return rec;
+    }
+  } catch (err) {
+    logger.warn({ subdomainId, fullDomain, err: err.message }, 'Failed to auto-provision Cloudflare DNS');
+  }
+  return null;
+}
+
+async function autoDeprovisionCloudflareDns(fullDomain, baseDomain, dnsRecordId) {
+  try {
+    const token = process.env.CLOUDFLARE_API_TOKEN;
+    if (!token) return;
+
+    const { getProvider } = require('./dns/DnsManager');
+    const provider = getProvider('cloudflare', token);
+    const targetBase = baseDomain || config.domains?.defaultDomain || 'commandor.my.id';
+
+    const zone = await provider.getZone(targetBase);
+    if (!zone || !zone.id) return;
+
+    let targetRecordId = dnsRecordId;
+    if (!targetRecordId) {
+      const existing = await provider.listRecords(zone.id, { name: fullDomain });
+      if (existing && existing.length > 0) {
+        targetRecordId = existing[0].id;
+      }
+    }
+
+    if (targetRecordId) {
+      await provider.deleteRecord(zone.id, targetRecordId);
+      logger.info({ fullDomain, recordId: targetRecordId }, 'Cloudflare DNS auto-deprovisioned');
+    }
+  } catch (err) {
+    logger.warn({ fullDomain, err: err.message }, 'Failed to auto-deprovision Cloudflare DNS');
+  }
+}
+
 function deleteSubdomain(id, tgId) {
   const db = getDb();
   const sub = getSubdomainById(id, tgId);
   if (!sub) return false;
+
+  autoDeprovisionCloudflareDns(sub.full_domain, sub.base_domain, sub.dns_record_id).catch(() => {});
 
   const tx = db.transaction(() => {
     // Also deactivate or remove aliases linked to this full domain
@@ -441,5 +516,7 @@ module.exports = {
   recordSubdomainEmail,
   recordWebRequest,
   getSubdomainWebRequests,
-  getAllSubdomainsAdmin
+  getAllSubdomainsAdmin,
+  autoProvisionCloudflareDns,
+  autoDeprovisionCloudflareDns
 };
