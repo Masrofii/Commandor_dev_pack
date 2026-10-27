@@ -1749,9 +1749,11 @@ export default function SubdomainsAndDomainsPage() {
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                   <ShieldCheckIcon className="w-5 h-5 text-sky-500" />
-                  Route Diagnostics — {inspectVerifySub.full_domain}
+                  {t('subdomains.diagnostics_title', 'Route Diagnostics — {domain}', { domain: inspectVerifySub.full_domain })}
                 </h3>
-                <p className="text-xs text-slate-500">Live multi-stage verification report</p>
+                <p className="text-xs text-slate-500">
+                  {t('subdomains.diagnostics_desc', 'Live multi-stage verification report')}
+                </p>
               </div>
               <button
                 onClick={() => setInspectVerifySub(null)}
@@ -1835,14 +1837,14 @@ export default function SubdomainsAndDomainsPage() {
                 className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
               >
                 <ArrowPathIcon className={`w-3.5 h-3.5 ${modalVerificationRunning ? 'animate-spin' : ''}`} />
-                <span>Re-Check</span>
+                <span>{t('subdomains.recheck_btn', 'Re-Check')}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setInspectVerifySub(null)}
                 className="btn-primary py-1.5 px-4 text-xs font-semibold"
               >
-                Close
+                {t('common.close', 'Close')}
               </button>
             </div>
           </div>
@@ -1859,7 +1861,7 @@ export default function SubdomainsAndDomainsPage() {
               <div className="flex items-center gap-2 text-rose-600">
                 <ExclamationTriangleIcon className="w-5 h-5" />
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Safe Delete Subdomain
+                  {t('subdomains.safe_delete_title', 'Safe Delete Subdomain')}
                 </h3>
               </div>
               <button onClick={() => setDeleteTargetSub(null)} className="text-slate-400 hover:text-slate-600">
@@ -1868,8 +1870,7 @@ export default function SubdomainsAndDomainsPage() {
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Are you sure you want to remove <span className="font-mono font-bold text-slate-900 dark:text-white">{deleteTargetSub.full_domain}</span>?
-              Reverse proxy routes will be disabled.
+              {t('subdomains.safe_delete_desc', 'Are you sure you want to remove {domain}? Reverse proxy routes will be disabled.', { domain: deleteTargetSub.full_domain })}
             </p>
 
             <div className="space-y-2 pt-1 text-xs">
@@ -1880,7 +1881,9 @@ export default function SubdomainsAndDomainsPage() {
                   onChange={(e) => setDeleteOptions({ ...deleteOptions, delete_dns: e.target.checked })}
                   className="rounded text-rose-600 focus:ring-rose-500"
                 />
-                <span className="text-slate-700 dark:text-slate-300">Also delete external DNS record at DNS provider</span>
+                <span className="text-slate-700 dark:text-slate-300">
+                  {t('subdomains.delete_dns_option', 'Also delete external DNS record at DNS provider')}
+                </span>
               </label>
 
               <label className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-cyber-850 border border-slate-200 dark:border-cyber-800 cursor-pointer">
@@ -1890,7 +1893,9 @@ export default function SubdomainsAndDomainsPage() {
                   onChange={(e) => setDeleteOptions({ ...deleteOptions, delete_site_data: e.target.checked })}
                   className="rounded text-rose-600 focus:ring-rose-500"
                 />
-                <span className="text-slate-700 dark:text-slate-300">Also delete linked aliases and captured web requests</span>
+                <span className="text-slate-700 dark:text-slate-300">
+                  {t('subdomains.delete_data_option', 'Also delete linked aliases and captured web requests')}
+                </span>
               </label>
             </div>
 
@@ -1900,7 +1905,7 @@ export default function SubdomainsAndDomainsPage() {
                 onClick={() => setDeleteTargetSub(null)}
                 className="btn-secondary py-1.5 px-3.5 text-xs"
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -1908,7 +1913,7 @@ export default function SubdomainsAndDomainsPage() {
                 onClick={handleExecuteSafeDelete}
                 className="btn-danger py-1.5 px-4 text-xs font-semibold"
               >
-                {deletingSub ? 'Removing...' : 'Confirm Deletion'}
+                {deletingSub ? t('subdomains.removing_btn', 'Removing...') : t('subdomains.confirm_deletion_btn', 'Confirm Deletion')}
               </button>
             </div>
           </div>
@@ -1925,9 +1930,11 @@ export default function SubdomainsAndDomainsPage() {
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                   <GlobeAltIcon className="w-5 h-5 text-brand-500" />
-                  Connect Root Domain to Inventory
+                  {t('subdomains.connect_domain_title', 'Connect Root Domain to Inventory')}
                 </h3>
-                <p className="text-xs text-slate-500">Add an apex domain or zone to manage subdomains and routing.</p>
+                <p className="text-xs text-slate-500">
+                  {t('subdomains.connect_domain_desc', 'Add an apex domain or zone to manage subdomains and routing.')}
+                </p>
               </div>
               <button onClick={() => setShowAddDomain(false)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="w-5 h-5" />
@@ -2072,9 +2079,11 @@ export default function SubdomainsAndDomainsPage() {
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Captured Requests: {inspectSub.full_domain}
+                  {t('subdomains.captured_title', 'Captured Requests: {domain}', { domain: inspectSub.full_domain })}
                 </h3>
-                <p className="text-xs text-slate-500">Live webhook and HTTP inspector stream</p>
+                <p className="text-xs text-slate-500">
+                  {t('subdomains.captured_requests_desc', 'Live webhook and HTTP inspector stream')}
+                </p>
               </div>
               <button onClick={() => setInspectSub(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="w-5 h-5" />

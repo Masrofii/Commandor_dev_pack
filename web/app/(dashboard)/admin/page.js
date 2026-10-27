@@ -1638,7 +1638,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <AdjustmentsHorizontalIcon className="h-5 w-5 text-rose-500" />
-                Edit User: {editingUser.first_name || editingUser.tg_id}
+                {t('admin.edit_user_title', 'Edit User: {name}', { name: editingUser.first_name || editingUser.tg_id })}
               </h3>
               <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
@@ -1648,21 +1648,21 @@ export default function AdminPage() {
             <form onSubmit={handleSaveUser} className="space-y-4 mt-4 text-xs">
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Role
+                  {t('admin.role_label', 'Account Role')}
                 </label>
                 <select
                   value={userForm.role}
                   onChange={e => setUserForm({ ...userForm, role: e.target.value })}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-semibold"
                 >
-                  <option value="user">User (Standard Access)</option>
-                  <option value="admin">Admin (Master Access)</option>
+                  <option value="user">{t('admin.role_user', 'Standard User')}</option>
+                  <option value="admin">{t('admin.role_admin', 'Administrator')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Email &amp; Attachments Storage Quota (MB)
+                  {t('admin.mailbox_storage_label', 'Mailbox Storage Quota (MB)')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -1679,13 +1679,13 @@ export default function AdminPage() {
                   </span>
                 </div>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Current actual email usage: <b>{formatBytesUI(editingUser.email_storage_used || 0)}</b> (Default: 1024 MB / 1 GB)
+                  {t('common.usage', 'Current actual usage')}: <b>{formatBytesUI(editingUser.email_storage_used || 0)}</b> (Default: 1024 MB / 1 GB)
                 </p>
               </div>
 
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Website &amp; App Hosting Storage Quota (MB)
+                  {t('admin.hosting_storage_label', 'Web Hosting Storage Quota (MB)')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -1702,13 +1702,13 @@ export default function AdminPage() {
                   </span>
                 </div>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Current actual hosting usage: <b>{formatBytesUI(editingUser.hosting_storage_used || 0)}</b> (Default: 5120 MB / 5 GB)
+                  {t('common.usage', 'Current actual usage')}: <b>{formatBytesUI(editingUser.hosting_storage_used || 0)}</b> (Default: 5120 MB / 5 GB)
                 </p>
               </div>
 
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Active Alias Quota (Count)
+                  {t('admin.alias_limit_label', 'Email Aliases Limit (Count)')}
                 </label>
                 <input
                   type="number"
@@ -1719,13 +1719,13 @@ export default function AdminPage() {
                   className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                 />
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Currently active aliases: <b>{editingUser.aliases_count || 0}</b>
+                  {t('aliases.active_count', 'Currently active aliases')}: <b>{editingUser.aliases_count || 0}</b>
                 </p>
               </div>
 
               <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-[11px] text-amber-800 dark:text-amber-300 space-y-1 border border-amber-200 dark:border-amber-800">
-                <p className="font-semibold">🛡️ Quota Adjustment Policy:</p>
-                <p>Reducing a user's quota below current usage preserves existing user data and will not delete files or emails. It safely blocks new uploads and incoming mail until usage drops below the limit.</p>
+                <p className="font-semibold">{t('admin.quota_policy_title', '🛡️ Quota Adjustment Policy:')}</p>
+                <p>{t('admin.quota_policy_desc', "Reducing a user's quota below current usage preserves existing user data and will not delete files or emails. It safely blocks new uploads and incoming mail until usage drops below the limit.")}</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
@@ -1734,13 +1734,13 @@ export default function AdminPage() {
                   onClick={() => setEditingUser(null)}
                   className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg shadow-sm"
                 >
-                  Save Changes
+                  {savingUser ? t('admin.saving_quotas', 'Saving Quotas...') : t('admin.update_user_quotas', 'Update User Quotas')}
                 </button>
               </div>
             </form>
@@ -1759,7 +1759,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <ServerStackIcon className="h-5 w-5 text-brand-500" />
-                Add Cloud Server Node (Ubuntu VPS)
+                {t('admin.add_node_title', 'Add Server Node (Ubuntu VPS)')}
               </h2>
               <button onClick={() => { setShowAddNode(false); setBulkResults(null); }} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
@@ -1777,7 +1777,7 @@ export default function AdminPage() {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
-                Single Node
+                {t('admin.single_node_tab', 'Single Node')}
               </button>
               <button
                 type="button"
@@ -1789,7 +1789,7 @@ export default function AdminPage() {
                 }`}
               >
                 <ListBulletIcon className="h-3.5 w-3.5" />
-                Bulk SSH Import
+                {t('admin.bulk_ssh_tab', 'Bulk SSH Import')}
               </button>
             </div>
 
@@ -1797,7 +1797,7 @@ export default function AdminPage() {
               <form onSubmit={handleAddNode} className="space-y-4 mt-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Connection String (host:port:user:pass)
+                    {t('admin.conn_str_label', 'Connection String (host:port:user:pass)')}
                   </label>
                   <input
                     type="text"
@@ -1808,13 +1808,13 @@ export default function AdminPage() {
                     className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white outline-none font-mono"
                   />
                   <p className="mt-1 text-[11px] text-slate-400">
-                    Provide your Ubuntu container SSH host, port, username, and password.
+                    {t('admin.conn_str_hint', 'Provide your Ubuntu container SSH host, port, username, and password.')}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Node Friendly Name (Optional)
+                    {t('admin.node_name_label', 'Node Friendly Name (Optional)')}
                   </label>
                   <input
                     type="text"
@@ -1826,8 +1826,8 @@ export default function AdminPage() {
                 </div>
 
                 <div className="p-3 bg-brand-50 dark:bg-brand-950/40 rounded-lg text-xs text-brand-700 dark:text-brand-300 space-y-1">
-                  <p className="font-semibold">⚡ Automated Provisioning:</p>
-                  <p>The system will automatically SSH into this container, set up directories, launch the multi-site web runner, and connect it to the hosting cluster.</p>
+                  <p className="font-semibold">{t('admin.auto_provision_title', '⚡ Automated Provisioning:')}</p>
+                  <p>{t('admin.auto_provision_desc', 'The system will automatically SSH into this container, set up directories, launch the multi-site web runner, and connect it to the hosting cluster.')}</p>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
@@ -1836,14 +1836,14 @@ export default function AdminPage() {
                     onClick={() => setShowAddNode(false)}
                     className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
-                    Cancel
+                    {t('common.cancel', 'Cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={addingNode}
                     className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                   >
-                    {addingNode ? 'Connecting & Provisioning...' : 'Connect Server Node'}
+                    {addingNode ? t('admin.connecting_node_btn', 'Connecting & Provisioning...') : t('admin.connect_node_btn', 'Connect Server Node')}
                   </button>
                 </div>
               </form>
@@ -1918,14 +1918,14 @@ export default function AdminPage() {
                     onClick={() => { setBulkResults(null); setBulkNodesText(''); }}
                     className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
-                    Import More
+                    {t('admin.import_more_btn', 'Import More')}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setShowAddNode(false); setBulkResults(null); }}
                     className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm"
                   >
-                    Done &amp; Close
+                    {t('admin.done_close_btn', 'Done & Close')}
                   </button>
                 </div>
               </div>
@@ -1934,7 +1934,7 @@ export default function AdminPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                      SSH Connection Strings (One per line)
+                      {t('admin.bulk_ssh_label', 'SSH Connection Strings (One per line)')}
                     </label>
                     <span className="text-[11px] text-brand-600 dark:text-brand-400 font-mono font-medium">
                       {bulkNodesText.split('\n').filter(l => l.trim() && !l.trim().startsWith('#') && l.includes(':')).length} nodes detected
@@ -1954,8 +1954,8 @@ export default function AdminPage() {
                 </div>
 
                 <div className="p-3 bg-brand-50 dark:bg-brand-950/40 rounded-lg text-xs text-brand-700 dark:text-brand-300 space-y-1">
-                  <p className="font-semibold">⚡ Parallel Provisioning (Pool size 3):</p>
-                  <p>All nodes will be contacted simultaneously via SSH, verified, hardware specs collected, and integrated into the cluster.</p>
+                  <p className="font-semibold">{t('admin.parallel_provision_title', '⚡ Parallel Provisioning:')}</p>
+                  <p>{t('admin.parallel_provision_desc', 'All nodes will be contacted simultaneously via SSH, verified, hardware specs collected, and integrated into the cluster.')}</p>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
@@ -1964,14 +1964,14 @@ export default function AdminPage() {
                     onClick={() => setShowAddNode(false)}
                     className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
-                    Cancel
+                    {t('common.cancel', 'Cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={bulkProvisioning}
                     className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                   >
-                    {bulkProvisioning ? 'Provisioning In Bulk...' : 'Connect & Provision Bulk'}
+                    {bulkProvisioning ? t('admin.connecting_bulk_btn', 'Provisioning In Bulk...') : t('admin.connect_bulk_btn', 'Connect & Provision Bulk')}
                   </button>
                 </div>
               </form>
@@ -1990,7 +1990,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
                 <ShieldExclamationIcon className="h-5 w-5" />
-                Suspend User &amp; Terminate Access
+                {t('admin.ban_user_title', 'Ban User & Purge Sessions')}
               </h2>
               <button onClick={() => setBanningUser(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
@@ -2003,13 +2003,13 @@ export default function AdminPage() {
                   User: {banningUser.first_name || 'N/A'} {banningUser.last_name || ''} (@{banningUser.username || banningUser.tg_id})
                 </p>
                 <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">
-                  ⚠️ This action immediately invalidates all active web sessions, disconnects open WebSockets, revokes API keys, and blocks Telegram bot commands.
+                  {t('admin.ban_user_desc', 'Are you sure you want to ban {name}? This will immediately terminate all active sessions, deactivate aliases, and lock account access.', { name: banningUser.first_name || banningUser.tg_id })}
                 </p>
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Reason for Suspension
+                  {t('admin.ban_reason_label', 'Ban Reason (Optional)')}
                 </label>
                 <textarea
                   rows={3}
@@ -2027,14 +2027,14 @@ export default function AdminPage() {
                   onClick={() => setBanningUser(null)}
                   className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 font-medium cursor-pointer"
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={banning}
                   className="px-4 py-2 text-xs bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
                 >
-                  {banning ? 'Suspending...' : 'Confirm Suspension'}
+                  {banning ? t('admin.banning_btn', 'Banning User...') : t('admin.confirm_ban_btn', 'Confirm Ban & Purge')}
                 </button>
               </div>
             </form>
@@ -2053,7 +2053,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <SparklesIcon className="h-5 w-5 text-brand-500" />
-                Manage User Subscription
+                {t('admin.set_subscription_title', 'Set User Subscription')}
               </h2>
               <button onClick={() => setSubscribingUser(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
@@ -2072,7 +2072,7 @@ export default function AdminPage() {
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Select Subscription Tier
+                  {t('admin.subscription_plan_label', 'Subscription Plan')}
                 </label>
                 <select
                   value={subForm.planId}
@@ -2102,7 +2102,7 @@ export default function AdminPage() {
               {!subForm.isLifetime && (
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Duration (Days to add/extend)
+                    {t('admin.subscription_duration_label', 'Duration')} (Days)
                   </label>
                   <input
                     type="number"
@@ -2125,14 +2125,14 @@ export default function AdminPage() {
                   onClick={() => setSubscribingUser(null)}
                   className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 font-medium cursor-pointer"
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={submittingSub}
                   className="px-4 py-2 text-xs bg-brand-700 hover:bg-brand-800 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
                 >
-                  {submittingSub ? 'Updating...' : 'Apply Subscription'}
+                  {submittingSub ? t('common.loading', 'Updating...') : t('admin.save_subscription_btn', 'Save Subscription')}
                 </button>
               </div>
             </form>
@@ -2151,7 +2151,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <TicketIcon className="h-5 w-5 text-rose-500" />
-                Generate Promo / Voucher Code
+                {t('admin.voucher_modal_title', 'Generate Promo / Voucher Code')}
               </h2>
               <button onClick={() => setShowCreateCodeModal(false)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
@@ -2162,14 +2162,14 @@ export default function AdminPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                    Voucher Code
+                    {t('admin.voucher_code_label', 'Voucher Code')}
                   </label>
                   <button
                     type="button"
                     onClick={generateRandomVoucher}
                     className="text-xs text-brand-600 hover:underline font-medium cursor-pointer"
                   >
-                    🎲 Generate Random
+                    🎲 {t('admin.generate_random', 'Generate Random')}
                   </button>
                 </div>
                 <input
@@ -2312,14 +2312,14 @@ export default function AdminPage() {
                   onClick={() => setShowCreateCodeModal(false)}
                   className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 font-medium cursor-pointer"
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={creatingCode}
                   className="px-4 py-2 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
                 >
-                  {creatingCode ? 'Creating...' : 'Create Voucher Code'}
+                  {creatingCode ? t('common.loading', 'Creating...') : t('admin.create_voucher_submit', 'Create Voucher Code')}
                 </button>
               </div>
             </form>

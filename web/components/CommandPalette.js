@@ -4,14 +4,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MagnifyingGlassIcon, ArrowRightIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 import Portal from './Portal';
+import { useTranslation } from '../lib/i18n';
 
 export default function CommandPalette({
   open,
   onClose,
   items = [],
   actions = [],
-  placeholder = 'Search pages, domains, apps…'
+  placeholder
 }) {
+  const { t } = useTranslation();
+  const searchPlaceholder = placeholder || t('command_palette.search_placeholder', 'Search pages, domains, apps…');
   const router = useRouter();
   const inputRef = useRef(null);
   const listRef = useRef(null);
@@ -90,7 +93,7 @@ export default function CommandPalette({
   const groups = [];
   const seen = new Set();
   for (const result of results) {
-    const group = result.group || (result.kind === 'action' ? 'Quick actions' : 'Pages');
+    const group = result.group || (result.kind === 'action' ? t('command_palette.quick_actions', 'Quick actions') : t('command_palette.pages', 'Pages'));
     if (!seen.has(group)) {
       seen.add(group);
       groups.push({ label: group, items: [] });
@@ -124,7 +127,7 @@ export default function CommandPalette({
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={searchPlaceholder}
             className="h-13 min-w-0 flex-1 bg-transparent py-4 text-sm text-cf-ink outline-none placeholder:text-cf-400 dark:text-white dark:placeholder:text-slate-500"
             aria-label="Search"
             autoComplete="off"
@@ -146,9 +149,11 @@ export default function CommandPalette({
               <div className="empty-state-icon">
                 <CommandLineIcon className="h-5 w-5" />
               </div>
-              <p className="text-sm font-semibold text-cf-700 dark:text-slate-200">No results found</p>
+              <p className="text-sm font-semibold text-cf-700 dark:text-slate-200">
+                {t('command_palette.no_results', 'No results found')}
+              </p>
               <p className="mt-1 max-w-xs text-xs leading-5 text-cf-500 dark:text-slate-400">
-                Try a page name, a resource, or an action such as “alias” or “deploy”.
+                {t('command_palette.no_results_desc', 'Try a page name, a resource, or an action such as “alias” or “deploy”.')}
               </p>
             </div>
           ) : (
@@ -214,14 +219,14 @@ export default function CommandPalette({
             <span className="flex items-center gap-1.5">
               <span className="kbd">↑</span>
               <span className="kbd">↓</span>
-              <span>Navigate</span>
+              <span>{t('command_palette.navigate', 'Navigate')}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="kbd">↵</span>
-              <span>Open</span>
+              <span>{t('command_palette.open', 'Open')}</span>
             </span>
           </div>
-          <span className="hidden sm:inline">Commandor quick search</span>
+          <span className="hidden sm:inline">{t('command_palette.quick_search', 'Commandor quick search')}</span>
         </div>
       </div>
     </div>

@@ -258,11 +258,11 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
             </span>
             <div>
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Commandor Launchpad</span>
-                <span className="badge-cyan text-[10px] uppercase font-mono">10-Step Guided Engine</span>
+                <span>{t('launchpad.title', 'Commandor Launchpad')}</span>
+                <span className="badge-cyan text-[10px] uppercase font-mono">{t('launchpad.guided_engine', '10-Step Guided Engine')}</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                End-to-end service creation: Git source, node allocation, secrets, Nginx reverse proxy, DNS, TLS, health probe, and auto-recovery.
+                {t('launchpad.subtitle', 'End-to-end service creation: Git source, node allocation, secrets, Nginx reverse proxy, DNS, TLS, health probe, and auto-recovery.')}
               </p>
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                   <span>#{s.num}</span>
                   {isCompleted && <CheckIcon className="w-3 h-3 text-emerald-500 inline" />}
                 </div>
-                <div className="truncate font-semibold">{s.title}</div>
+                <div className="truncate font-semibold">{t(`launchpad.step_${s.title.toLowerCase()}`, s.title)}</div>
               </div>
             );
           })}
@@ -777,7 +777,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
               className="btn-secondary py-1.5 px-4 text-xs flex items-center gap-1"
             >
               <ArrowLeftIcon className="w-3.5 h-3.5 rtl:rotate-180" />
-              <span>{t('common.cancel', 'Back')}</span>
+              <span>{t('common.back', 'Back')}</span>
             </button>
           ) : (
             <div />

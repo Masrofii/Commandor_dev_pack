@@ -308,7 +308,7 @@ export default function WebhooksPage() {
                 <div>
                   <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
                     <ArrowPathIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
-                    <span>Webhook Delivery Log &amp; Retry Inspector</span>
+                    <span>{t('webhooks.inspector_title', 'Webhook Delivery Log & Retry Inspector')}</span>
                   </h3>
                   <p className="text-xs text-slate-400 font-mono mt-0.5">
                     Target: {inspectWebhook.name} ({inspectWebhook.url})

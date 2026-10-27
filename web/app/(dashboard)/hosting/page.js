@@ -737,7 +737,7 @@ export default function HostingPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <ServerStackIcon className="h-5 w-5 text-brand-500" />
-                Add Cloud Server Node (Ubuntu VPS)
+                {t('nodes.add_title', 'Add Hosting Node')}
               </h2>
               <button onClick={() => { setShowAddNode(false); setBulkResults(null); }} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
@@ -755,7 +755,7 @@ export default function HostingPage() {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
-                Single Node
+                {t('nodes.single_node_enroll', 'Single Node')}
               </button>
               <button
                 type="button"
@@ -767,7 +767,7 @@ export default function HostingPage() {
                 }`}
               >
                 <ListBulletIcon className="h-3.5 w-3.5" />
-                Bulk SSH Import
+                {t('nodes.bulk_ssh_import', 'Bulk SSH Import')}
               </button>
             </div>
 

@@ -1185,7 +1185,7 @@ export default function NodesPage() {
               <div className="flex items-center gap-2">
                 <CommandLineIcon className="w-5 h-5 text-brand-500" />
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Remote Diagnostics Terminal — {selectedNode.name}
+                  {t('nodes.terminal_title', 'Remote Diagnostics Terminal')} — {selectedNode.name}
                 </h3>
               </div>
               <button
@@ -1198,7 +1198,7 @@ export default function NodesPage() {
 
             {/* Quick Command Presets */}
             <div className="space-y-1.5">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase">Quick Command Presets</div>
+              <div className="text-[11px] font-semibold text-slate-400 uppercase">{t('nodes.quick_presets', 'Quick Command Presets')}</div>
               <div className="flex flex-wrap gap-1.5">
                 {[
                   { label: 'Uptime', cmd: 'uptime -p' },
@@ -1311,7 +1311,7 @@ export default function NodesPage() {
               <div className="flex items-center gap-2">
                 <PencilSquareIcon className="w-5 h-5 text-brand-500" />
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Edit Node — {editingNode.name}
+                  {t('nodes.edit_title', 'Edit Node')} — {editingNode.name}
                 </h3>
               </div>
               <button
@@ -1419,7 +1419,7 @@ export default function NodesPage() {
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                   <GlobeAltIcon className="w-5 h-5 text-brand-500" />
-                  Hosted Sites on {inspectNode.name}
+                  {t('nodes.hosted_sites_title', 'Hosted Sites on')} {inspectNode.name}
                 </h3>
                 <p className="text-xs text-slate-500">{inspectNode.host}:{inspectNode.port}</p>
               </div>
@@ -1495,7 +1495,7 @@ export default function NodesPage() {
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                   <ServerStackIcon className="w-5 h-5 text-brand-500" />
-                  {addMode === 'single' ? 'Enroll Linux Server Node' : 'Bulk Import SSH Nodes'}
+                  {addMode === 'single' ? t('nodes.enroll_single', 'Enroll Linux Server Node') : t('nodes.bulk_import_ssh', 'Bulk Import SSH Nodes')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {addMode === 'single'
@@ -1522,7 +1522,7 @@ export default function NodesPage() {
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
-                Single Node Enrollment
+                {t('nodes.single_node_enroll', 'Single Node Enrollment')}
               </button>
               <button
                 type="button"
@@ -1533,7 +1533,7 @@ export default function NodesPage() {
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
-                Bulk SSH Strings
+                {t('nodes.bulk_ssh_import', 'Bulk SSH Import')}
               </button>
             </div>
 
@@ -1974,7 +1974,7 @@ export default function NodesPage() {
                 <FolderArrowDownIcon className="w-6 h-6 text-emerald-500" />
                 <div>
                   <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                    FTP & SFTP Management — {selectedFtpNode.name}
+                    {t('nodes.ftp_title', 'FTP & SFTP Management')} — {selectedFtpNode.name}
                   </h3>
                   <p className="text-xs text-slate-400 font-mono">
                     {selectedFtpNode.host} • SSH Port: {selectedFtpNode.port}

@@ -93,23 +93,23 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
               <Square3Stack3DIcon className="w-5 h-5" />
             </span>
             <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-              Reusable Subdomain &amp; Service Templates
+              {t('templates.title', 'Reusable Subdomain & Service Templates')}
             </h3>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Pre-configured, injection-safe routing blueprints for Applications, APIs, Documentation portals, Static sites, and Status pages.
+            {t('templates.subtitle', 'Pre-configured, injection-safe routing blueprints for Applications, APIs, Documentation portals, Static sites, and Status pages.')}
           </p>
         </div>
 
         {/* Category Pills */}
         <div className="flex flex-wrap rounded-lg bg-slate-100 dark:bg-cyber-850 p-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-400">
           {[
-            { id: 'all', label: t('common.all', 'All Templates') },
+            { id: 'all', label: t('templates.all', 'All Templates') },
             { id: 'application', label: t('nav.applications', 'Applications') },
             { id: 'api', label: t('nav.api_keys', 'REST APIs') },
-            { id: 'documentation', label: 'Docs' },
+            { id: 'documentation', label: t('templates.docs', 'Docs') },
             { id: 'static_site', label: t('hosting.title', 'Static') },
-            { id: 'status_page', label: 'Status' }
+            { id: 'status_page', label: t('templates.status', 'Status') }
           ].map(c => (
             <button
               key={c.id}
@@ -142,58 +142,58 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map(t => (
+          {templates.map(tpl => (
             <div
-              key={t.id}
+              key={tpl.id}
               className="card p-5 flex flex-col justify-between space-y-4 hover:border-brand-300 dark:hover:border-cyber-700 transition-colors"
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {CATEGORY_ICONS[t.category] || <CommandLineIcon className="w-5 h-5 text-brand-500" />}
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">{t.name}</h4>
+                    {CATEGORY_ICONS[tpl.category] || <CommandLineIcon className="w-5 h-5 text-brand-500" />}
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">{tpl.name}</h4>
                   </div>
                   <span className="badge-cyan text-[10px] uppercase font-mono font-bold">
-                    {t.category.replace('_', ' ')}
+                    {tpl.category.replace('_', ' ')}
                   </span>
                 </div>
 
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                  {t.description}
+                  {tpl.description}
                 </p>
 
                 <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cyber-850 border border-slate-200/60 dark:border-cyber-800 space-y-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Default Port:</span>
-                    <strong className="text-brand-600 dark:text-sky-400">:{t.default_port}</strong>
+                    <span className="text-slate-400">{t('templates.default_port', 'Default Port:')}</span>
+                    <strong className="text-brand-600 dark:text-sky-400">:{tpl.default_port}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Runtime:</span>
-                    <span className="capitalize">{t.runtime}</span>
+                    <span className="text-slate-400">{t('templates.runtime', 'Runtime:')}</span>
+                    <span className="capitalize">{tpl.runtime}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Health Endpoint:</span>
-                    <span className="truncate max-w-[140px]">{t.health_check_endpoint}</span>
+                    <span className="text-slate-400">{t('templates.health_endpoint', 'Health Endpoint:')}</span>
+                    <span className="truncate max-w-[140px]">{tpl.health_check_endpoint}</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-cyber-800">
                 <button
-                  onClick={() => handleOpenPreview(t)}
+                  onClick={() => handleOpenPreview(tpl)}
                   className="btn-secondary py-1 px-3 text-xs flex-1 flex items-center justify-center gap-1"
                 >
                   <EyeIcon className="w-3.5 h-3.5" />
-                  <span>Preview Route</span>
+                  <span>{t('templates.preview_route', 'Preview Route')}</span>
                 </button>
 
                 {onSelectTemplateForLaunch && (
                   <button
-                    onClick={() => onSelectTemplateForLaunch(t)}
+                    onClick={() => onSelectTemplateForLaunch(tpl)}
                     className="btn-primary py-1 px-3 text-xs flex-1 flex items-center justify-center gap-1 font-semibold"
                   >
                     <RocketLaunchIcon className="w-3.5 h-3.5" />
-                    <span>Launch</span>
+                    <span>{t('templates.launch', 'Launch')}</span>
                   </button>
                 )}
               </div>
@@ -211,7 +211,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
               <div className="flex items-center gap-2">
                 <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
                 <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Template Preview: {previewModal.name}
+                  {t('templates.preview_title', 'Template Preview')}: {previewModal.name}
                 </h3>
               </div>
               <button onClick={() => setPreviewModal(null)} className="text-slate-400 hover:text-slate-600">
@@ -223,7 +223,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
               {/* Hostname form */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1">Subdomain Prefix</label>
+                  <label className="block font-semibold mb-1">{t('templates.subdomain_prefix', 'Subdomain Prefix')}</label>
                   <input
                     type="text"
                     value={previewSubdomain}
@@ -235,7 +235,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Root Domain</label>
+                  <label className="block font-semibold mb-1">{t('templates.root_domain', 'Root Domain')}</label>
                   {baseDomains.length > 0 ? (
                     <select
                       value={previewBaseDomain}
@@ -275,12 +275,12 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
                     )}
                     <div>
                       <div className="font-bold text-slate-900 dark:text-white">
-                        {previewData.hasConflict ? 'Route Conflict Detected' : 'Pre-Flight Conflict Verification Passed'}
+                        {previewData.hasConflict ? t('templates.route_conflict', 'Route Conflict Detected') : t('templates.preflight_passed', 'Pre-Flight Conflict Verification Passed')}
                       </div>
                       <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
                         {previewData.hasConflict
                           ? previewData.conflicts.join(' ')
-                          : 'No collisions with active proxy routes or DNS records.'}
+                          : t('templates.no_collisions', 'No collisions with active proxy routes or DNS records.')}
                       </p>
                       <p className="text-emerald-600 dark:text-emerald-400 text-[11px] mt-1 font-semibold">
                         ✓ {previewData.preservedRecordsNotice}
@@ -289,7 +289,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
                   </div>
 
                   <div>
-                    <label className="block font-semibold mb-1">Generated Nginx Virtual Host Configuration</label>
+                    <label className="block font-semibold mb-1">{t('templates.nginx_vhost', 'Generated Nginx Virtual Host Configuration')}</label>
                     <pre className="p-4 bg-slate-950 text-slate-200 rounded-xl font-mono text-[11px] overflow-x-auto border border-slate-800 leading-relaxed">
                       {previewData.renderedConfig}
                     </pre>
@@ -300,12 +300,12 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
 
             <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-cyber-800">
               <span className="text-[11px] text-slate-400">
-                Syntax check: {previewData?.syntaxValid ? '✓ Valid' : 'Checking...'}
+                {previewData?.syntaxValid ? t('templates.syntax_valid', 'Syntax check: Valid') : t('templates.syntax_checking', 'Syntax check: Checking...')}
               </span>
 
               <div className="flex gap-2">
                 <button onClick={() => setPreviewModal(null)} className="btn-secondary py-1.5 px-4 text-xs">
-                  Close
+                  {t('common.close', 'Close')}
                 </button>
                 {onSelectTemplateForLaunch && (
                   <button
@@ -315,7 +315,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
                     }}
                     className="btn-primary py-1.5 px-4 text-xs font-semibold"
                   >
-                    Use in Launchpad
+                    {t('templates.use_in_launchpad', 'Use in Launchpad')}
                   </button>
                 )}
               </div>

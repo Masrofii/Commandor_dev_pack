@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
+import { useTranslation } from '../../../lib/i18n';
 import {
   CircleStackIcon,
   PlusIcon,
@@ -20,6 +21,7 @@ import {
 import Portal from '../../../components/Portal';
 
 export default function BackupsPage() {
+  const { t } = useTranslation();
   const { data: backupsData, isLoading, mutate } = useSWR('backups-list', () => api.getBackups());
   const backups = backupsData?.backups || [];
 
@@ -258,7 +260,7 @@ export default function BackupsPage() {
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                   <ShieldCheckIcon className="w-5 h-5 text-indigo-600 dark:text-cyan-400" />
-                  <span>Backup Integrity Report</span>
+                  <span>{t('backups.integrity_report_title', 'Backup Integrity Report')}</span>
                 </h3>
                 <button onClick={() => setVerificationResult(null)} className="text-slate-400 hover:text-slate-600">
                   <XMarkIcon className="w-5 h-5" />
@@ -297,7 +299,7 @@ export default function BackupsPage() {
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <BeakerIcon className="w-5 h-5 text-cyan-500" />
-                <span>Dry-Run Restore Sandbox Report</span>
+                <span>{t('backups.sandbox_test_title', 'Dry-Run Restore Sandbox Report')}</span>
               </h3>
               <button onClick={() => setTestRestoreResult(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="w-5 h-5" />
@@ -352,7 +354,7 @@ export default function BackupsPage() {
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <h3 className="font-bold text-base text-amber-600 dark:text-amber-400 flex items-center gap-2">
                 <ExclamationTriangleIcon className="w-5 h-5" />
-                <span>Confirm Database Restore</span>
+                <span>{t('backups.confirm_restore_title', 'Confirm Database Restore')}</span>
               </h3>
               <button onClick={() => setRestoringBackup(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="w-5 h-5" />
@@ -364,8 +366,8 @@ export default function BackupsPage() {
                 You are about to restore the database to the snapshot from <strong>{restoringBackup.created_at}</strong> ({restoringBackup.backup_name}).
               </p>
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900/60 space-y-1 text-amber-800 dark:text-amber-300">
-                <p className="font-bold">⚠️ High-Risk Action</p>
-                <p>An automated pre-restore safety snapshot will be taken immediately before restoring so you can revert if needed.</p>
+                <p className="font-bold">{t('backups.risk_warning_title', '⚠️ High-Risk Action')}</p>
+                <p>{t('backups.risk_warning_desc', 'An automated pre-restore safety snapshot will be taken immediately before restoring so you can revert if needed.')}</p>
               </div>
 
               <div>
@@ -388,7 +390,7 @@ export default function BackupsPage() {
                 onClick={() => setRestoringBackup(null)}
                 className="btn-secondary py-1.5 px-4 text-xs font-semibold"
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -396,7 +398,7 @@ export default function BackupsPage() {
                 disabled={confirmText !== 'RESTORE' || restoring}
                 className="p-2 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs"
               >
-                {restoring ? 'Restoring Database...' : 'Execute Restore'}
+                {restoring ? t('backups.restoring_btn', 'Restoring Database...') : t('backups.execute_restore_btn', 'Execute Restore')}
               </button>
             </div>
           </div>

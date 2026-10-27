@@ -573,9 +573,11 @@ export default function AliasesPage() {
                 <div className="text-left">
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
                     <QrCodeIcon className="w-4 h-4 text-brand-500" />
-                    Alias QR Code
+                    {t('aliases.qr_title', 'Alias QR Code')}
                   </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Scan with your phone camera to compose or copy</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {t('aliases.qr_desc', 'Scan with your phone camera to compose or copy')}
+                  </p>
                 </div>
                 <button onClick={() => setQrModalAlias(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                   <XMarkIcon className="w-4 h-4" />
@@ -649,7 +651,7 @@ export default function AliasesPage() {
                   className="btn-secondary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
                 >
                   <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-                  Copy Address
+                  {t('aliases.copy_address', 'Copy Address')}
                 </button>
                 <a
                   href={api.getAliasQr(qrModalAlias, { format: qrFormat })}
@@ -659,7 +661,7 @@ export default function AliasesPage() {
                   className="btn-primary py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
                 >
                   <ArrowDownTrayIcon className="w-3.5 h-3.5" />
-                  Download PNG
+                  {t('aliases.download_png', 'Download PNG')}
                 </a>
               </div>
             </div>
@@ -679,24 +681,24 @@ export default function AliasesPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                Delete Email Alias?
+                {t('aliases.delete_title', 'Delete Email Alias?')}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Are you sure you want to permanently delete <code className="text-rose-600 dark:text-rose-400 font-mono font-bold">{deleteConfirmAlias}</code>? Any incoming emails sent to this address in the future will be rejected.
+                {t('aliases.delete_desc', 'Are you sure you want to permanently delete {alias}? Any incoming emails sent to this address in the future will be rejected.', { alias: deleteConfirmAlias })}
               </p>
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-cyber-800">
                 <button
                   onClick={() => setDeleteConfirmAlias(null)}
                   className="btn-secondary py-1.5 px-3.5 text-xs font-semibold"
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   onClick={confirmDelete}
                   disabled={deleting}
                   className="btn bg-rose-600 hover:bg-rose-500 text-white py-1.5 px-4 text-xs font-semibold shadow-sm shadow-rose-500/20"
                 >
-                  {deleting ? 'Deleting...' : 'Delete Alias'}
+                  {deleting ? t('aliases.deleting_btn', 'Deleting...') : t('aliases.delete_btn', 'Delete Alias')}
                 </button>
               </div>
             </div>
