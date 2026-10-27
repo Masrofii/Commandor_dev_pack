@@ -33,7 +33,10 @@ import {
   TagIcon,
   KeyIcon,
   LockClosedIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  FolderArrowDownIcon,
+  BoltIcon,
+  StopIcon
 } from '@heroicons/react/24/outline';
 
 export default function NodesPage() {
@@ -116,6 +119,24 @@ export default function NodesPage() {
   const [inspectNode, setInspectNode] = useState(null);
   const [nodeDetails, setNodeDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // FTP Management Modal state
+  const [selectedFtpNode, setSelectedFtpNode] = useState(null);
+  const [showFtpModal, setShowFtpModal] = useState(false);
+  const [ftpInfo, setFtpInfo] = useState(null);
+  const [loadingFtpInfo, setLoadingFtpInfo] = useState(false);
+  const [detectingFtp, setDetectingFtp] = useState(false);
+  const [provisioningFtp, setProvisioningFtp] = useState(false);
+  const [controllingFtp, setControllingFtp] = useState(false);
+  const [testingFtp, setTestingFtp] = useState(false);
+  const [ftpTestResult, setFtpTestResult] = useState(null);
+  const [ftpTestForm, setFtpTestForm] = useState({ username: '', password: '', port: '' });
+  const [showAddFtpUser, setShowAddFtpUser] = useState(false);
+  const [newFtpUser, setNewFtpUser] = useState({ username: '', password: '', site_id: '', root_path: '/var/www/nodesites', permissions: 'rw' });
+  const [savingFtpUser, setSavingFtpUser] = useState(false);
+  const [bulkDetectingFtp, setBulkDetectingFtp] = useState(false);
+  const [bulkAutoDetectFtp, setBulkAutoDetectFtp] = useState(true);
+  const [bulkAutoProvisionFtp, setBulkAutoProvisionFtp] = useState(false);
 
   // Unique groups list
   const availableGroups = Array.from(new Set(nodes.map(n => n.group_name || 'default').filter(Boolean)));
@@ -256,6 +277,177 @@ export default function NodesPage() {
     });
   }
 
+  // Open FTP Management Modal
+  async function handleOpenFtpModal(node) {
+    setSelectedFtpNode(node);
+    setShowFtpModal(true);
+    setFtpTestResult(null);
+    setFtpTestForm({ username: '', password: '', port: String(node.ftp_port || 21) });
+    setNewFtpUser({ username: '', password: '', site_id: '', root_path: '/var/www/nodesites', permissions: 'rw' });
+    setLoadingFtpInfo(true);
+    try {
+      const data = await api.getNodeFtp(node.id);
+      setFtpInfo(data);
+    } catch (err) {
+      toast.error(err.message || 'Failed to load FTP information');
+    } finally {
+      setLoadingFtpInfo(false);
+    }
+  }
+
+  // Trigger FTP Auto-Detection on Node
+  async function handleDetectFtp() {
+    if (!selectedFtpNode) return;
+    setDetectingFtp(true);
+    try {
+      const res = await api.detectNodeFtp(selectedFtpNode.id);
+      if (res.detected) {
+        toast.success(`FTP detected online on port ${res.port}! (${res.serverType || 'standard'})`);
+      } else {
+        toast.error(`No FTP server listening on ${selectedFtpNode.host}:${res.port} (status: ${res.status})`);
+      }
+      const refreshed = await api.getNodeFtp(selectedFtpNode.id);
+      setFtpInfo(refreshed);
+      setSelectedFtpNode(prev => ({
+        ...prev,
+        ftp_status: res.status,
+        ftp_port: res.port,
+        ftp_server_type: res.serverType,
+        ftp_banner: res.banner
+      }));
+      mutateNodes();
+    } catch (err) {
+      toast.error(err.message || 'FTP detection probe failed');
+    } finally {
+      setDetectingFtp(false);
+    }
+  }
+
+  // Provision FTP on Node
+  async function handleProvisionFtp() {
+    if (!selectedFtpNode) return;
+    if (!confirm(`Provision and start FTP server on ${selectedFtpNode.name} (${selectedFtpNode.host})?`)) return;
+    setProvisioningFtp(true);
+    try {
+      const res = await api.provisionNodeFtp(selectedFtpNode.id, {
+        port: selectedFtpNode.ftp_port || 21
+      });
+      if (res.success) {
+        toast.success(res.message || 'FTP service provisioned successfully');
+      } else {
+        toast.error(res.error || 'FTP provisioning failed');
+      }
+      const refreshed = await api.getNodeFtp(selectedFtpNode.id);
+      setFtpInfo(refreshed);
+      mutateNodes();
+    } catch (err) {
+      toast.error(err.message || 'FTP provisioning failed');
+    } finally {
+      setProvisioningFtp(false);
+    }
+  }
+
+  // Control FTP Service (start, stop, restart)
+  async function handleControlFtp(action) {
+    if (!selectedFtpNode) return;
+    setControllingFtp(true);
+    try {
+      const res = await api.controlNodeFtp(selectedFtpNode.id, action);
+      toast.success(`FTP daemon ${action}ed successfully`);
+      const refreshed = await api.getNodeFtp(selectedFtpNode.id);
+      setFtpInfo(refreshed);
+      mutateNodes();
+    } catch (err) {
+      toast.error(err.message || `Failed to ${action} FTP daemon`);
+    } finally {
+      setControllingFtp(false);
+    }
+  }
+
+  // Test FTP Login Credentials
+  async function handleTestFtpCredentials(e) {
+    e.preventDefault();
+    if (!selectedFtpNode) return;
+    setTestingFtp(true);
+    setFtpTestResult(null);
+    try {
+      const res = await api.testNodeFtp(selectedFtpNode.id, {
+        username: ftpTestForm.username.trim(),
+        password: ftpTestForm.password,
+        port: parseInt(ftpTestForm.port, 10) || selectedFtpNode.ftp_port || 21
+      });
+      setFtpTestResult(res);
+      if (res.success) {
+        toast.success('FTP Authentication verified!');
+      } else {
+        toast.error(res.error || 'FTP Authentication failed');
+      }
+    } catch (err) {
+      setFtpTestResult({ success: false, error: err.message });
+      toast.error(err.message || 'Test request failed');
+    } finally {
+      setTestingFtp(false);
+    }
+  }
+
+  // Create FTP User Account
+  async function handleCreateFtpUser(e) {
+    e.preventDefault();
+    if (!selectedFtpNode) return;
+    if (!newFtpUser.username.trim() || !newFtpUser.password) {
+      toast.error('Username and password are required');
+      return;
+    }
+    setSavingFtpUser(true);
+    try {
+      await api.createNodeFtpUser(selectedFtpNode.id, {
+        username: newFtpUser.username.trim(),
+        password: newFtpUser.password,
+        root_path: newFtpUser.root_path.trim() || '/var/www/nodesites',
+        permissions: newFtpUser.permissions
+      });
+      toast.success(`FTP user "${newFtpUser.username.trim()}" created!`);
+      setShowAddFtpUser(false);
+      setNewFtpUser({ username: '', password: '', site_id: '', root_path: '/var/www/nodesites', permissions: 'rw' });
+      const refreshed = await api.getNodeFtp(selectedFtpNode.id);
+      setFtpInfo(refreshed);
+    } catch (err) {
+      toast.error(err.message || 'Failed to create FTP user');
+    } finally {
+      setSavingFtpUser(false);
+    }
+  }
+
+  // Delete FTP User Account
+  async function handleDeleteFtpUser(userId, username) {
+    if (!selectedFtpNode) return;
+    if (!confirm(`Delete FTP user "${username}" from node "${selectedFtpNode.name}"?`)) return;
+    try {
+      await api.deleteNodeFtpUser(selectedFtpNode.id, userId);
+      toast.success(`FTP user "${username}" removed`);
+      const refreshed = await api.getNodeFtp(selectedFtpNode.id);
+      setFtpInfo(refreshed);
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete FTP user');
+    }
+  }
+
+  // Bulk Auto-Detect FTP across all nodes
+  async function handleBulkDetectFtp() {
+    if (nodes.length === 0) return;
+    setBulkDetectingFtp(true);
+    try {
+      const res = await api.bulkDetectFtp(nodes.map(n => n.id));
+      const onlineCount = (res.results || []).filter(r => r.status === 'online').length;
+      toast.success(`FTP Scan complete! ${onlineCount} of ${res.results.length} nodes have FTP online.`);
+      mutateNodes();
+    } catch (err) {
+      toast.error(err.message || 'Bulk FTP scan failed');
+    } finally {
+      setBulkDetectingFtp(false);
+    }
+  }
+
   // Save Edit Node
   async function handleSaveEdit(e) {
     e.preventDefault();
@@ -389,7 +581,11 @@ export default function NodesPage() {
     setBulkProvisioning(true);
     setBulkResult(null);
     try {
-      const res = await api.addHostingNodesBulk({ connection_strings: bulkText });
+      const res = await api.addHostingNodesBulk({
+        connection_strings: bulkText,
+        detect_ftp: bulkAutoDetectFtp,
+        auto_provision_ftp: bulkAutoProvisionFtp
+      });
       setBulkResult(res);
       toast.success(`Enrolled ${res.successful} of ${res.total} nodes`);
       mutateNodes();
@@ -446,12 +642,40 @@ export default function NodesPage() {
     return matchesSearch && matchesStatus && matchesGroup;
   });
 
+  // Safe helper to extract CPU count
+  const parseNodeCpus = (node) => {
+    const c = parseInt(node.system_info?.cpus, 10);
+    return Number.isFinite(c) && c > 0 ? c : 1;
+  };
+
+  // Safe helper to extract RAM in MB (handling 'N/A', strings, undefined, null)
+  const parseNodeRamMb = (node) => {
+    const sys = node.system_info;
+    const raw = sys?.ramTotalMb !== undefined && sys?.ramTotalMb !== 'N/A'
+      ? sys?.ramTotalMb
+      : (sys?.ramMb !== 'N/A' ? sys?.ramMb : 0);
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
   // Aggregate cluster metrics
   const totalNodes = nodes.length;
   const onlineNodes = nodes.filter(n => n.status === 'online').length;
   const totalSites = nodes.reduce((acc, n) => acc + (n.current_sites || 0), 0);
-  const totalCpus = nodes.reduce((acc, n) => acc + (n.system_info?.cpus || 1), 0);
-  const totalRamGb = (nodes.reduce((acc, n) => acc + (n.system_info?.ramTotalMb || n.system_info?.ramMb || 0), 0) / 1024).toFixed(1);
+
+  const totalCpus = nodes.reduce((acc, n) => acc + parseNodeCpus(n), 0);
+  const onlineCpus = nodes.filter(n => n.status === 'online').reduce((acc, n) => acc + parseNodeCpus(n), 0);
+
+  const totalRamMb = nodes.reduce((acc, n) => acc + parseNodeRamMb(n), 0);
+  const onlineRamMb = nodes.filter(n => n.status === 'online').reduce((acc, n) => acc + parseNodeRamMb(n), 0);
+
+  const formatClusterGb = (mb) => {
+    const gb = mb / 1024;
+    return gb >= 100 ? Math.round(gb).toLocaleString() : gb.toFixed(1);
+  };
+
+  const totalRamGbStr = formatClusterGb(totalRamMb);
+  const onlineRamGbStr = formatClusterGb(onlineRamMb);
 
   return (
     <div className="space-y-6 animate-fade-in pb-16">
@@ -486,6 +710,15 @@ export default function NodesPage() {
             <span>{t('nodes.bulk_import', 'Bulk Import')}</span>
           </button>
           <button
+            onClick={handleBulkDetectFtp}
+            disabled={bulkDetectingFtp || nodes.length === 0}
+            className="btn-secondary py-2 px-3.5 text-xs shadow-xs font-semibold flex items-center gap-1.5"
+            title="Auto-detect FTP status across all nodes"
+          >
+            <FolderArrowDownIcon className={`w-4 h-4 text-emerald-500 ${bulkDetectingFtp ? 'animate-bounce' : ''}`} />
+            <span>{bulkDetectingFtp ? 'Scanning FTP...' : 'Scan Nodes FTP'}</span>
+          </button>
+          <button
             onClick={() => { setAddMode('single'); setTestResult(null); setShowAddModal(true); }}
             className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold"
           >
@@ -502,8 +735,10 @@ export default function NodesPage() {
             <span>{t('nodes.total_nodes', 'Total Nodes')}</span>
             <ServerStackIcon className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white">{totalNodes}</div>
-          <div className="text-[11px] text-slate-500">{onlineNodes} {t('common.online', 'online')}</div>
+          <div className="text-lg font-bold text-slate-900 dark:text-white">
+            {onlineNodes} <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/ {totalNodes}</span>
+          </div>
+          <div className="text-[11px] text-slate-500">{onlineNodes} {t('common.online', 'online in cluster')}</div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
@@ -514,7 +749,7 @@ export default function NodesPage() {
           <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
             {totalNodes > 0 ? Math.round((onlineNodes / totalNodes) * 100) : 100}%
           </div>
-          <div className="text-[11px] text-slate-500">{t('nodes.cluster_health', 'Cluster health ratio')}</div>
+          <div className="text-[11px] text-slate-500">{onlineNodes} of {totalNodes} nodes online</div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
@@ -522,8 +757,12 @@ export default function NodesPage() {
             <span>{t('nodes.vcpu_cores', 'vCPU Cores')}</span>
             <CpuChipIcon className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white">{totalCpus} Cores</div>
-          <div className="text-[11px] text-slate-500">{t('nodes.cluster_compute', 'Total cluster compute')}</div>
+          <div className="text-lg font-bold text-slate-900 dark:text-white">
+            {onlineCpus} <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/ {totalCpus} Cores</span>
+          </div>
+          <div className="text-[11px] text-slate-500">
+            {totalCpus > 0 ? Math.round((onlineCpus / totalCpus) * 100) : 0}% available compute
+          </div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
@@ -531,8 +770,12 @@ export default function NodesPage() {
             <span>{t('nodes.total_ram', 'Total RAM')}</span>
             <CircleStackIcon className="w-4 h-4 text-cyan-500" />
           </div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white">{totalRamGb} GB</div>
-          <div className="text-[11px] text-slate-500">{t('nodes.allocated_memory', 'Allocated memory pool')}</div>
+          <div className="text-lg font-bold text-slate-900 dark:text-white">
+            {onlineRamGbStr} <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/ {totalRamGbStr} GB</span>
+          </div>
+          <div className="text-[11px] text-slate-500">
+            {totalRamMb > 0 ? Math.round((onlineRamMb / totalRamMb) * 100) : 0}% active memory pool
+          </div>
         </div>
 
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800 col-span-2 sm:col-span-1">
@@ -629,8 +872,9 @@ export default function NodesPage() {
             const isActive = node.is_active !== 0;
             const isStale = node.is_stale || (isOnline && (!node.last_ping_at || (Date.now() - new Date(node.last_ping_at.includes('T') ? node.last_ping_at : node.last_ping_at.replace(' ', 'T') + 'Z').getTime() > 15 * 60 * 1000)));
             const sys = node.system_info || {};
-            const ramTotal = sys.ramTotalMb || sys.ramMb || 0;
-            const ramUsed = sys.ramUsedMb || 0;
+            const isSftpStorage = Boolean(sys.sftpOnly || node.sftp_only);
+            const ramTotal = parseNodeRamMb(node);
+            const ramUsed = Number(sys.ramUsedMb) || 0;
             const ramPercent = ramTotal > 0 ? Math.min(100, Math.round((ramUsed / ramTotal) * 100)) : 0;
             const isPinging = pingingId === node.id;
             const isProvisioning = provisioningId === node.id;
@@ -702,6 +946,43 @@ export default function NodesPage() {
                           #{lbl}
                         </span>
                       ))}
+
+                      {/* Protocol Badge */}
+                      {sys.sftpOnly || node.sftp_only ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-mono font-bold flex items-center gap-1">
+                          🔒 SFTP Node
+                        </span>
+                      ) : sys.ftpOnly || node.ftp_only || node.auth_method === 'ftp' ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-bold flex items-center gap-1">
+                          📁 FTP Node
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-cyan-400 border border-indigo-200 dark:border-indigo-800 font-mono">
+                          🖥️ SSH Node
+                        </span>
+                      )}
+
+                      {/* FTP & SFTP Status Badges */}
+                      {node.ftp_status === 'online' ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono font-bold flex items-center gap-1">
+                          <BoltIcon className="w-3 h-3 text-emerald-500" />
+                          FTP: {node.ftp_port || 21}
+                        </span>
+                      ) : node.ftp_status === 'stopped' ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-medium flex items-center gap-1">
+                          <StopIcon className="w-3 h-3 text-amber-500" />
+                          FTP: Stopped
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-cyber-850 text-slate-500 dark:text-slate-400 font-mono">
+                          FTP: Not Installed
+                        </span>
+                      )}
+                      {node.sftp_enabled !== false && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 font-mono">
+                          SFTP: {node.port || 22}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -771,10 +1052,10 @@ export default function NodesPage() {
                       <CpuChipIcon className="w-3.5 h-3.5 text-indigo-500" />
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white">
-                      {sys.cpus || 1} vCPU
+                      {isSftpStorage ? 'SFTP Only' : `${sys.cpus || 1} vCPU`}
                     </div>
                     <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                      Load: {sys.loadAvg || '0.00'}
+                      {isSftpStorage ? 'Storage Subsystem' : `Load: ${sys.loadAvg || '0.00'}`}
                     </div>
                   </div>
 
@@ -785,14 +1066,18 @@ export default function NodesPage() {
                       <CircleStackIcon className="w-3.5 h-3.5 text-cyan-500" />
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between gap-1">
-                      <span>{formatMemoryMb(ramTotal)}</span>
+                      <span>{isSftpStorage ? 'Storage Node' : formatMemoryMb(ramTotal)}</span>
                       {sys.containerLimitMb && sys.containerLimitMb < ramTotal && (
                         <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-cyan-400 border border-indigo-200/50 dark:border-indigo-800/50" title={`Container limit: ${formatMemoryMb(sys.containerLimitMb)}`}>
                           cgroup: {formatMemoryMb(sys.containerLimitMb)}
                         </span>
                       )}
                     </div>
-                    {ramUsed > 0 ? (
+                    {isSftpStorage ? (
+                      <div className="text-[10px] text-purple-600 dark:text-purple-400 font-medium truncate mt-0.5">
+                        SFTP Storage
+                      </div>
+                    ) : ramUsed > 0 ? (
                       <div>
                         <div className="w-full bg-slate-200 dark:bg-cyber-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
                           <div
@@ -858,6 +1143,14 @@ export default function NodesPage() {
                     >
                       <CommandLineIcon className="w-3.5 h-3.5 text-indigo-500" />
                       <span>SSH Terminal</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenFtpModal(node)}
+                      className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
+                      title="Manage FTP & SFTP service and user accounts"
+                    >
+                      <FolderArrowDownIcon className="w-3.5 h-3.5" />
+                      <span>FTP & SFTP</span>
                     </button>
                   </div>
                 </div>
@@ -1458,7 +1751,9 @@ export default function NodesPage() {
                               </div>
                               <div className="p-1.5 rounded bg-white dark:bg-cyber-950 border border-slate-200/60 dark:border-cyber-800">
                                 <span className="text-slate-400 block">RAM:</span>
-                                <span className="font-bold text-slate-800 dark:text-slate-200">{formatMemoryMb(testResult.specs.ramTotalMb || testResult.specs.ramMb || 0)}</span>
+                                <span className="font-bold text-slate-800 dark:text-slate-200">
+                                  {testResult.specs.sftpOnly ? 'Storage' : formatMemoryMb(testResult.specs.ramTotalMb || (testResult.specs.ramMb !== 'N/A' ? testResult.specs.ramMb : 0))}
+                                </span>
                               </div>
                             </div>
                           )}
@@ -1514,8 +1809,30 @@ export default function NodesPage() {
                     className="input font-mono text-xs w-full"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Accepts <code>host:port:user:pass#label</code> or <code>user:pass@host:port</code> formats.
+                    Accepts <code>host:port:user:pass#label</code>, <code>user:pass@host:port</code>, or <code>ftp://user:pass@host:21</code> formats.
                   </p>
+                </div>
+
+                {/* FTP Bulk Auto-Detect & Provision Toggles */}
+                <div className="flex flex-col sm:flex-row gap-3 p-3 bg-slate-50 dark:bg-cyber-900 rounded-lg border border-slate-200 dark:border-cyber-800">
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={bulkAutoDetectFtp}
+                      onChange={(e) => setBulkAutoDetectFtp(e.target.checked)}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>🔍 Auto-detect FTP service on nodes</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={bulkAutoProvisionFtp}
+                      onChange={(e) => setBulkAutoProvisionFtp(e.target.checked)}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>⚡ Auto-provision FTP server if missing</span>
+                  </label>
                 </div>
 
                 {/* Dry Run Validation Result */}
@@ -1571,7 +1888,16 @@ export default function NodesPage() {
                               : 'bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                           }`}
                         >
-                          <span>{r.name || r.host || `Node #${idx + 1}`}</span>
+                          <div className="flex items-center gap-2">
+                            <span>{r.name || r.host || `Node #${idx + 1}`}</span>
+                            {r.ftp && (
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                                r.ftp.detected ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-slate-200 text-slate-700 dark:bg-cyber-800 dark:text-slate-300'
+                              }`}>
+                                {r.ftp.detected ? `FTP :${r.ftp.port} Online` : 'FTP Not Running'}
+                              </span>
+                            )}
+                          </div>
                           <span>{r.status === 'success' ? 'Enrolled' : (r.error || 'Failed')}</span>
                         </div>
                       ))}
@@ -1610,6 +1936,391 @@ export default function NodesPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* FTP Management Modal */}
+      {showFtpModal && selectedFtpNode && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="card max-w-3xl w-full p-5 sm:p-6 space-y-5 shadow-2xl border-emerald-200 dark:border-cyber-800 animate-scale-in my-8 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
+              <div className="flex items-center gap-2">
+                <FolderArrowDownIcon className="w-6 h-6 text-emerald-500" />
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    FTP & SFTP Management — {selectedFtpNode.name}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    {selectedFtpNode.host} • SSH Port: {selectedFtpNode.port}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowFtpModal(false); setSelectedFtpNode(null); }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* FTP Status Overview Card */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="p-3 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800">
+                <div className="text-[11px] text-slate-400 uppercase font-semibold">FTP Status</div>
+                <div className="flex items-center gap-1.5 mt-1 font-bold">
+                  {selectedFtpNode.ftp_status === 'online' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-emerald-500 text-sm">Online</span>
+                    </>
+                  ) : selectedFtpNode.ftp_status === 'stopped' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      <span className="text-amber-500 text-sm">Stopped</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                      <span className="text-slate-400 text-sm">Not Installed</span>
+                    </>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 truncate">
+                  Type: {selectedFtpNode.ftp_server_type || 'None'}
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800">
+                <div className="text-[11px] text-slate-400 uppercase font-semibold">FTP Port</div>
+                <div className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200 mt-1">
+                  {selectedFtpNode.ftp_port || 21}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1">
+                  Passive: {selectedFtpNode.ftp_pasv_min || 30000}-{selectedFtpNode.ftp_pasv_max || 30100}
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800">
+                <div className="text-[11px] text-slate-400 uppercase font-semibold">SFTP (SSH)</div>
+                <div className="text-sm font-mono font-bold text-sky-600 dark:text-sky-400 mt-1">
+                  Port {selectedFtpNode.port || 22}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1">
+                  {selectedFtpNode.sftp_enabled !== false ? 'Enabled via SSH' : 'Disabled'}
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800">
+                <div className="text-[11px] text-slate-400 uppercase font-semibold">FTP Accounts</div>
+                <div className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200 mt-1">
+                  {(ftpInfo?.users || []).length} Active
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1">
+                  Root: /var/www/nodesites
+                </div>
+              </div>
+            </div>
+
+            {/* Service Action Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDetectFtp}
+                  disabled={detectingFtp}
+                  className="btn-secondary py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5"
+                  title="Detect FTP service & port on remote node"
+                >
+                  <ArrowPathIcon className={`w-3.5 h-3.5 text-indigo-500 ${detectingFtp ? 'animate-spin' : ''}`} />
+                  <span>{detectingFtp ? 'Probing...' : 'Auto-Detect FTP'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProvisionFtp}
+                  disabled={provisioningFtp}
+                  className="btn-secondary py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"
+                  title="Install vsftpd / Python daemon on node"
+                >
+                  <WrenchScrewdriverIcon className={`w-3.5 h-3.5 ${provisioningFtp ? 'animate-spin' : ''}`} />
+                  <span>{provisioningFtp ? 'Provisioning...' : 'Install / Provision FTP'}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleControlFtp('start')}
+                  disabled={controllingFtp}
+                  className="btn-secondary py-1.5 px-2.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                >
+                  <PlayIcon className="w-3.5 h-3.5" />
+                  <span>Start</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleControlFtp('stop')}
+                  disabled={controllingFtp}
+                  className="btn-secondary py-1.5 px-2.5 text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+                >
+                  <StopIcon className="w-3.5 h-3.5" />
+                  <span>Stop</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleControlFtp('restart')}
+                  disabled={controllingFtp}
+                  className="btn-secondary py-1.5 px-2.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  <ArrowPathIcon className="w-3.5 h-3.5" />
+                  <span>Restart</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Connect & Client Guide */}
+            <div className="p-3.5 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-2 text-xs">
+              <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
+                <span className="flex items-center gap-1.5">
+                  <KeyIcon className="w-4 h-4 text-emerald-500" />
+                  Quick Connect (FileZilla, Cyberduck, WinSCP)
+                </span>
+                <button
+                  onClick={() => copyToClipboard(`ftp://${selectedFtpNode.host}:${selectedFtpNode.ftp_port || 21}/`, 'FTP Connection URL')}
+                  className="btn-secondary py-1 px-2 text-[11px] font-mono flex items-center gap-1"
+                >
+                  <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                  <span>Copy FTP URL</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
+                <div className="p-2 bg-white dark:bg-cyber-850 rounded border border-slate-200 dark:border-cyber-800">
+                  <span className="text-slate-400 block text-[10px]">HOST / SERVER</span>
+                  <span className="font-bold truncate select-all">{selectedFtpNode.host}</span>
+                </div>
+                <div className="p-2 bg-white dark:bg-cyber-850 rounded border border-slate-200 dark:border-cyber-800">
+                  <span className="text-slate-400 block text-[10px]">PORT</span>
+                  <span className="font-bold select-all">{selectedFtpNode.ftp_port || 21} (FTP) / {selectedFtpNode.port || 22} (SFTP)</span>
+                </div>
+                <div className="p-2 bg-white dark:bg-cyber-850 rounded border border-slate-200 dark:border-cyber-800">
+                  <span className="text-slate-400 block text-[10px]">PROTOCOL</span>
+                  <span className="font-bold select-all">{selectedFtpNode.ftp_status === 'online' ? 'FTP (or SFTP)' : 'SFTP'}</span>
+                </div>
+                <div className="p-2 bg-white dark:bg-cyber-850 rounded border border-slate-200 dark:border-cyber-800">
+                  <span className="text-slate-400 block text-[10px]">ROOT DIRECTORY</span>
+                  <span className="font-bold select-all">/var/www/nodesites</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Test FTP Login Tool */}
+            <div className="p-3.5 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-2 text-xs">
+              <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <ShieldCheckIcon className="w-4 h-4 text-indigo-500" />
+                <span>Test FTP Authentication</span>
+              </div>
+              <form onSubmit={handleTestFtpCredentials} className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={ftpTestForm.username}
+                  onChange={(e) => setFtpTestForm({ ...ftpTestForm, username: e.target.value })}
+                  className="input text-xs"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={ftpTestForm.password}
+                  onChange={(e) => setFtpTestForm({ ...ftpTestForm, password: e.target.value })}
+                  className="input text-xs"
+                />
+                <input
+                  type="number"
+                  placeholder={`Port (${selectedFtpNode.ftp_port || 21})`}
+                  value={ftpTestForm.port}
+                  onChange={(e) => setFtpTestForm({ ...ftpTestForm, port: e.target.value })}
+                  className="input text-xs"
+                />
+                <button
+                  type="submit"
+                  disabled={testingFtp}
+                  className="btn-primary py-1.5 px-3 text-xs font-semibold"
+                >
+                  {testingFtp ? 'Testing...' : 'Test Login'}
+                </button>
+              </form>
+              {ftpTestResult && (
+                <div className={`p-2 rounded font-mono text-[11px] ${
+                  ftpTestResult.success ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                }`}>
+                  {ftpTestResult.success ? `✅ ${ftpTestResult.message || 'FTP login successful'} (${ftpTestResult.banner || ''})` : `❌ ${ftpTestResult.error || 'Login failed'}`}
+                </div>
+              )}
+            </div>
+
+            {/* FTP Accounts List */}
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <DocumentTextIcon className="w-4 h-4 text-emerald-500" />
+                  FTP Accounts ({(ftpInfo?.users || []).length})
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setShowAddFtpUser(!showAddFtpUser)}
+                  className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1 text-emerald-600 dark:text-emerald-400"
+                >
+                  <PlusIcon className="w-3.5 h-3.5" />
+                  <span>{showAddFtpUser ? 'Hide Form' : 'Create FTP User'}</span>
+                </button>
+              </div>
+
+              {/* Add FTP User Form */}
+              {showAddFtpUser && (
+                <form onSubmit={handleCreateFtpUser} className="p-3.5 bg-slate-50 dark:bg-cyber-900 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3">
+                  <div className="font-bold text-slate-800 dark:text-slate-200">New FTP User Account</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Username
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="ftp_user"
+                        value={newFtpUser.username}
+                        onChange={(e) => setNewFtpUser({ ...newFtpUser, username: e.target.value })}
+                        className="input text-xs w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••••••"
+                        value={newFtpUser.password}
+                        onChange={(e) => setNewFtpUser({ ...newFtpUser, password: e.target.value })}
+                        className="input text-xs w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Chroot Root Path
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="/var/www/nodesites"
+                        value={newFtpUser.root_path}
+                        onChange={(e) => setNewFtpUser({ ...newFtpUser, root_path: e.target.value })}
+                        className="input font-mono text-xs w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Permissions
+                      </label>
+                      <select
+                        value={newFtpUser.permissions}
+                        onChange={(e) => setNewFtpUser({ ...newFtpUser, permissions: e.target.value })}
+                        className="input text-xs w-full"
+                      >
+                        <option value="rw">Read & Write (Full)</option>
+                        <option value="r">Read-Only (Download Only)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddFtpUser(false)}
+                      className="btn-secondary py-1 px-3 text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingFtpUser}
+                      className="btn-primary py-1 px-3 text-xs font-semibold"
+                    >
+                      {savingFtpUser ? 'Creating...' : 'Create Account'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Users Table */}
+              <div className="border border-slate-200 dark:border-cyber-800 rounded-xl overflow-hidden">
+                <table className="w-full text-left font-mono text-[11px]">
+                  <thead className="bg-slate-50 dark:bg-cyber-900 border-b border-slate-200 dark:border-cyber-800 text-slate-500">
+                    <tr>
+                      <th className="p-2.5">User</th>
+                      <th className="p-2.5">Directory Jail</th>
+                      <th className="p-2.5">Access</th>
+                      <th className="p-2.5">Created</th>
+                      <th className="p-2.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-cyber-800/60">
+                    {loadingFtpInfo ? (
+                      <tr>
+                        <td colSpan={5} className="p-4 text-center text-slate-400">Loading accounts...</td>
+                      </tr>
+                    ) : (ftpInfo?.users || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-4 text-center text-slate-400">
+                          No dedicated FTP user accounts created on this node yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      (ftpInfo?.users || []).map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-cyber-850/50">
+                          <td className="p-2.5 font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <KeyIcon className="w-3.5 h-3.5 text-emerald-500" />
+                            <span>{u.username}</span>
+                          </td>
+                          <td className="p-2.5 text-slate-600 dark:text-slate-300 truncate max-w-xs" title={u.root_path}>
+                            {u.root_path}
+                          </td>
+                          <td className="p-2.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+                              u.permissions === 'rw' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-cyber-800 dark:text-slate-400'
+                            }`}>
+                              {u.permissions === 'rw' ? 'Read/Write' : 'Read-Only'}
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-slate-400">
+                            {formatTimeAgo(u.created_at)}
+                          </td>
+                          <td className="p-2.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteFtpUser(u.id, u.username)}
+                              className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+                              title="Delete FTP User"
+                            >
+                              <TrashIcon className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-cyber-800">
+              <button
+                type="button"
+                onClick={() => { setShowFtpModal(false); setSelectedFtpNode(null); }}
+                className="btn-secondary py-1.5 px-4 text-xs font-semibold"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

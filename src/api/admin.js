@@ -6,7 +6,29 @@ const { getDb } = require('../../database/database');
 const { getDatabaseStats, getProcessStats, getCounters } = require('../monitoring/metrics');
 const { getAllSubdomainsAdmin, updateSubdomain, deleteSubdomain, getSubdomainById } = require('../services/subdomainService');
 const { getAllSitesAdmin, deleteSite, getSecurityLogs } = require('../services/hostingService');
-const { listNodes, enrollNode, updateNode, bulkAddNodes, validateBulkNodes, testNodeConnection, deleteNode, parseNodeConnectionString, pingNode, executeNodeCommand, getNodeWithSites } = require('../services/nodeManagerService');
+const {
+  listNodes,
+  enrollNode,
+  updateNode,
+  bulkAddNodes,
+  validateBulkNodes,
+  testNodeConnection,
+  deleteNode,
+  parseNodeConnectionString,
+  pingNode,
+  executeNodeCommand,
+  getNodeWithSites,
+  getNodeById,
+  detectNodeFtp,
+  provisionNodeFtp,
+  controlNodeFtp,
+  getNodeFtpInfo,
+  createNodeFtpUser,
+  deleteNodeFtpUser,
+  listNodeFtpUsers,
+  testNodeFtpCredentials,
+  bulkDetectFtp
+} = require('../services/nodeManagerService');
 const { listUsers, getUserDetails, banUser, unbanUser, setSubscription, listSubscriptionPlans } = require('../services/userService');
 const { createRedeemCode, listRedeemCodes, revokeRedeemCode, deleteRedeemCode, listRedeemLogs } = require('../services/redeemService');
 const { getGlobalStorageMetrics, getUserComprehensiveStorageStats, formatBytes } = require('../services/quotaService');
@@ -483,6 +505,100 @@ router.post('/nodes/:id/exec', async (req, res) => {
       return res.status(400).json({ error: 'command is required' });
     }
     const result = await executeNodeCommand(id, command, req.user?.tg_id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Node FTP Endpoints
+router.post('/nodes/bulk/ftp/detect', async (req, res) => {
+  try {
+    const results = await bulkDetectFtp(req.body.node_ids);
+    res.json({ results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/nodes/:id/ftp', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const info = getNodeFtpInfo(id);
+    res.json(info);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/detect', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const node = getNodeById(id);
+    if (!node) return res.status(404).json({ error: 'Node not found' });
+    const result = await detectNodeFtp({ host: node.host, port: node.ftp_port || 21, nodeId: id });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/provision', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const result = await provisionNodeFtp(id, req.body, req.user?.tg_id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/control', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { action } = req.body;
+    const result = await controlNodeFtp(id, action, req.user?.tg_id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/test', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const result = await testNodeFtpCredentials(id, req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/nodes/:id/ftp/users', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const users = listNodeFtpUsers(id);
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/nodes/:id/ftp/users', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const user = await createNodeFtpUser(id, req.body, req.user?.tg_id);
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/nodes/:id/ftp/users/:userId', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const userId = parseInt(req.params.userId, 10);
+    const result = await deleteNodeFtpUser(id, userId, req.user?.tg_id);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
