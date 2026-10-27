@@ -6,6 +6,7 @@ import { api } from '../../../lib/api';
 import { isAdmin } from '../../../lib/auth';
 import { formatMemoryMb } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
+import PageHeader, { PageTab } from '../../../components/PageHeader';
 import {
   ServerStackIcon,
   PlusIcon,
@@ -20,6 +21,8 @@ import {
   DocumentArrowUpIcon,
   CodeBracketIcon,
   InformationCircleIcon,
+  ChartBarIcon,
+  CircleStackIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
   ListBulletIcon
@@ -54,6 +57,12 @@ export default function HostingPage() {
   const hostingBaseDomain = basesData?.defaultDomain || basesData?.baseDomains?.[0] || '';
   const limits = limitsData || { canCreate: true, plan: { name: 'Free Tier', max_sites: 1 } };
   const logs = logsData?.logs || [];
+
+  const activeSites = sites.filter((site) => site.status === 'active').length;
+  const totalVisits = sites.reduce((sum, site) => sum + Number(site.visits_count || 0), 0);
+  const storageKb = sites.reduce((sum, site) => sum + Number(site.storage_used_bytes || 0), 0) / 1024;
+  const storageLabel = storageKb >= 1024 ? `${(storageKb / 1024).toFixed(1)} MB` : `${storageKb.toFixed(1)} KB`;
+  const currentPlanName = limits?.plan?.name || '';
 
   // Deploy Site Modal
   const [showDeploy, setShowDeploy] = useState(false);
@@ -192,92 +201,88 @@ export default function HostingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
-            <ServerStackIcon className="h-7 w-7 text-indigo-500" />
-            {t('hosting.title', 'Cloud Hosting & Sites')}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('hosting.subtitle', 'High-performance cloud hosting with automated real-time security scanning and instant subdomains.')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {adminUser && (
+    <div className="page-container space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('hosting.eyebrow', 'Build')}
+          </>
+        }
+        title={t('hosting.title', 'Cloud Hosting & Sites')}
+        description={t('hosting.subtitle', 'High-performance cloud hosting with automated real-time security scanning and instant subdomains.')}
+        actions={
+          <>
+            {adminUser && (
+              <button
+                onClick={() => setShowAddNode(true)}
+                className="btn-secondary text-xs py-2"
+              >
+                <PlusIcon className="h-4 w-4" />
+                {t('nodes.provision_btn', 'Add server node')}
+              </button>
+            )}
             <button
-              onClick={() => setShowAddNode(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors"
+              onClick={() => setShowDeploy(true)}
+              className="btn-primary text-xs py-2"
             >
               <PlusIcon className="h-4 w-4" />
-              {t('nodes.provision_btn', 'Add Server Node')}
+              {t('hosting.deploy_btn', 'Deploy website')}
             </button>
-          )}
-          <button
-            onClick={() => setShowDeploy(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
-          >
-            <PlusIcon className="h-4 w-4" />
-            {t('hosting.deploy_btn', 'Deploy Website')}
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-6 text-sm font-medium">
-        <button
-          onClick={() => setTab('sites')}
-          className={`pb-3 border-b-2 flex items-center gap-2 ${tab === 'sites' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
-        >
-          <GlobeAltIcon className="h-4 w-4" />
-          {t('hosting.title', 'My Hosted Sites')} ({sites.length})
-        </button>
-        <button
-          onClick={() => setTab('plans')}
-          className={`pb-3 border-b-2 flex items-center gap-2 ${tab === 'plans' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
-        >
-          <InformationCircleIcon className="h-4 w-4" />
-          {t('bot.btn.plans_limits', 'Packs & Limits')}
-        </button>
-        {adminUser && (
-          <button
-            onClick={() => setTab('nodes')}
-            className={`pb-3 border-b-2 flex items-center gap-2 ${tab === 'nodes' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
-          >
-            <ServerStackIcon className="h-4 w-4" />
-            {t('nav.nodes', 'Server Nodes')} ({nodes.length})
-          </button>
-        )}
-        {adminUser && (
-          <button
-            onClick={() => setTab('security')}
-            className={`pb-3 border-b-2 flex items-center gap-2 ${tab === 'security' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
-          >
-            <ShieldCheckIcon className="h-4 w-4" />
-            Security Audit Logs
-          </button>
-        )}
-      </div>
+          </>
+        }
+        tabs={
+          <>
+            <PageTab active={tab === 'sites'} onClick={() => setTab('sites')} count={sites.length}>
+              <span className="inline-flex items-center gap-1.5">
+                <GlobeAltIcon className="h-3.5 w-3.5" />
+                {t('hosting.tab_sites', 'Hosted Sites')}
+              </span>
+            </PageTab>
+            <PageTab active={tab === 'plans'} onClick={() => setTab('plans')}>
+              <span className="inline-flex items-center gap-1.5">
+                <InformationCircleIcon className="h-3.5 w-3.5" />
+                {t('hosting.tab_plans', 'Plans & limits')}
+              </span>
+            </PageTab>
+            {adminUser && (
+              <PageTab active={tab === 'nodes'} onClick={() => setTab('nodes')} count={nodes.length}>
+                <span className="inline-flex items-center gap-1.5">
+                  <ServerStackIcon className="h-3.5 w-3.5" />
+                  {t('nav.nodes', 'Server Nodes')}
+                </span>
+              </PageTab>
+            )}
+            {adminUser && (
+              <PageTab active={tab === 'security'} onClick={() => setTab('security')}>
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheckIcon className="h-3.5 w-3.5" />
+                  {t('hosting.tab_security', 'Security audit logs')}
+                </span>
+              </PageTab>
+            )}
+          </>
+        }
+      />
 
       {/* TAB 1: SITES */}
       {tab === 'sites' && (
         <div>
           {loadingSites ? (
             <div className="flex items-center justify-center py-12">
-              <ArrowPathIcon className="h-8 w-8 text-gray-400 animate-spin" />
+              <ArrowPathIcon className="h-8 w-8 text-slate-400 animate-spin" />
             </div>
           ) : sites.length === 0 ? (
-            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 shadow-sm">
-              <GlobeAltIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-base font-semibold text-gray-900 dark:text-white">{t('hosting.empty_title', 'No sites deployed yet')}</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 shadow-sm">
+              <GlobeAltIcon className="mx-auto h-12 w-12 text-slate-400" />
+              <h3 className="mt-2 text-base font-semibold text-slate-900 dark:text-white">{t('hosting.empty_title', 'No sites deployed yet')}</h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {t('hosting.empty_desc', 'Deploy your first static website, landing page, or HTML app onto your connected edge server nodes.')}
               </p>
               <div className="mt-6">
                 <button
                   onClick={() => setShowDeploy(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-sm font-medium"
                 >
                   <PlusIcon className="h-4 w-4" />
                   {t('hosting.deploy_first', 'Deploy First Site')}
@@ -285,74 +290,131 @@ export default function HostingPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {sites.map(s => (
-                <div
-                  key={s.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white text-base font-mono">
-                          {s.name}
-                        </h3>
-                        <a
-                          href={`http://${s.full_domain}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 mt-0.5 font-mono"
-                        >
-                          {s.full_domain}
-                          <ArrowTopRightOnSquareIcon className="h-3 w-3" />
-                        </a>
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {[
+                  {
+                    label: t('hosting.stat_sites', 'Hosted sites'),
+                    value: sites.length,
+                    note: t('hosting.stat_sites_note', '{count} active', { count: activeSites }),
+                    icon: GlobeAltIcon,
+                    tone: 'text-brand-600 dark:text-brand-400'
+                  },
+                  {
+                    label: t('hosting.stat_visits', 'Visitor hits'),
+                    value: totalVisits.toLocaleString(),
+                    note: t('hosting.stat_visits_note', 'All time'),
+                    icon: ChartBarIcon,
+                    tone: 'text-sky-600 dark:text-sky-400'
+                  },
+                  {
+                    label: t('hosting.stat_storage', 'Storage used'),
+                    value: storageLabel,
+                    note: t('hosting.stat_storage_note', 'Across all sites'),
+                    icon: CircleStackIcon,
+                    tone: 'text-cf-500 dark:text-slate-400'
+                  },
+                  {
+                    label: t('hosting.stat_security', 'Security status'),
+                    value: 'Clean',
+                    note: t('hosting.stat_security_note', 'No threats detected'),
+                    icon: ShieldCheckIcon,
+                    tone: 'text-emerald-600 dark:text-emerald-400'
+                  }
+                ].map((stat) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div key={stat.label} className="card p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cf-500 dark:text-slate-400">
+                          {stat.label}
+                        </span>
+                        <Icon className={`h-4 w-4 flex-shrink-0 ${stat.tone}`} />
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${s.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
-                        {s.status}
-                      </span>
+                      <div className="mt-2 font-display text-2xl font-bold leading-none text-cf-ink dark:text-white">
+                        {stat.value}
+                      </div>
+                      <div className="mt-1.5 text-[10px] font-medium text-cf-500 dark:text-slate-400">{stat.note}</div>
                     </div>
+                  );
+                })}
+              </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 space-y-2 text-xs text-gray-600 dark:text-gray-300">
-                      {adminUser && s.node_name && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Server Node:</span>
-                          <span className="font-mono font-medium">{s.node_name}</span>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {sites.map(s => (
+                  <div
+                    key={s.id}
+                    className="card card-hover flex flex-col justify-between p-5"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate font-display text-base font-bold text-cf-ink dark:text-white">
+                            {s.name}
+                          </h3>
+                          <a
+                            href={`http://${s.full_domain}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 truncate font-mono text-[11px] text-brand-700 hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200"
+                          >
+                            {s.full_domain}
+                            <ArrowTopRightOnSquareIcon className="h-3 w-3 flex-shrink-0" />
+                          </a>
                         </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Storage Used:</span>
-                        <span className="font-mono">{(s.storage_used_bytes / 1024).toFixed(1)} KB</span>
+                        <span className={`badge flex-shrink-0 capitalize ${s.status === 'active' ? 'badge-green' : 'badge-red'}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${s.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          {s.status}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Visitor Hits:</span>
-                        <span className="font-mono font-medium">{s.visits_count}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Security Scan:</span>
-                        <span className="text-green-600 font-medium">Passed (Clean)</span>
+
+                      <div className="mt-4 space-y-2.5 border-t border-cf-200 pt-4 text-[11px] text-cf-600 dark:border-cyber-800 dark:text-slate-300">
+                        {adminUser && s.node_name && (
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-cf-500 dark:text-slate-400">{t('hosting.server_node', 'Server node')}</span>
+                            <span className="truncate font-mono font-medium text-cf-800 dark:text-slate-200">{s.node_name}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-cf-500 dark:text-slate-400">{t('hosting.storage_used', 'Storage used')}</span>
+                          <span className="font-mono font-medium text-cf-800 dark:text-slate-200">{(s.storage_used_bytes / 1024).toFixed(1)} KB</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-cf-500 dark:text-slate-400">{t('hosting.visitor_hits', 'Visitor hits')}</span>
+                          <span className="font-mono font-medium text-cf-800 dark:text-slate-200">{Number(s.visits_count || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-cf-500 dark:text-slate-400">{t('hosting.security_scan', 'Security scan')}</span>
+                          <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
+                            <ShieldCheckIcon className="h-3.5 w-3.5" />
+                            {t('hosting.scan_passed', 'Passed (clean)')}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
-                    <a
-                      href={`http://${s.full_domain}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 rounded text-xs font-medium"
-                    >
-                      Visit Live
-                    </a>
-                    <button
-                      onClick={() => handleDeleteSite(s.id, s.name)}
-                      className="text-gray-400 hover:text-red-500 p-1.5 rounded transition-colors"
-                      title="Delete Site"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
+                    <div className="mt-4 flex items-center justify-between border-t border-cf-200 pt-3 dark:border-cyber-800">
+                      <a
+                        href={`http://${s.full_domain}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-secondary px-3 py-1.5 text-[11px]"
+                      >
+                        {t('hosting.visit_live', 'Visit live')}
+                        <ArrowTopRightOnSquareIcon className="h-3 w-3" />
+                      </a>
+                      <button
+                        onClick={() => handleDeleteSite(s.id, s.name)}
+                        className="rounded p-1.5 text-cf-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-500 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+                        title={t('hosting.delete_site', 'Delete site')}
+                        aria-label={t('hosting.delete_site', 'Delete site')}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -362,18 +424,18 @@ export default function HostingPage() {
       {tab === 'nodes' && adminUser && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Connected Server Nodes</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Connected Server Nodes</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); setShowAddNode(true); }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-600 shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-600 shadow-sm"
               >
-                <ListBulletIcon className="h-3.5 w-3.5 text-indigo-500" />
+                <ListBulletIcon className="h-3.5 w-3.5 text-brand-500" />
                 Bulk Add SSH
               </button>
               <button
                 onClick={() => { setNodeModalTab('single'); setBulkResults(null); setShowAddNode(true); }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-medium shadow-sm"
               >
                 <PlusIcon className="h-3.5 w-3.5" /> Connect Container
               </button>
@@ -382,23 +444,23 @@ export default function HostingPage() {
 
           {loadingNodes ? (
             <div className="flex items-center justify-center py-12">
-              <ArrowPathIcon className="h-8 w-8 text-gray-400 animate-spin" />
+              <ArrowPathIcon className="h-8 w-8 text-slate-400 animate-spin" />
             </div>
           ) : nodes.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <ServerStackIcon className="h-10 w-10 text-gray-400 mx-auto" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No nodes connected</h3>
-              <p className="text-xs text-gray-500 mt-1">Connect your Ubuntu server containers individually or bulk import multiple SSH servers.</p>
+            <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <ServerStackIcon className="h-10 w-10 text-slate-400 mx-auto" />
+              <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">No nodes connected</h3>
+              <p className="text-xs text-slate-500 mt-1">Connect your Ubuntu server containers individually or bulk import multiple SSH servers.</p>
               <div className="mt-4 flex items-center justify-center gap-2">
                 <button
                   onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); setShowAddNode(true); }}
-                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600"
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600"
                 >
                   Bulk Add SSH
                 </button>
                 <button
                   onClick={() => { setNodeModalTab('single'); setBulkResults(null); setShowAddNode(true); }}
-                  className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg"
+                  className="px-3 py-1.5 bg-brand-700 text-white text-xs font-medium rounded-lg"
                 >
                   Connect Single Container
                 </button>
@@ -407,39 +469,39 @@ export default function HostingPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {nodes.map(n => (
-                <div key={n.id} className="p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+                <div key={n.id} className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <span className={`h-2.5 w-2.5 rounded-full ${n.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <h4 className="font-semibold text-sm text-gray-900 dark:text-white">{n.name}</h4>
+                        <h4 className="font-semibold text-sm text-slate-900 dark:text-white">{n.name}</h4>
                       </div>
                       <button
                         onClick={() => handleDeleteNode(n.id, n.name)}
-                        className="text-gray-400 hover:text-red-500 p-1"
+                        className="text-slate-400 hover:text-red-500 p-1"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
-                    <p className="font-mono text-xs text-gray-500 mt-1">{n.host}:{n.port}</p>
+                    <p className="font-mono text-xs text-slate-500 mt-1">{n.host}:{n.port}</p>
 
                     <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <div className="text-gray-400 text-[10px] uppercase">CPUs</div>
-                        <div className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{n.system_info?.cpus || 1} vCPU</div>
+                      <div className="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div className="text-slate-400 text-[10px] uppercase">CPUs</div>
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{n.system_info?.cpus || 1} vCPU</div>
                       </div>
-                      <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <div className="text-gray-400 text-[10px] uppercase">RAM</div>
-                        <div className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{formatMemoryMb(n.system_info?.ramTotalMb || n.system_info?.ramMb)}</div>
+                      <div className="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div className="text-slate-400 text-[10px] uppercase">RAM</div>
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{formatMemoryMb(n.system_info?.ramTotalMb || n.system_info?.ramMb)}</div>
                       </div>
-                      <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <div className="text-gray-400 text-[10px] uppercase">Capacity</div>
-                        <div className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{n.current_sites} / {n.max_sites}</div>
+                      <div className="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div className="text-slate-400 text-[10px] uppercase">Capacity</div>
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{n.current_sites} / {n.max_sites}</div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60 text-xs text-gray-500 flex justify-between items-center">
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs text-slate-500 flex justify-between items-center">
                     <span>Multi-Site Runner: Active</span>
                     <span className="text-green-600 font-medium">Ready</span>
                   </div>
@@ -454,39 +516,57 @@ export default function HostingPage() {
       {tab === 'plans' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {plans.map(p => (
-              <div key={p.id} className="p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{p.name}</h3>
-                  <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                    <div className="flex items-center justify-between">
-                      <span>{t('hosting.plan_max_sites', 'Max Sites:')}</span>
-                      <span className="font-bold text-gray-900 dark:text-white">{p.max_sites}</span>
+            {plans.map(p => {
+              const isCurrent = currentPlanName && p.name?.toLowerCase() === currentPlanName.toLowerCase();
+              return (
+                <div
+                  key={p.id}
+                  className={`card flex flex-col justify-between p-6 ${isCurrent ? 'ring-1 ring-brand-400/70 dark:ring-brand-500/50' : ''}`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-display text-lg font-bold text-cf-ink dark:text-white">{p.name}</h3>
+                      {isCurrent && (
+                        <span className="badge-brand normal-case tracking-normal">
+                          {t('hosting.current_plan', 'Current plan')}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>{t('hosting.plan_storage', 'Storage Quota:')}</span>
-                      <span className="font-bold">{(p.max_storage_bytes / (1024 * 1024)).toFixed(0)} MB</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>{t('hosting.plan_max_files', 'Max Files:')}</span>
-                      <span className="font-bold">{p.max_files}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>{t('hosting.plan_monthly_req', 'Monthly Requests:')}</span>
-                      <span className="font-bold">{p.max_requests_monthly.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>{t('hosting.plan_scanner', 'Anti-Malware Scanner:')}</span>
-                      <span className="text-green-600 font-bold">{t('hosting.plan_included', 'Included')}</span>
+                    <div className="mt-4 space-y-2.5 text-xs text-cf-600 dark:text-slate-300">
+                      <div className="flex items-center justify-between">
+                        <span>{t('hosting.plan_max_sites', 'Max Sites:')}</span>
+                        <span className="font-bold text-cf-ink dark:text-white">{p.max_sites}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>{t('hosting.plan_storage', 'Storage Quota:')}</span>
+                        <span className="font-bold">{formatMemoryMb(Math.round(p.max_storage_bytes / (1024 * 1024)))}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>{t('hosting.plan_max_files', 'Max Files:')}</span>
+                        <span className="font-bold">{p.max_files}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>{t('hosting.plan_monthly_req', 'Monthly Requests:')}</span>
+                        <span className="font-bold">{p.max_requests_monthly.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>{t('hosting.plan_scanner', 'Anti-Malware Scanner:')}</span>
+                        <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-400">
+                          <ShieldCheckIcon className="h-3.5 w-3.5" />
+                          {t('hosting.plan_included', 'Included')}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <span className="text-xs text-gray-400 uppercase font-semibold">{t('hosting.plan_protected', 'Strict Anti-Abuse Protected')}</span>
+                  <div className="mt-6 border-t border-cf-200 pt-4 dark:border-cyber-800">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cf-400 dark:text-slate-500">
+                      {t('hosting.plan_protected', 'Strict Anti-Abuse Protected')}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -510,9 +590,9 @@ export default function HostingPage() {
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('hosting.security_logs_title', 'Recent Security Scanner Audit Logs')}</h4>
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">{t('hosting.security_logs_title', 'Recent Security Scanner Audit Logs')}</h4>
             {logs.length === 0 ? (
-              <p className="text-xs text-gray-400 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-slate-400 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                 {t('hosting.security_logs_clean', 'No security violations detected. All deployments are clean.')}
               </p>
             ) : (
@@ -522,7 +602,7 @@ export default function HostingPage() {
                     <div>
                       <span className="font-bold text-red-700 dark:text-red-400">[{l.threat_type.toUpperCase()}]</span> {l.file_name} - Threat blocked: {l.matched_pattern}
                     </div>
-                    <span className="text-gray-400">{l.created_at}</span>
+                    <span className="text-slate-400">{l.created_at}</span>
                   </div>
                 ))}
               </div>
@@ -534,23 +614,23 @@ export default function HostingPage() {
       {/* Deploy Site Modal */}
       {showDeploy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <GlobeAltIcon className="h-5 w-5 text-indigo-500" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <GlobeAltIcon className="h-5 w-5 text-brand-500" />
                 {t('hosting.deploy_title', 'Deploy Website')}
               </h2>
-              <button onClick={() => setShowDeploy(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowDeploy(false)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleDeploy} className="space-y-4 mt-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   {t('hosting.site_name_label', 'Site Name (Subdomain)')}
                 </label>
-                <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">
                   <input
                     type="text"
                     required
@@ -559,25 +639,25 @@ export default function HostingPage() {
                     onChange={e => setSiteForm({ ...siteForm, name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                     className="flex-1 px-3 py-2 bg-transparent text-sm outline-none font-mono"
                   />
-                  <span className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-xs font-mono text-gray-500 border-l border-gray-300 dark:border-gray-600 flex items-center">
+                  <span className="px-3 py-2 bg-slate-50 dark:bg-slate-700 text-xs font-mono text-slate-500 border-l border-slate-300 dark:border-slate-600 flex items-center">
                     .{hostingBaseDomain || 'configure-domain'}
                   </span>
                 </div>
               </div>
 
               {/* Mode switch */}
-              <div className="flex border border-gray-200 dark:border-gray-700 rounded-lg p-1 bg-gray-50 dark:bg-gray-900">
+              <div className="flex border border-slate-200 dark:border-slate-700 rounded-lg p-1 bg-slate-50 dark:bg-slate-900">
                 <button
                   type="button"
                   onClick={() => setDeployMode('html')}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${deployMode === 'html' ? 'bg-white dark:bg-gray-800 shadow-sm text-indigo-600 font-bold' : 'text-gray-500'}`}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${deployMode === 'html' ? 'bg-white dark:bg-slate-800 shadow-sm text-brand-600 font-bold' : 'text-slate-500'}`}
                 >
                   {t('hosting.deploy_type_html', 'HTML Code Editor')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeployMode('zip')}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${deployMode === 'zip' ? 'bg-white dark:bg-gray-800 shadow-sm text-indigo-600 font-bold' : 'text-gray-500'}`}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${deployMode === 'zip' ? 'bg-white dark:bg-slate-800 shadow-sm text-brand-600 font-bold' : 'text-slate-500'}`}
                 >
                   {t('hosting.deploy_type_zip', 'Upload ZIP Archive')}
                 </button>
@@ -585,19 +665,19 @@ export default function HostingPage() {
 
               {deployMode === 'html' ? (
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     {t('hosting.html_content_label', 'HTML Code (index.html)')}
                   </label>
                   <textarea
                     rows={6}
                     value={siteForm.rawHtml}
                     onChange={e => setSiteForm({ ...siteForm, rawHtml: e.target.value })}
-                    className="w-full p-3 font-mono text-xs bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full p-3 font-mono text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     {t('hosting.upload_zip_label', 'Select ZIP File')}
                   </label>
                   <input
@@ -605,9 +685,9 @@ export default function HostingPage() {
                     accept=".zip"
                     required
                     onChange={e => setZipFile(e.target.files[0] || null)}
-                    className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">Must contain an index.html at root.</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Must contain an index.html at root.</p>
                 </div>
               )}
 
@@ -618,25 +698,25 @@ export default function HostingPage() {
                   required
                   checked={siteForm.tosAccepted}
                   onChange={e => setSiteForm({ ...siteForm, tosAccepted: e.target.checked })}
-                  className="rounded border-gray-300 text-indigo-600 mt-0.5"
+                  className="rounded border-slate-300 text-brand-600 mt-0.5"
                 />
-                <label htmlFor="tos" className="text-xs text-gray-600 dark:text-gray-300 select-none cursor-pointer">
+                <label htmlFor="tos" className="text-xs text-slate-600 dark:text-slate-300 select-none cursor-pointer">
                   I agree to the <b>Anti-Abuse Policy</b> (No cryptocurrency miners, phishing login kits, webshells, or malware).
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setShowDeploy(false)}
-                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                 >
                   {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={deploying}
-                  className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                 >
                   {deploying ? t('hosting.deploying_btn', 'Scanning & Deploying...') : t('hosting.deploy_now_btn', 'Deploy to Cloud')}
                 </button>
@@ -649,26 +729,26 @@ export default function HostingPage() {
       {/* Add Node Modal (Owner/Admin Only) */}
       {showAddNode && adminUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <ServerStackIcon className="h-5 w-5 text-indigo-500" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ServerStackIcon className="h-5 w-5 text-brand-500" />
                 Add Cloud Server Node (Ubuntu VPS)
               </h2>
-              <button onClick={() => { setShowAddNode(false); setBulkResults(null); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setShowAddNode(false); setBulkResults(null); }} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Tabs: Single vs Bulk */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mt-3">
+            <div className="flex border-b border-slate-200 dark:border-slate-700 mt-3">
               <button
                 type="button"
                 onClick={() => { setNodeModalTab('single'); setBulkResults(null); }}
                 className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors ${
                   nodeModalTab === 'single'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                    ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
                 Single Node
@@ -678,8 +758,8 @@ export default function HostingPage() {
                 onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); }}
                 className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
                   nodeModalTab === 'bulk'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                    ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
                 <ListBulletIcon className="h-3.5 w-3.5" />
@@ -690,7 +770,7 @@ export default function HostingPage() {
             {nodeModalTab === 'single' ? (
               <form onSubmit={handleAddNode} className="space-y-4 mt-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Connection String (host:port:user:pass)
                   </label>
                   <input
@@ -699,15 +779,15 @@ export default function HostingPage() {
                     placeholder="198.51.100.25:22:root:password"
                     value={nodeForm.connection_string}
                     onChange={e => setNodeForm({ ...nodeForm, connection_string: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white outline-none font-mono"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white outline-none font-mono"
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">
+                  <p className="mt-1 text-[11px] text-slate-400">
                     Provide your Ubuntu container SSH host, port, username, and password.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Node Friendly Name (Optional)
                   </label>
                   <input
@@ -715,27 +795,27 @@ export default function HostingPage() {
                     placeholder="edge-node-01"
                     value={nodeForm.name}
                     onChange={e => setNodeForm({ ...nodeForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm outline-none"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm outline-none"
                   />
                 </div>
 
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+                <div className="p-3 bg-brand-50 dark:bg-brand-950/40 rounded-lg text-xs text-brand-700 dark:text-brand-300 space-y-1">
                   <p className="font-semibold">⚡ Automated Provisioning:</p>
                   <p>The system will automatically SSH into this container, set up directories, launch the multi-site web runner, and connect it to the hosting cluster.</p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => setShowAddNode(false)}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={addingNode}
-                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
+                    className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                   >
                     {addingNode ? 'Connecting & Provisioning...' : 'Connect Server Node'}
                   </button>
@@ -743,11 +823,11 @@ export default function HostingPage() {
               </form>
             ) : bulkResults ? (
               <div className="space-y-4 mt-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Bulk Provisioning Complete</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <h4 className="font-semibold text-sm text-slate-900 dark:text-white">Bulk Provisioning Complete</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {bulkResults.total} node(s) processed
                       </p>
                     </div>
@@ -775,7 +855,7 @@ export default function HostingPage() {
                       }`}
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-1.5 font-mono font-medium text-gray-900 dark:text-white">
+                        <div className="flex items-center gap-1.5 font-mono font-medium text-slate-900 dark:text-white">
                           {r.status === 'success' ? (
                             <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
                           ) : (
@@ -794,7 +874,7 @@ export default function HostingPage() {
                         </span>
                       </div>
                       {r.status === 'success' ? (
-                        <div className="mt-1 text-gray-600 dark:text-gray-300 pl-5">
+                        <div className="mt-1 text-slate-600 dark:text-slate-300 pl-5">
                           Node: <span className="font-semibold">{r.node?.name || r.name}</span> • {r.node?.system_info?.cpus || 1} vCPU • {formatMemoryMb(r.node?.system_info?.ramTotalMb || r.node?.system_info?.ramMb)} RAM
                         </div>
                       ) : (
@@ -806,18 +886,18 @@ export default function HostingPage() {
                   ))}
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => { setBulkResults(null); setBulkNodesText(''); }}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
                     Import More
                   </button>
                   <button
                     type="button"
                     onClick={() => { setShowAddNode(false); setBulkResults(null); }}
-                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
+                    className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm"
                   >
                     Done &amp; Close
                   </button>
@@ -827,10 +907,10 @@ export default function HostingPage() {
               <form onSubmit={handleBulkAddNodes} className="space-y-4 mt-4">
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                       SSH Connection Strings (One per line)
                     </label>
-                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
+                    <span className="text-[11px] text-brand-600 dark:text-brand-400 font-mono font-medium">
                       {bulkNodesText.split('\n').filter(l => l.trim() && !l.trim().startsWith('#') && l.includes(':')).length} nodes detected
                     </span>
                   </div>
@@ -840,30 +920,30 @@ export default function HostingPage() {
                     placeholder={`198.51.100.25:22:root:password123 # US-Edge-1\n198.51.100.26:22:root:password456 # US-Edge-2\nubuntu:mypass@198.51.100.27:2222\n10.0.0.15:22:root:secret`}
                     value={bulkNodesText}
                     onChange={e => setBulkNodesText(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-mono text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">
+                  <p className="mt-1 text-[11px] text-slate-400">
                     Format: <code>host:port:user:pass</code> or <code>user:pass@host:port</code>. Append <code># Custom Name</code> to name each node.
                   </p>
                 </div>
 
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+                <div className="p-3 bg-brand-50 dark:bg-brand-950/40 rounded-lg text-xs text-brand-700 dark:text-brand-300 space-y-1">
                   <p className="font-semibold">⚡ Parallel Provisioning (Pool size 3):</p>
                   <p>All nodes will be contacted simultaneously via SSH, verified, hardware specs collected, and integrated into the cluster.</p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => setShowAddNode(false)}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={bulkProvisioning}
-                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
+                    className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                   >
                     {bulkProvisioning ? 'Provisioning In Bulk...' : 'Connect & Provision Bulk'}
                   </button>

@@ -20,9 +20,9 @@ import {
 } from '@heroicons/react/24/outline';
 
 const CATEGORY_ICONS = {
-  application: <CommandLineIcon className="w-5 h-5 text-indigo-500" />,
+  application: <CommandLineIcon className="w-5 h-5 text-brand-500" />,
   api: <GlobeAltIcon className="w-5 h-5 text-emerald-500" />,
-  documentation: <DocumentTextIcon className="w-5 h-5 text-cyan-500" />,
+  documentation: <DocumentTextIcon className="w-5 h-5 text-sky-500" />,
   static_site: <Square3Stack3DIcon className="w-5 h-5 text-amber-500" />,
   status_page: <SignalIcon className="w-5 h-5 text-purple-500" />
 };
@@ -88,7 +88,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-cyber-800 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-indigo-50 dark:bg-cyan-950/80 text-indigo-600 dark:text-cyan-400">
+            <span className="p-1.5 rounded-lg bg-brand-50 dark:bg-sky-950/80 text-brand-600 dark:text-sky-400">
               <Square3Stack3DIcon className="w-5 h-5" />
             </span>
             <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
@@ -115,7 +115,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
               onClick={() => setSelectedCategory(c.id)}
               className={`px-2.5 py-1 rounded-md transition-colors ${
                 selectedCategory === c.id
-                  ? 'bg-white dark:bg-cyber-750 text-indigo-600 dark:text-cyan-400 font-bold shadow-xs'
+                  ? 'bg-white dark:bg-cyber-750 text-brand-600 dark:text-sky-400 font-bold shadow-xs'
                   : 'hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -144,12 +144,12 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
           {templates.map(t => (
             <div
               key={t.id}
-              className="card p-5 flex flex-col justify-between space-y-4 hover:border-indigo-300 dark:hover:border-cyber-700 transition-colors"
+              className="card p-5 flex flex-col justify-between space-y-4 hover:border-brand-300 dark:hover:border-cyber-700 transition-colors"
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {CATEGORY_ICONS[t.category] || <CommandLineIcon className="w-5 h-5 text-indigo-500" />}
+                    {CATEGORY_ICONS[t.category] || <CommandLineIcon className="w-5 h-5 text-brand-500" />}
                     <h4 className="font-bold text-sm text-slate-900 dark:text-white">{t.name}</h4>
                   </div>
                   <span className="badge-cyan text-[10px] uppercase font-mono font-bold">
@@ -164,7 +164,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
                 <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cyber-850 border border-slate-200/60 dark:border-cyber-800 space-y-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Default Port:</span>
-                    <strong className="text-indigo-600 dark:text-cyan-400">:{t.default_port}</strong>
+                    <strong className="text-brand-600 dark:text-sky-400">:{t.default_port}</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Runtime:</span>
@@ -207,7 +207,7 @@ export default function SubdomainTemplates({ onSelectTemplateForLaunch }) {
           <div className="card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2">
-                <ShieldCheckIcon className="w-5 h-5 text-indigo-600 dark:text-cyan-400" />
+                <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
                 <h3 className="font-bold text-base text-slate-900 dark:text-white">
                   Template Preview: {previewModal.name}
                 </h3>

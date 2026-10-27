@@ -60,7 +60,7 @@ export default function InfrastructureTopologyMap() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-cyber-800 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-indigo-50 dark:bg-cyan-950/80 text-indigo-600 dark:text-cyan-400">
+            <span className="p-1.5 rounded-lg bg-brand-50 dark:bg-sky-950/80 text-brand-600 dark:text-sky-400">
               <ArrowsRightLeftIcon className="w-5 h-5" />
             </span>
             <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
@@ -81,7 +81,7 @@ export default function InfrastructureTopologyMap() {
                 onClick={() => setFilterType(tKey)}
                 className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
                   filterType === tKey
-                    ? 'bg-white dark:bg-cyber-750 text-indigo-600 dark:text-cyan-400 font-bold shadow-xs'
+                    ? 'bg-white dark:bg-cyber-850 text-brand-600 dark:text-sky-400 font-bold shadow-xs'
                     : 'hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -143,7 +143,7 @@ export default function InfrastructureTopologyMap() {
                 key={n.id}
                 onClick={() => setSelectedNode(n)}
                 className={`p-3 rounded-xl border transition-all cursor-pointer text-xs ${
-                  selectedNode?.id === n.id ? 'ring-2 ring-indigo-500 shadow-md' : ''
+                  selectedNode?.id === n.id ? 'ring-2 ring-brand-500 shadow-md' : ''
                 } ${STATE_COLORS[n.healthState] || STATE_COLORS.unknown}`}
               >
                 <div className="font-bold flex items-center justify-between">
@@ -173,7 +173,7 @@ export default function InfrastructureTopologyMap() {
                   key={n.id}
                   onClick={() => setSelectedNode(n)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer text-xs ${
-                    selectedNode?.id === n.id ? 'ring-2 ring-indigo-500 shadow-md' : ''
+                    selectedNode?.id === n.id ? 'ring-2 ring-brand-500 shadow-md' : ''
                   } ${STATE_COLORS[n.healthState] || STATE_COLORS.unknown}`}
                 >
                   <div className="font-bold flex items-center justify-between truncate">
@@ -206,7 +206,7 @@ export default function InfrastructureTopologyMap() {
                   key={n.id}
                   onClick={() => setSelectedNode(n)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer text-xs ${
-                    selectedNode?.id === n.id ? 'ring-2 ring-indigo-500 shadow-md' : ''
+                    selectedNode?.id === n.id ? 'ring-2 ring-brand-500 shadow-md' : ''
                   } ${STATE_COLORS[n.healthState] || STATE_COLORS.unknown}`}
                 >
                   <div className="font-bold flex items-center justify-between truncate">
@@ -258,7 +258,7 @@ export default function InfrastructureTopologyMap() {
                   key={n.id}
                   onClick={() => setSelectedNode(n)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer text-xs ${
-                    selectedNode?.id === n.id ? 'ring-2 ring-indigo-500 shadow-md' : ''
+                    selectedNode?.id === n.id ? 'ring-2 ring-brand-500 shadow-md' : ''
                   } ${STATE_COLORS[n.healthState] || STATE_COLORS.unknown}`}
                 >
                   <div className="font-bold flex items-center justify-between truncate">
@@ -292,7 +292,7 @@ export default function InfrastructureTopologyMap() {
                   key={n.id}
                   onClick={() => setSelectedNode(n)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer text-xs ${
-                    selectedNode?.id === n.id ? 'ring-2 ring-indigo-500 shadow-md' : ''
+                    selectedNode?.id === n.id ? 'ring-2 ring-brand-500 shadow-md' : ''
                   } ${STATE_COLORS[n.healthState] || STATE_COLORS.unknown}`}
                 >
                   <div className="font-bold flex items-center justify-between truncate">

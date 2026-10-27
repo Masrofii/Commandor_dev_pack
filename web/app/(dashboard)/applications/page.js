@@ -8,6 +8,7 @@ import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
 import CommandorLaunchpad from '../../../components/CommandorLaunchpad';
 import SubdomainTemplates from '../../../components/SubdomainTemplates';
+import PageHeader, { PageTab } from '../../../components/PageHeader';
 import {
   CommandLineIcon,
   PlusIcon,
@@ -243,67 +244,55 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 pb-20">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <CommandLineIcon className="w-8 h-8 text-indigo-600 dark:text-cyan-400" />
-            <span>{t('apps.title', 'Applications & Deployments')}</span>
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {t('apps.subtitle', 'Git-backed developer services, automated reverse-proxy ingress, release history, and rollback engine.')}
-          </p>
-        </div>
+    <div className="page-container space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('apps.eyebrow', 'Build')}
+          </>
+        }
+        title={t('apps.title', 'Applications & Deployments')}
+        description={t('apps.subtitle', 'Git-backed developer services, automated reverse-proxy ingress, release history, and rollback engine.')}
+        actions={
+          <>
+            <button
+              onClick={() => {
+                setLaunchpadTemplate(null);
+                setShowLaunchpad(true);
+              }}
+              className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-1.5 shadow-md"
+            >
+              <RocketLaunchIcon className="w-4 h-4" />
+              <span>{t('launchpad.title', 'Commandor Launchpad')}</span>
+            </button>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={() => {
-              setLaunchpadTemplate(null);
-              setShowLaunchpad(true);
-            }}
-            className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-1.5 shadow-md bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white"
-          >
-            <RocketLaunchIcon className="w-4 h-4" />
-            <span>{t('launchpad.title', 'Commandor Launchpad')}</span>
-          </button>
-
-          <button
-            onClick={() => setShowCreate(true)}
-            className="btn-secondary py-2 px-3 text-xs font-semibold flex items-center gap-1"
-          >
-            <PlusIcon className="w-4 h-4" />
-            <span>{t('apps.deploy_btn', 'Deploy Application')}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-cyber-800 text-xs font-semibold">
-        <button
-          onClick={() => setActiveTab('apps')}
-          className={`pb-3 px-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'apps'
-              ? 'border-indigo-600 dark:border-cyan-400 text-indigo-600 dark:text-cyan-400'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <CommandLineIcon className="w-4 h-4" />
-          <span>{t('apps.running_apps', 'Active Applications')} ({applications.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('templates')}
-          className={`pb-3 px-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'templates'
-              ? 'border-indigo-600 dark:border-cyan-400 text-indigo-600 dark:text-cyan-400'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Square3Stack3DIcon className="w-4 h-4" />
-          <span>{t('templates.title', 'Service Blueprints & Templates')}</span>
-        </button>
-      </div>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="btn-secondary py-2 px-3 text-xs font-semibold flex items-center gap-1"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span>{t('apps.deploy_btn', 'Deploy application')}</span>
+            </button>
+          </>
+        }
+        tabs={
+          <>
+            <PageTab active={activeTab === 'apps'} onClick={() => setActiveTab('apps')} count={applications.length}>
+              <span className="inline-flex items-center gap-1.5">
+                <CommandLineIcon className="h-3.5 w-3.5" />
+                {t('apps.running_apps', 'Active applications')}
+              </span>
+            </PageTab>
+            <PageTab active={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>
+              <span className="inline-flex items-center gap-1.5">
+                <Square3Stack3DIcon className="h-3.5 w-3.5" />
+                {t('templates.title', 'Service Blueprints & Templates')}
+              </span>
+            </PageTab>
+          </>
+        }
+      />
 
       {/* TAB CONTENT: TEMPLATES */}
       {activeTab === 'templates' && (
@@ -329,7 +318,7 @@ export default function ApplicationsPage() {
             </div>
           ) : applications.length === 0 ? (
             <div className="card p-12 text-center space-y-4">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-brand-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-brand-100 dark:border-cyber-800">
                 🚀
               </div>
               <h3 className="font-bold text-base text-slate-900 dark:text-white">{t('apps.empty_title', 'No applications deployed yet')}</h3>
@@ -350,7 +339,7 @@ export default function ApplicationsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {applications.map((app) => (
-                <div key={app.id} className="card p-5 space-y-4 hover:border-indigo-300 dark:hover:border-cyber-700 transition-colors flex flex-col justify-between">
+                <div key={app.id} className="card p-5 space-y-4 hover:border-brand-300 dark:hover:border-cyber-700 transition-colors flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -388,7 +377,7 @@ export default function ApplicationsPage() {
 
                       <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-mono text-[11px]">
                         <span>Port:</span>
-                        <span className="font-bold text-indigo-600 dark:text-cyan-400">{app.port}</span>
+                        <span className="font-bold text-brand-600 dark:text-sky-400">{app.port}</span>
                       </div>
 
                       {app.node && (
@@ -405,7 +394,7 @@ export default function ApplicationsPage() {
                             href={`https://${app.subdomain.full_domain}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-cyan-600 dark:text-cyan-400 hover:underline truncate max-w-[170px]"
+                            className="text-sky-600 dark:text-sky-400 hover:underline truncate max-w-[170px]"
                           >
                             {app.subdomain.full_domain} ↗
                           </a>
@@ -461,7 +450,7 @@ export default function ApplicationsPage() {
                       <button
                         onClick={() => handleOpenHistory(app)}
                         title="Deployment History & Safe Rollback"
-                        className="p-1.5 rounded-lg border border-indigo-200 dark:border-indigo-900/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-cyan-400 text-xs flex items-center gap-1"
+                        className="p-1.5 rounded-lg border border-brand-200 dark:border-brand-900/60 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-brand-600 dark:text-sky-400 text-xs flex items-center gap-1"
                       >
                         <ClockIcon className="w-4 h-4" />
                         <span className="hidden sm:inline font-semibold text-[11px]">Releases</span>
@@ -521,11 +510,11 @@ export default function ApplicationsPage() {
       {/* DEPLOYMENT HISTORY & ROLLBACK MODAL */}
       {historyApp && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-3xl w-full p-6 space-y-5 max-h-[88vh] flex flex-col border-indigo-300 dark:border-cyber-700 shadow-2xl">
+          <div className="card max-w-3xl w-full p-6 space-y-5 max-h-[88vh] flex flex-col border-brand-300 dark:border-cyber-700 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <ClockIcon className="w-5 h-5 text-indigo-600 dark:text-cyan-400" />
+                  <ClockIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
                   <span>Deployment History &amp; Rollback — {historyApp.name}</span>
                 </h3>
                 <p className="text-xs text-slate-500 font-mono mt-0.5">
@@ -657,7 +646,7 @@ export default function ApplicationsPage() {
           <div className="card max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <CommandLineIcon className="w-5 h-5 text-indigo-600 dark:text-cyan-400" />
+                <CommandLineIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
                 <span>Deploy New Application</span>
               </h3>
               <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-600">
@@ -810,7 +799,7 @@ export default function ApplicationsPage() {
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <DocumentTextIcon className="w-5 h-5 text-indigo-600 dark:text-cyan-400" />
+                  <DocumentTextIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
                   <span>Deployment Logs — {activeLogs.appName}</span>
                 </h3>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">Release Commit: {activeLogs.commit}</p>

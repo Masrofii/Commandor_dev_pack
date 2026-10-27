@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { useTranslation } from '../../../lib/i18n';
+import PageHeader from '../../../components/PageHeader';
 import {
   KeyIcon,
   PlusIcon,
@@ -68,25 +69,26 @@ export default function ApiKeysPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {t('api_keys.title', 'REST API Keys')}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('api_keys.subtitle', 'Programmatically manage your email aliases and messages with secure tokens')}
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowCreate((v) => !v)}
-          className="btn-primary py-2 px-3.5 text-xs shadow-sm"
-        >
-          <PlusIcon className="w-4 h-4" />
-          <span>{t('api_keys.generate_btn', 'New API Key')}</span>
-        </button>
-      </div>
+    <div className="page-container max-w-4xl space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('api_keys.eyebrow', 'Access')}
+          </>
+        }
+        title={t('api_keys.title', 'REST API Keys')}
+        description={t('api_keys.subtitle', 'Programmatically manage your email aliases and messages with secure tokens')}
+        actions={
+          <button
+            onClick={() => setShowCreate((v) => !v)}
+            className="btn-primary py-2 px-3.5 text-xs shadow-sm"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>{t('api_keys.generate_btn', 'New API key')}</span>
+          </button>
+        }
+      />
 
       {/* Newly Created Key Alert */}
       {newKey && (
@@ -118,7 +120,7 @@ export default function ApiKeysPage() {
 
       {/* Create Key Card */}
       {showCreate && (
-        <div className="card p-5 sm:p-6 border-indigo-200 dark:border-indigo-900/80 shadow-md animate-fade-in space-y-4">
+        <div className="card p-5 sm:p-6 border-brand-200 dark:border-brand-900/80 shadow-md animate-fade-in space-y-4">
           <h3 className="font-bold text-sm text-slate-900 dark:text-white">
             Generate New API Key
           </h3>
@@ -148,8 +150,8 @@ export default function ApiKeysPage() {
                   onClick={() => toggleScope(s)}
                   className={`text-xs px-3 py-1.5 rounded-xl border font-mono transition-all ${
                     scopes.includes(s)
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-indigo-300'
+                      ? 'bg-brand-700 text-white border-brand-700 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-brand-300'
                   }`}
                 >
                   {s}

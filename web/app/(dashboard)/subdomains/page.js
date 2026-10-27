@@ -7,6 +7,7 @@ import { isAdmin } from '../../../lib/auth';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
 import SubdomainTemplates from '../../../components/SubdomainTemplates';
+import PageHeader, { PageTab } from '../../../components/PageHeader';
 import {
   GlobeAltIcon,
   PlusIcon,
@@ -484,57 +485,18 @@ export default function SubdomainsAndDomainsPage() {
   });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 pb-24 animate-fade-in">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {t('subdomains.title', 'Domains & Subdomains')}
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {t('subdomains.subtitle', 'Guided 8-step subdomain creation wizard, automated Nginx reverse proxy routing, and multi-root DNS inventory.')}
-          </p>
-        </div>
-
-        {/* Tab Switcher & Action */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center p-1 bg-slate-100 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800 text-xs font-semibold">
-            <button
-              onClick={() => setSection('subdomains')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                section === 'subdomains'
-                  ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              {t('subdomains.tab_subdomains', 'Subdomains')} ({subdomains.length})
-            </button>
-            <button
-              onClick={() => setSection('domains')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                section === 'domains'
-                  ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              {t('subdomains.tab_domains', 'Domain Inventory')} ({customDomains.length})
-            </button>
-            <button
-              onClick={() => setSection('templates')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                section === 'templates'
-                  ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              {t('subdomains.templates_title', 'Templates & Blueprints')}
-            </button>
-          </div>
-
-          {section === 'subdomains' ? (
+    <div className="page-container max-w-6xl space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('subdomains.eyebrow', 'Network')}
+          </>
+        }
+        title={t('subdomains.title', 'Domains & Subdomains')}
+        description={t('subdomains.subtitle', 'Guided 8-step subdomain creation wizard, automated Nginx reverse proxy routing, and multi-root DNS inventory.')}
+        actions={
+          section === 'subdomains' ? (
             <button
               onClick={() => {
                 setShowWizard(true);
@@ -550,7 +512,7 @@ export default function SubdomainsAndDomainsPage() {
               <SparklesIcon className="w-4 h-4" />
               <span>{t('subdomains.wizard_btn', 'Subdomain Wizard')}</span>
             </button>
-          ) : (
+          ) : section === 'domains' ? (
             <button
               onClick={() => setShowAddDomain(true)}
               className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold flex items-center gap-1.5"
@@ -558,9 +520,22 @@ export default function SubdomainsAndDomainsPage() {
               <PlusIcon className="w-4 h-4" />
               <span>{t('subdomains.add_domain_btn', 'Add Root Domain')}</span>
             </button>
-          )}
-        </div>
-      </div>
+          ) : null
+        }
+        tabs={
+          <>
+            <PageTab active={section === 'subdomains'} onClick={() => setSection('subdomains')} count={subdomains.length}>
+              {t('subdomains.tab_subdomains', 'Subdomains')}
+            </PageTab>
+            <PageTab active={section === 'domains'} onClick={() => setSection('domains')} count={customDomains.length}>
+              {t('subdomains.tab_domains', 'Domain Inventory')}
+            </PageTab>
+            <PageTab active={section === 'templates'} onClick={() => setSection('templates')}>
+              {t('subdomains.templates_title', 'Templates & Blueprints')}
+            </PageTab>
+          </>
+        }
+      />
 
       {basesData && !platformReady && (
         <div className="card p-3 border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-300">
@@ -592,7 +567,7 @@ export default function SubdomainsAndDomainsPage() {
               <div className="p-8 text-center text-xs text-slate-400">{t('common.loading', 'Loading subdomains...')}</div>
             ) : filteredSubs.length === 0 ? (
               <div className="p-12 text-center space-y-3">
-                <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
+                <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-brand-100 dark:border-cyber-800">
                   🌐
                 </div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
@@ -643,7 +618,7 @@ export default function SubdomainsAndDomainsPage() {
                                 href={`http://${sub.full_domain}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="font-mono font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-cyan-400 flex items-center gap-1"
+                                className="font-mono font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-sky-400 flex items-center gap-1"
                               >
                                 {sub.full_domain}
                                 <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 text-slate-400" />
@@ -710,14 +685,14 @@ export default function SubdomainsAndDomainsPage() {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleOpenVerification(sub)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                                 title="Run Multi-Stage Verification"
                               >
-                                <ShieldCheckIcon className="w-4 h-4 text-cyan-500" />
+                                <ShieldCheckIcon className="w-4 h-4 text-sky-500" />
                               </button>
                               <button
                                 onClick={() => handleRepairRoute(sub.id, sub.full_domain)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                                 title="Repair / Regenerate Proxy Route"
                               >
                                 <WrenchScrewdriverIcon className="w-4 h-4" />
@@ -760,7 +735,7 @@ export default function SubdomainsAndDomainsPage() {
               <div className="card p-8 text-center text-slate-400 text-xs">Loading root domains...</div>
             ) : customDomains.length === 0 ? (
               <div className="card p-8 text-center space-y-3">
-                <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
+                <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-brand-100 dark:border-cyber-800">
                   🛡️
                 </div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">No custom root domains in inventory</h3>
@@ -776,7 +751,7 @@ export default function SubdomainsAndDomainsPage() {
                 <div key={d.id} className="card p-6 space-y-5 border-slate-200 dark:border-cyber-800">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-cyber-850 border border-indigo-100 dark:border-cyber-700 flex items-center justify-center font-mono font-bold text-indigo-700 dark:text-cyan-400">
+                      <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-cyber-850 border border-brand-100 dark:border-cyber-700 flex items-center justify-center font-mono font-bold text-brand-700 dark:text-sky-400">
                         @
                       </div>
                       <div>
@@ -814,7 +789,7 @@ export default function SubdomainsAndDomainsPage() {
                         className="btn-secondary py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5"
                         title="Run deep DNS health check (MX, SPF, DMARC)"
                       >
-                        <ArrowPathIcon className={`w-3.5 h-3.5 text-cyan-500 ${checkingHealthId === d.id ? 'animate-spin' : ''}`} />
+                        <ArrowPathIcon className={`w-3.5 h-3.5 text-sky-500 ${checkingHealthId === d.id ? 'animate-spin' : ''}`} />
                         <span>{checkingHealthId === d.id ? 'Diagnosing...' : 'DNS Health'}</span>
                       </button>
 
@@ -843,7 +818,7 @@ export default function SubdomainsAndDomainsPage() {
                     <div className="p-4 rounded-xl bg-slate-50 dark:bg-cyber-900 border border-slate-200 dark:border-cyber-700 text-xs space-y-2.5 animate-fade-in">
                       <div className="flex items-center justify-between font-bold">
                         <span className="flex items-center gap-2">
-                          <ShieldCheckIcon className="w-4 h-4 text-cyan-500" />
+                          <ShieldCheckIcon className="w-4 h-4 text-sky-500" />
                           <span>DNS Health &amp; Routing Diagnostic</span>
                         </span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-mono font-bold ${
@@ -899,7 +874,7 @@ export default function SubdomainsAndDomainsPage() {
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-cyber-950 border border-slate-200/80 dark:border-cyber-800 space-y-3">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
                       <span className="flex items-center gap-1.5">
-                        <InformationCircleIcon className="w-4 h-4 text-cyan-500" />
+                        <InformationCircleIcon className="w-4 h-4 text-sky-500" />
                         <span>Authoritative DNS Instructions for {d.domain}</span>
                       </span>
                       <span className="text-slate-400 font-normal">Add these records at your DNS registrar or Cloudflare dashboard</span>
@@ -917,13 +892,13 @@ export default function SubdomainsAndDomainsPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-cyber-900">
                           <tr>
-                            <td className="py-2.5 font-bold text-indigo-600 dark:text-cyan-400">TXT</td>
+                            <td className="py-2.5 font-bold text-brand-600 dark:text-sky-400">TXT</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300">@</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300 truncate max-w-xs">{d.verification_token}</td>
                             <td className="py-2.5 text-right">
                               <button
                                 onClick={() => copyToClipboard(d.verification_token, 'TXT verification token')}
-                                className="p-1 text-slate-400 hover:text-indigo-600"
+                                className="p-1 text-slate-400 hover:text-brand-600"
                                 title="Copy TXT value"
                               >
                                 <ClipboardDocumentIcon className="w-4 h-4" />
@@ -931,14 +906,14 @@ export default function SubdomainsAndDomainsPage() {
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-2.5 font-bold text-indigo-600 dark:text-cyan-400">MX</td>
+                            <td className="py-2.5 font-bold text-brand-600 dark:text-sky-400">MX</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300">@ (Priority 10)</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300">{mailHost || 'Configure DOMAINS first'}</td>
                             <td className="py-2.5 text-right">
                               <button
                                 onClick={() => mailHost && copyToClipboard(mailHost, 'MX host')}
                                 disabled={!mailHost}
-                                className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-40"
+                                className="p-1 text-slate-400 hover:text-brand-600 disabled:opacity-40"
                                 title="Copy MX value"
                               >
                                 <ClipboardDocumentIcon className="w-4 h-4" />
@@ -946,14 +921,14 @@ export default function SubdomainsAndDomainsPage() {
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-2.5 font-bold text-indigo-600 dark:text-cyan-400">TXT (SPF)</td>
+                            <td className="py-2.5 font-bold text-brand-600 dark:text-sky-400">TXT (SPF)</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300">@</td>
                             <td className="py-2.5 text-slate-700 dark:text-slate-300">{spfRecord || 'Configure DOMAINS first'}</td>
                             <td className="py-2.5 text-right">
                               <button
                                 onClick={() => spfRecord && copyToClipboard(spfRecord, 'SPF record')}
                                 disabled={!spfRecord}
-                                className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-40"
+                                className="p-1 text-slate-400 hover:text-brand-600 disabled:opacity-40"
                                 title="Copy SPF value"
                               >
                                 <ClipboardDocumentIcon className="w-4 h-4" />
@@ -991,12 +966,12 @@ export default function SubdomainsAndDomainsPage() {
       {/* 8-STEP SUBDOMAIN GUIDED WIZARD MODAL */}
       {showWizard && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl border-indigo-200 dark:border-cyber-800 animate-scale-in max-h-[92vh] overflow-y-auto">
+          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in max-h-[92vh] overflow-y-auto">
             {/* Wizard Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <SparklesIcon className="w-5 h-5 text-indigo-500" />
+                  <SparklesIcon className="w-5 h-5 text-brand-500" />
                   {t('subdomain_wizard.title', 'Subdomain Guided Provisioning Wizard')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -1027,7 +1002,7 @@ export default function SubdomainsAndDomainsPage() {
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
                       wizardStep === s
-                        ? 'bg-indigo-600 text-white shadow-xs ring-4 ring-indigo-100 dark:ring-indigo-900/50'
+                        ? 'bg-brand-600 text-white shadow-xs ring-4 ring-brand-100 dark:ring-brand-900/50'
                         : wizardStep > s
                         ? 'bg-emerald-500 text-white'
                         : 'bg-slate-100 dark:bg-cyber-800 text-slate-400'
@@ -1134,7 +1109,7 @@ export default function SubdomainsAndDomainsPage() {
 
                 <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 text-xs">
                   <span className="text-slate-400 block text-[11px]">{t('subdomain_wizard.fqdn_label', 'Fully Qualified Domain Name (FQDN):')}</span>
-                  <span className="font-mono font-bold text-sm text-indigo-600 dark:text-cyan-400">
+                  <span className="font-mono font-bold text-sm text-brand-600 dark:text-sky-400">
                     https://{wizardForm.subdomain || '[subdomain]'}.{wizardForm.root_domain}
                   </span>
                 </div>
@@ -1206,12 +1181,12 @@ export default function SubdomainsAndDomainsPage() {
                       onClick={() => setWizardForm({ ...wizardForm, destination_type: item.type })}
                       className={`p-3 rounded-xl border cursor-pointer transition-all ${
                         wizardForm.destination_type === item.type
-                          ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                          ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
                           : 'border-slate-200 dark:border-cyber-800 hover:border-slate-300'
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <item.icon className="w-4 h-4 text-indigo-500" />
+                        <item.icon className="w-4 h-4 text-brand-500" />
                         <span className="font-bold text-xs text-slate-900 dark:text-white">{item.title}</span>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-relaxed">{item.desc}</p>
@@ -1370,10 +1345,10 @@ export default function SubdomainsAndDomainsPage() {
                 <div className="p-3.5 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-2">
                   <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
                     <span className="flex items-center gap-1.5">
-                      <ShieldCheckIcon className="w-4 h-4 text-indigo-500" />
+                      <ShieldCheckIcon className="w-4 h-4 text-brand-500" />
                       {t('subdomain_wizard.proposed_record', 'Proposed DNS Record')}
                     </span>
-                    <span className="font-mono text-indigo-600 dark:text-cyan-400 font-bold">{wizardForm.dns_record_type}</span>
+                    <span className="font-mono text-brand-600 dark:text-sky-400 font-bold">{wizardForm.dns_record_type}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
                     <div>
@@ -1427,7 +1402,7 @@ export default function SubdomainsAndDomainsPage() {
                         type="checkbox"
                         checked={wizardForm.enable_websocket}
                         onChange={(e) => setWizardForm({ ...wizardForm, enable_websocket: e.target.checked })}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                        className="rounded text-brand-600 focus:ring-brand-500"
                       />
                       <div>
                         <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_ws', 'Enable WebSocket Upgrades')}</span>
@@ -1440,7 +1415,7 @@ export default function SubdomainsAndDomainsPage() {
                         type="checkbox"
                         checked={wizardForm.security_headers}
                         onChange={(e) => setWizardForm({ ...wizardForm, security_headers: e.target.checked })}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                        className="rounded text-brand-600 focus:ring-brand-500"
                       />
                       <div>
                         <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.security_headers', 'Security & Privacy Headers')}</span>
@@ -1484,7 +1459,7 @@ export default function SubdomainsAndDomainsPage() {
                       type="checkbox"
                       checked={wizardForm.enable_https}
                       onChange={(e) => setWizardForm({ ...wizardForm, enable_https: e.target.checked })}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                      className="rounded text-brand-600 focus:ring-brand-500"
                     />
                     <div>
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.enable_tls_v2', 'Enable HTTPS / TLS')}</span>
@@ -1497,7 +1472,7 @@ export default function SubdomainsAndDomainsPage() {
                       type="checkbox"
                       checked={wizardForm.force_https_redirect}
                       onChange={(e) => setWizardForm({ ...wizardForm, force_https_redirect: e.target.checked })}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                      className="rounded text-brand-600 focus:ring-brand-500"
                     />
                     <div>
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('subdomain_wizard.force_https', 'Force HTTP to HTTPS 301 Redirect')}</span>
@@ -1535,7 +1510,7 @@ export default function SubdomainsAndDomainsPage() {
               <div className="space-y-4 max-w-lg mx-auto py-2 text-xs">
                 {previewLoading ? (
                   <div className="p-8 text-center">
-                    <ArrowPathIcon className="w-6 h-6 animate-spin text-indigo-500 mx-auto" />
+                    <ArrowPathIcon className="w-6 h-6 animate-spin text-brand-500 mx-auto" />
                     <p className="text-xs text-slate-500 mt-2">{t('subdomain_wizard.preview_loading', 'Generating configuration preview and checking DNS conflicts...')}</p>
                   </div>
                 ) : (
@@ -1549,7 +1524,7 @@ export default function SubdomainsAndDomainsPage() {
                       <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
                         <div>
                           <span className="text-slate-400 block text-[10px]">FQDN:</span>
-                          <span className="font-bold text-indigo-600 dark:text-cyan-400">
+                          <span className="font-bold text-brand-600 dark:text-sky-400">
                             {wizardForm.subdomain}.{wizardForm.root_domain}
                           </span>
                         </div>
@@ -1603,15 +1578,15 @@ export default function SubdomainsAndDomainsPage() {
                     </div>
 
                     {/* Explicit Confirmation Gate */}
-                    <label className="flex items-start gap-2.5 p-3 rounded-xl bg-indigo-50/60 dark:bg-cyber-900 border border-indigo-200 dark:border-indigo-900/60 cursor-pointer">
+                    <label className="flex items-start gap-2.5 p-3 rounded-xl bg-brand-50/60 dark:bg-cyber-900 border border-brand-200 dark:border-brand-900/60 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={wizardForm.confirmation_accepted}
                         onChange={(e) => setWizardForm({ ...wizardForm, confirmation_accepted: e.target.checked })}
-                        className="rounded text-indigo-600 focus:ring-indigo-500 mt-0.5"
+                        className="rounded text-brand-600 focus:ring-brand-500 mt-0.5"
                       />
                       <div>
-                        <span className="font-bold text-indigo-950 dark:text-indigo-200 block text-xs">
+                        <span className="font-bold text-brand-950 dark:text-brand-200 block text-xs">
                           {t('subdomain_wizard.auth_deploy', 'Authorize Automated Deployment')}
                         </span>
                         <span className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -1658,7 +1633,7 @@ export default function SubdomainsAndDomainsPage() {
 
                 {verifyingDeployment ? (
                   <div className="p-8 text-center">
-                    <ArrowPathIcon className="w-8 h-8 animate-spin text-cyan-500 mx-auto" />
+                    <ArrowPathIcon className="w-8 h-8 animate-spin text-sky-500 mx-auto" />
                     <p className="text-xs text-slate-500 mt-3 font-semibold">{t('subdomain_wizard.verifying_suite', 'Running multi-stage verification suite...')}</p>
                   </div>
                 ) : verificationResult ? (
@@ -1674,7 +1649,7 @@ export default function SubdomainsAndDomainsPage() {
                     <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-1">
                       <div className="flex items-center justify-between font-bold">
                         <span className="flex items-center gap-1.5">
-                          <GlobeAltIcon className="w-4 h-4 text-indigo-500" />
+                          <GlobeAltIcon className="w-4 h-4 text-brand-500" />
                           <span>{t('subdomain_wizard.stage_dns', '1. DNS Resolution')}</span>
                         </span>
                         <span className={verificationResult.dns?.status === 'passed' ? 'text-emerald-500 font-bold' : verificationResult.dns?.status === 'failed' ? 'text-rose-500 font-bold' : 'text-amber-500 font-bold'}>
@@ -1692,7 +1667,7 @@ export default function SubdomainsAndDomainsPage() {
                     <div className="p-3 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200 dark:border-cyber-800 space-y-1">
                       <div className="flex items-center justify-between font-bold">
                         <span className="flex items-center gap-1.5">
-                          <ServerStackIcon className="w-4 h-4 text-cyan-500" />
+                          <ServerStackIcon className="w-4 h-4 text-sky-500" />
                           <span>{t('subdomain_wizard.stage_http', '2. Reverse Proxy Reachability')}</span>
                         </span>
                         <span className={verificationResult.routing?.status === 'passed' ? 'text-emerald-500 font-bold' : verificationResult.routing?.status === 'failed' ? 'text-rose-500 font-bold' : 'text-amber-500 font-bold'}>
@@ -1765,11 +1740,11 @@ export default function SubdomainsAndDomainsPage() {
       {/* INSPECT MULTI-STAGE VERIFICATION MODAL (FROM TABLE) */}
       {inspectVerifySub && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-indigo-200 dark:border-cyber-800 animate-scale-in">
+          <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <ShieldCheckIcon className="w-5 h-5 text-cyan-500" />
+                  <ShieldCheckIcon className="w-5 h-5 text-sky-500" />
                   Route Diagnostics — {inspectVerifySub.full_domain}
                 </h3>
                 <p className="text-xs text-slate-500">Live multi-stage verification report</p>
@@ -1784,7 +1759,7 @@ export default function SubdomainsAndDomainsPage() {
 
             {modalVerificationRunning ? (
               <div className="p-8 text-center">
-                <ArrowPathIcon className="w-8 h-8 animate-spin text-cyan-500 mx-auto" />
+                <ArrowPathIcon className="w-8 h-8 animate-spin text-sky-500 mx-auto" />
                 <p className="text-xs text-slate-500 mt-3 font-semibold">Running diagnostics on {inspectVerifySub.full_domain}...</p>
               </div>
             ) : modalVerificationResult ? (
@@ -1937,11 +1912,11 @@ export default function SubdomainsAndDomainsPage() {
       {/* ADD ROOT DOMAIN MODAL */}
       {showAddDomain && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-indigo-200 dark:border-cyber-800 animate-scale-in">
+          <div className="card max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <GlobeAltIcon className="w-5 h-5 text-indigo-500" />
+                  <GlobeAltIcon className="w-5 h-5 text-brand-500" />
                   Connect Root Domain to Inventory
                 </h3>
                 <p className="text-xs text-slate-500">Add an apex domain or zone to manage subdomains and routing.</p>
@@ -1976,7 +1951,7 @@ export default function SubdomainsAndDomainsPage() {
                     onClick={() => setDnsProviderChoice('manual')}
                     className={`flex-1 py-1 rounded text-xs font-semibold transition-all ${
                       dnsProviderChoice === 'manual'
-                        ? 'bg-white dark:bg-cyber-800 text-indigo-600 dark:text-cyan-400 shadow-xs'
+                        ? 'bg-white dark:bg-cyber-800 text-brand-600 dark:text-sky-400 shadow-xs'
                         : 'text-slate-500'
                     }`}
                   >
@@ -1987,7 +1962,7 @@ export default function SubdomainsAndDomainsPage() {
                     onClick={() => setDnsProviderChoice('cloudflare')}
                     className={`flex-1 py-1 rounded text-xs font-semibold transition-all ${
                       dnsProviderChoice === 'cloudflare'
-                        ? 'bg-white dark:bg-cyber-800 text-indigo-600 dark:text-cyan-400 shadow-xs'
+                        ? 'bg-white dark:bg-cyber-800 text-brand-600 dark:text-sky-400 shadow-xs'
                         : 'text-slate-500'
                     }`}
                   >
@@ -2105,7 +2080,7 @@ export default function SubdomainsAndDomainsPage() {
                 requests.map((r) => (
                   <div key={r.id} className="p-3.5 rounded-xl bg-slate-50 dark:bg-cyber-950 border border-slate-200/80 dark:border-cyber-800 text-xs font-mono space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-cyan-600 dark:text-cyan-400">{r.method} {r.path}</span>
+                      <span className="font-bold text-sky-600 dark:text-sky-400">{r.method} {r.path}</span>
                       <span className="text-[11px] text-slate-400">{new Date(r.created_at).toLocaleTimeString()}</span>
                     </div>
                     {r.body && (

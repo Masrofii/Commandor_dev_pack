@@ -247,11 +247,11 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="card max-w-4xl w-full p-5 sm:p-7 space-y-6 max-h-[92vh] flex flex-col border-indigo-300 dark:border-cyber-700 shadow-2xl">
+      <div className="card max-w-4xl w-full p-5 sm:p-7 space-y-6 max-h-[92vh] flex flex-col border-brand-300 dark:border-cyber-700 shadow-2xl">
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-4">
           <div className="flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white shadow-md">
+            <span className="p-2 rounded-xl bg-gradient-to-tr from-brand-600 to-sky-500 text-white shadow-md">
               <RocketLaunchIcon className="w-6 h-6" />
             </span>
             <div>
@@ -279,7 +279,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                 key={s.num}
                 className={`p-1.5 rounded-lg border transition-all ${
                   isCurrent
-                    ? 'border-indigo-600 dark:border-cyan-400 bg-indigo-50 dark:bg-cyan-950/60 font-bold text-indigo-700 dark:text-cyan-300'
+                    ? 'border-brand-600 dark:border-sky-400 bg-brand-50 dark:bg-sky-950/60 font-bold text-brand-700 dark:text-sky-300'
                     : isCompleted
                     ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
                     : 'border-slate-200 dark:border-cyber-800 text-slate-400 opacity-60'
@@ -300,9 +300,9 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEP 1: SOURCE */}
           {activeStep === 1 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800">
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <CommandLineIcon className="w-4 h-4 text-indigo-500" />
+                  <CommandLineIcon className="w-4 h-4 text-brand-500" />
                   <span>Step 1: Choose Application Source &amp; Metadata</span>
                 </h4>
                 <p className="text-slate-500 text-[11px] mt-0.5">
@@ -377,9 +377,9 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEP 2: NODE */}
           {activeStep === 2 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800">
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <ServerStackIcon className="w-4 h-4 text-indigo-500" />
+                  <ServerStackIcon className="w-4 h-4 text-brand-500" />
                   <span>Step 2: Select Compute Node or Cluster Host</span>
                 </h4>
                 <p className="text-slate-500 text-[11px] mt-0.5">
@@ -392,7 +392,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                   onClick={() => setSelectedNodeId('')}
                   className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                     selectedNodeId === ''
-                      ? 'border-indigo-600 dark:border-cyan-400 bg-indigo-50/40 dark:bg-cyan-950/40'
+                      ? 'border-brand-600 dark:border-sky-400 bg-brand-50/40 dark:bg-sky-950/40'
                       : 'border-slate-200 dark:border-cyber-800 hover:border-slate-300'
                   }`}
                 >
@@ -412,7 +412,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                     onClick={() => setSelectedNodeId(String(n.id))}
                     className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                       selectedNodeId === String(n.id)
-                        ? 'border-indigo-600 dark:border-cyan-400 bg-indigo-50/40 dark:bg-cyan-950/40'
+                        ? 'border-brand-600 dark:border-sky-400 bg-brand-50/40 dark:bg-sky-950/40'
                         : 'border-slate-200 dark:border-cyber-800 hover:border-slate-300'
                     }`}
                   >
@@ -437,9 +437,9 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEP 3: RUNTIME */}
           {activeStep === 3 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800">
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <WrenchScrewdriverIcon className="w-4 h-4 text-indigo-500" />
+                  <WrenchScrewdriverIcon className="w-4 h-4 text-brand-500" />
                   <span>Step 3: Runtime Environment &amp; Build Configuration</span>
                 </h4>
                 <p className="text-slate-500 text-[11px] mt-0.5">
@@ -509,10 +509,10 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEP 4: SECRETS */}
           {activeStep === 4 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800">
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between">
                   <span className="flex items-center gap-2">
-                    <KeyIcon className="w-4 h-4 text-indigo-500" />
+                    <KeyIcon className="w-4 h-4 text-brand-500" />
                     <span>Step 4: Environment Variables &amp; Secrets</span>
                   </span>
                   <span className="text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold flex items-center gap-1">
@@ -539,9 +539,9 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEP 5: DOMAIN */}
           {activeStep === 5 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800">
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <GlobeAltIcon className="w-4 h-4 text-indigo-500" />
+                  <GlobeAltIcon className="w-4 h-4 text-brand-500" />
                   <span>Step 5: Subdomain Routing &amp; Domain Selection</span>
                 </h4>
                 <p className="text-slate-500 text-[11px] mt-0.5">
@@ -577,7 +577,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-cyber-850 border border-slate-200 dark:border-cyber-800 font-mono text-xs flex items-center justify-between">
                 <span className="text-slate-500">Full Public Hostname:</span>
-                <strong className="text-indigo-600 dark:text-cyan-400">
+                <strong className="text-brand-600 dark:text-sky-400">
                   {subdomain ? `${subdomain.trim().toLowerCase()}.${baseDomain}` : '...'}
                 </strong>
               </div>
@@ -587,7 +587,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                   type="checkbox"
                   checked={enableHttps}
                   onChange={(e) => setEnableHttps(e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                  className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
                 />
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                   Provision automated HTTPS / TLS certificate
@@ -599,9 +599,9 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEP 6: PREVIEW */}
           {activeStep === 6 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800">
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <EyeIcon className="w-4 h-4 text-indigo-500" />
+                  <EyeIcon className="w-4 h-4 text-brand-500" />
                   <span>Step 6: Preview DNS, Reverse-Proxy, and HTTPS Changes</span>
                 </h4>
                 <p className="text-slate-500 text-[11px] mt-0.5">
@@ -643,9 +643,9 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEP 7: CONFIRM */}
           {activeStep === 7 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800">
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <ShieldCheckIcon className="w-4 h-4 text-indigo-500" />
+                  <ShieldCheckIcon className="w-4 h-4 text-brand-500" />
                   <span>Step 7: Review Deployment Plan &amp; Final Confirmation</span>
                 </h4>
                 <p className="text-slate-500 text-[11px] mt-0.5">
@@ -660,7 +660,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                 </div>
                 <div className="flex justify-between border-b border-slate-200/60 dark:border-cyber-800 pb-1.5">
                   <span className="text-slate-400">Target Hostname:</span>
-                  <strong className="text-indigo-600 dark:text-cyan-400">{subdomain}.{baseDomain}</strong>
+                  <strong className="text-brand-600 dark:text-sky-400">{subdomain}.{baseDomain}</strong>
                 </div>
                 <div className="flex justify-between border-b border-slate-200/60 dark:border-cyber-800 pb-1.5">
                   <span className="text-slate-400">Git Repository:</span>
@@ -677,7 +677,7 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
                   type="checkbox"
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 mt-0.5"
+                  className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4 mt-0.5"
                 />
                 <span className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
                   <strong>Explicit Approval:</strong> I have reviewed the deployment plan, DNS routing changes, and reverse proxy rules. I authorize Commandor Dev Pack to deploy this service and verify runtime health.
@@ -689,10 +689,10 @@ export default function CommandorLaunchpad({ isOpen, onClose, initialTemplate = 
           {/* STEPS 8 - 10: DEPLOYMENT EXECUTION & REMEDIATION */}
           {activeStep >= 8 && (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/50 dark:bg-cyber-900 rounded-xl border border-indigo-100 dark:border-cyber-800 flex items-center justify-between">
+              <div className="p-3 bg-brand-50/50 dark:bg-cyber-900 rounded-xl border border-brand-100 dark:border-cyber-800 flex items-center justify-between">
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    <RocketLaunchIcon className="w-4 h-4 text-indigo-500" />
+                    <RocketLaunchIcon className="w-4 h-4 text-brand-500" />
                     <span>Deployment Execution &amp; Health Probe</span>
                   </h4>
                   <p className="text-slate-500 text-[11px] mt-0.5">

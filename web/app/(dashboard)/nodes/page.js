@@ -7,6 +7,7 @@ import { api } from '../../../lib/api';
 import { isAdmin } from '../../../lib/auth';
 import { formatTimeAgo, formatMemoryMb } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
+import PageHeader from '../../../components/PageHeader';
 import {
   ServerStackIcon,
   PlusIcon,
@@ -454,53 +455,50 @@ export default function NodesPage() {
   const totalRamGb = (nodes.reduce((acc, n) => acc + (n.system_info?.ramTotalMb || n.system_info?.ramMb || 0), 0) / 1024).toFixed(1);
 
   return (
-    <div className="space-y-6 animate-fade-in pb-16">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {t('nodes.title', 'Nodes & Servers')}
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {t('nodes.subtitle', 'Enterprise Linux cluster management with verified SSH host keys, AES-256 encrypted credentials, and live telemetry.')}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => mutateNodes()}
-            className="btn-secondary py-2 px-3 text-xs shadow-xs"
-            title={t('common.refresh', 'Refresh Nodes')}
-          >
-            <ArrowPathIcon className={`w-4 h-4 ${loadingNodes ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{t('common.refresh', 'Refresh')}</span>
-          </button>
-          <button
-            onClick={() => { setAddMode('bulk'); setBulkResult(null); setBulkValidationResult(null); setShowAddModal(true); }}
-            className="btn-secondary py-2 px-3.5 text-xs shadow-xs font-semibold"
-          >
-            <ListBulletIcon className="w-4 h-4 text-indigo-500" />
-            <span>{t('nodes.bulk_import', 'Bulk Import')}</span>
-          </button>
-          <button
-            onClick={() => { setAddMode('single'); setTestResult(null); setShowAddModal(true); }}
-            className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold"
-          >
-            <PlusIcon className="w-4 h-4" />
-            <span>{t('nodes.provision_btn', 'Add Node')}</span>
-          </button>
-        </div>
-      </div>
+    <div className="page-container space-y-6 animate-fade-in">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('nodes.eyebrow', 'Operations')}
+          </>
+        }
+        title={t('nodes.title', 'Nodes & Servers')}
+        description={t('nodes.subtitle', 'Enterprise Linux cluster management with verified SSH host keys, AES-256 encrypted credentials, and live telemetry.')}
+        actions={
+          <>
+            <button
+              onClick={() => mutateNodes()}
+              className="btn-secondary py-2 px-3 text-xs shadow-xs"
+              title={t('common.refresh', 'Refresh Nodes')}
+            >
+              <ArrowPathIcon className={`w-4 h-4 ${loadingNodes ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{t('common.refresh', 'Refresh')}</span>
+            </button>
+            <button
+              onClick={() => { setAddMode('bulk'); setBulkResult(null); setBulkValidationResult(null); setShowAddModal(true); }}
+              className="btn-secondary py-2 px-3.5 text-xs shadow-xs font-semibold"
+            >
+              <ListBulletIcon className="w-4 h-4 text-brand-500" />
+              <span>{t('nodes.bulk_import', 'Bulk Import')}</span>
+            </button>
+            <button
+              onClick={() => { setAddMode('single'); setTestResult(null); setShowAddModal(true); }}
+              className="btn-primary py-2 px-3.5 text-xs shadow-xs font-semibold"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span>{t('nodes.provision_btn', 'Add node')}</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Cluster Overview Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
             <span>{t('nodes.total_nodes', 'Total Nodes')}</span>
-            <ServerStackIcon className="w-4 h-4 text-indigo-500" />
+            <ServerStackIcon className="w-4 h-4 text-brand-500" />
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-white">{totalNodes}</div>
           <div className="text-[11px] text-slate-500">{onlineNodes} {t('common.online', 'online')}</div>
@@ -520,7 +518,7 @@ export default function NodesPage() {
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
             <span>{t('nodes.vcpu_cores', 'vCPU Cores')}</span>
-            <CpuChipIcon className="w-4 h-4 text-indigo-500" />
+            <CpuChipIcon className="w-4 h-4 text-brand-500" />
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-white">{totalCpus} Cores</div>
           <div className="text-[11px] text-slate-500">{t('nodes.cluster_compute', 'Total cluster compute')}</div>
@@ -529,7 +527,7 @@ export default function NodesPage() {
         <div className="card p-3.5 border-slate-200/80 dark:border-cyber-800">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
             <span>{t('nodes.total_ram', 'Total RAM')}</span>
-            <CircleStackIcon className="w-4 h-4 text-cyan-500" />
+            <CircleStackIcon className="w-4 h-4 text-sky-500" />
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-white">{totalRamGb} GB</div>
           <div className="text-[11px] text-slate-500">{t('nodes.allocated_memory', 'Allocated memory pool')}</div>
@@ -602,7 +600,7 @@ export default function NodesPage() {
         </div>
       ) : filteredNodes.length === 0 ? (
         <div className="card p-12 text-center space-y-3">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-brand-100 dark:border-cyber-800">
             🖥️
           </div>
           <h3 className="font-bold text-sm text-slate-900 dark:text-white">
@@ -638,7 +636,7 @@ export default function NodesPage() {
             return (
               <div
                 key={node.id}
-                className={`card p-5 space-y-4 hover:border-indigo-300 dark:hover:border-cyber-700 transition-all shadow-xs ${
+                className={`card p-5 space-y-4 hover:border-brand-300 dark:hover:border-cyber-700 transition-all shadow-xs ${
                   !isActive ? 'opacity-70 border-dashed' : ''
                 }`}
               >
@@ -693,7 +691,7 @@ export default function NodesPage() {
                     {/* Group & Labels */}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                       {node.group_name && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-cyan-400 border border-indigo-100 dark:border-indigo-900/60 font-semibold">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-sky-400 border border-brand-100 dark:border-brand-900/60 font-semibold">
                           📁 {node.group_name}
                         </span>
                       )}
@@ -720,7 +718,7 @@ export default function NodesPage() {
                     </button>
                     <button
                       onClick={() => handleOpenEdit(node)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                       title="Edit Node metadata"
                     >
                       <PencilSquareIcon className="w-4 h-4" />
@@ -728,10 +726,10 @@ export default function NodesPage() {
                     <button
                       onClick={() => handlePing(node.id)}
                       disabled={isPinging}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                       title="Ping & Test Connection"
                     >
-                      <ArrowPathIcon className={`w-4 h-4 ${isPinging ? 'animate-spin text-indigo-500' : ''}`} />
+                      <ArrowPathIcon className={`w-4 h-4 ${isPinging ? 'animate-spin text-brand-500' : ''}`} />
                     </button>
                     <button
                       onClick={() => handleDeleteNode(node)}
@@ -754,7 +752,7 @@ export default function NodesPage() {
                     </div>
                     <button
                       onClick={() => copyToClipboard(node.host_key_fingerprint, 'Host key fingerprint')}
-                      className="p-0.5 text-slate-400 hover:text-indigo-500 shrink-0 ml-1"
+                      className="p-0.5 text-slate-400 hover:text-brand-500 shrink-0 ml-1"
                       title="Copy fingerprint"
                     >
                       <ClipboardDocumentIcon className="w-3.5 h-3.5" />
@@ -768,7 +766,7 @@ export default function NodesPage() {
                   <div className="p-2.5 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800">
                     <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase mb-1">
                       <span>CPU</span>
-                      <CpuChipIcon className="w-3.5 h-3.5 text-indigo-500" />
+                      <CpuChipIcon className="w-3.5 h-3.5 text-brand-500" />
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white">
                       {sys.cpus || 1} vCPU
@@ -782,12 +780,12 @@ export default function NodesPage() {
                   <div className="p-2.5 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800">
                     <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase mb-1">
                       <span>RAM</span>
-                      <CircleStackIcon className="w-3.5 h-3.5 text-cyan-500" />
+                      <CircleStackIcon className="w-3.5 h-3.5 text-sky-500" />
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between gap-1">
                       <span>{formatMemoryMb(ramTotal)}</span>
                       {sys.containerLimitMb && sys.containerLimitMb < ramTotal && (
-                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-cyan-400 border border-indigo-200/50 dark:border-indigo-800/50" title={`Container limit: ${formatMemoryMb(sys.containerLimitMb)}`}>
+                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-950/80 text-brand-700 dark:text-sky-400 border border-brand-200/50 dark:border-brand-800/50" title={`Container limit: ${formatMemoryMb(sys.containerLimitMb)}`}>
                           cgroup: {formatMemoryMb(sys.containerLimitMb)}
                         </span>
                       )}
@@ -796,7 +794,7 @@ export default function NodesPage() {
                       <div>
                         <div className="w-full bg-slate-200 dark:bg-cyber-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
                           <div
-                            className="bg-cyan-500 h-full rounded-full transition-all"
+                            className="bg-sky-500 h-full rounded-full transition-all"
                             style={{ width: `${ramPercent}%` }}
                           />
                         </div>
@@ -841,14 +839,14 @@ export default function NodesPage() {
                     <button
                       onClick={() => handleProvision(node)}
                       disabled={isProvisioning}
-                      className="btn-secondary py-1 px-2 text-xs text-slate-600 dark:text-slate-300 hover:text-indigo-600"
+                      className="btn-secondary py-1 px-2 text-xs text-slate-600 dark:text-slate-300 hover:text-brand-600"
                       title="Provision Node Daemon"
                     >
                       <WrenchScrewdriverIcon className={`w-3.5 h-3.5 ${isProvisioning ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                       onClick={() => handleInspectSites(node)}
-                      className="btn-secondary py-1 px-2.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800"
+                      className="btn-secondary py-1 px-2.5 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800"
                     >
                       <span>Sites ({node.current_sites || 0})</span>
                     </button>
@@ -856,7 +854,7 @@ export default function NodesPage() {
                       onClick={() => handleOpenTerminal(node)}
                       className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5"
                     >
-                      <CommandLineIcon className="w-3.5 h-3.5 text-indigo-500" />
+                      <CommandLineIcon className="w-3.5 h-3.5 text-brand-500" />
                       <span>SSH Terminal</span>
                     </button>
                   </div>
@@ -870,10 +868,10 @@ export default function NodesPage() {
       {/* Terminal / Exec Modal */}
       {showTerminal && selectedNode && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-indigo-200 dark:border-cyber-800 animate-scale-in">
+          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2">
-                <CommandLineIcon className="w-5 h-5 text-indigo-500" />
+                <CommandLineIcon className="w-5 h-5 text-brand-500" />
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
                   Remote Diagnostics Terminal — {selectedNode.name}
                 </h3>
@@ -905,7 +903,7 @@ export default function NodesPage() {
                       setExecCommand(preset.cmd);
                       handleRunCommand(preset.cmd);
                     }}
-                    className="px-2.5 py-1 bg-slate-100 dark:bg-cyber-850 hover:bg-indigo-50 dark:hover:bg-cyber-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-mono border border-slate-200/80 dark:border-cyber-700 transition-colors"
+                    className="px-2.5 py-1 bg-slate-100 dark:bg-cyber-850 hover:bg-brand-50 dark:hover:bg-cyber-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-mono border border-slate-200/80 dark:border-cyber-700 transition-colors"
                   >
                     {preset.label}
                   </button>
@@ -922,7 +920,7 @@ export default function NodesPage() {
               className="flex items-center gap-2"
             >
               <div className="relative flex-1">
-                <span className="absolute left-3 top-2.5 font-mono text-xs text-indigo-500 font-bold">$</span>
+                <span className="absolute left-3 top-2.5 font-mono text-xs text-brand-500 font-bold">$</span>
                 <input
                   type="text"
                   value={execCommand}
@@ -948,7 +946,7 @@ export default function NodesPage() {
             {/* Monospace Output Screen */}
             <div className="bg-slate-950 text-slate-100 p-4 rounded-xl font-mono text-xs min-h-[160px] max-h-[320px] overflow-y-auto border border-slate-800 shadow-inner">
               {executing ? (
-                <div className="flex items-center gap-2 text-indigo-400 animate-pulse">
+                <div className="flex items-center gap-2 text-brand-400 animate-pulse">
                   <ArrowPathIcon className="w-4 h-4 animate-spin" />
                   <span>Executing remote command over SSH on {selectedNode.host}...</span>
                 </div>
@@ -994,10 +992,10 @@ export default function NodesPage() {
       {/* Edit Node Modal */}
       {editingNode && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl border-indigo-200 dark:border-cyber-800 animate-scale-in">
+          <div className="card max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div className="flex items-center gap-2">
-                <PencilSquareIcon className="w-5 h-5 text-indigo-500" />
+                <PencilSquareIcon className="w-5 h-5 text-brand-500" />
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
                   Edit Node — {editingNode.name}
                 </h3>
@@ -1100,11 +1098,11 @@ export default function NodesPage() {
       {/* Inspect Hosted Sites Modal */}
       {inspectNode && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-indigo-200 dark:border-cyber-800 animate-scale-in">
+          <div className="card max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <GlobeAltIcon className="w-5 h-5 text-indigo-500" />
+                  <GlobeAltIcon className="w-5 h-5 text-brand-500" />
                   Hosted Sites on {inspectNode.name}
                 </h3>
                 <p className="text-xs text-slate-500">{inspectNode.host}:{inspectNode.port}</p>
@@ -1119,7 +1117,7 @@ export default function NodesPage() {
 
             {loadingDetails ? (
               <div className="p-8 text-center">
-                <ArrowPathIcon className="w-6 h-6 animate-spin text-indigo-500 mx-auto" />
+                <ArrowPathIcon className="w-6 h-6 animate-spin text-brand-500 mx-auto" />
                 <p className="text-xs text-slate-500 mt-2">Loading hosted sites...</p>
               </div>
             ) : (nodeDetails?.sites || []).length === 0 ? (
@@ -1135,7 +1133,7 @@ export default function NodesPage() {
                         href={`http://${s.full_domain}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono font-bold text-indigo-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
+                        className="font-mono font-bold text-brand-600 dark:text-sky-400 hover:underline flex items-center gap-1"
                       >
                         {s.full_domain}
                         <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
@@ -1174,11 +1172,11 @@ export default function NodesPage() {
       {/* Add / Bulk Node Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-indigo-200 dark:border-cyber-800 animate-scale-in max-h-[90vh] overflow-y-auto">
+          <div className="card max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-brand-200 dark:border-cyber-800 animate-scale-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <ServerStackIcon className="w-5 h-5 text-indigo-500" />
+                  <ServerStackIcon className="w-5 h-5 text-brand-500" />
                   {addMode === 'single' ? 'Enroll Linux Server Node' : 'Bulk Import SSH Nodes'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -1202,7 +1200,7 @@ export default function NodesPage() {
                 onClick={() => { setAddMode('single'); setTestResult(null); }}
                 className={`flex-1 py-1.5 rounded-lg transition-all ${
                   addMode === 'single'
-                    ? 'bg-white dark:bg-cyber-800 text-indigo-600 dark:text-cyan-400 shadow-xs'
+                    ? 'bg-white dark:bg-cyber-800 text-brand-600 dark:text-sky-400 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -1213,7 +1211,7 @@ export default function NodesPage() {
                 onClick={() => { setAddMode('bulk'); setBulkResult(null); setBulkValidationResult(null); }}
                 className={`flex-1 py-1.5 rounded-lg transition-all ${
                   addMode === 'bulk'
-                    ? 'bg-white dark:bg-cyber-800 text-indigo-600 dark:text-cyan-400 shadow-xs'
+                    ? 'bg-white dark:bg-cyber-800 text-brand-600 dark:text-sky-400 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -1298,7 +1296,7 @@ export default function NodesPage() {
                             onClick={() => setAuthMethod('password')}
                             className={`flex-1 py-1 rounded text-[11px] font-semibold transition-all ${
                               authMethod === 'password'
-                                ? 'bg-white dark:bg-cyber-800 text-indigo-600 dark:text-cyan-400 shadow-xs'
+                                ? 'bg-white dark:bg-cyber-800 text-brand-600 dark:text-sky-400 shadow-xs'
                                 : 'text-slate-500'
                             }`}
                           >
@@ -1309,7 +1307,7 @@ export default function NodesPage() {
                             onClick={() => setAuthMethod('private_key')}
                             className={`flex-1 py-1 rounded text-[11px] font-semibold transition-all ${
                               authMethod === 'private_key'
-                                ? 'bg-white dark:bg-cyber-800 text-indigo-600 dark:text-cyan-400 shadow-xs'
+                                ? 'bg-white dark:bg-cyber-800 text-brand-600 dark:text-sky-400 shadow-xs'
                                 : 'text-slate-500'
                             }`}
                           >
@@ -1426,7 +1424,7 @@ export default function NodesPage() {
                       disabled={testingConnection || (!nodeForm.connection_string && !nodeForm.host)}
                       className="btn-secondary py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5"
                     >
-                      <ArrowPathIcon className={`w-3.5 h-3.5 ${testingConnection ? 'animate-spin text-indigo-500' : ''}`} />
+                      <ArrowPathIcon className={`w-3.5 h-3.5 ${testingConnection ? 'animate-spin text-brand-500' : ''}`} />
                       <span>{testingConnection ? 'Testing...' : 'Test Connection'}</span>
                     </button>
                   </div>

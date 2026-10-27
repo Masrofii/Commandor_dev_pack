@@ -17,7 +17,7 @@ export default function GlobalError({ error, reset }) {
           </p>
           <button
             onClick={() => reset()}
-            className="w-full py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors"
+            className="w-full py-2 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-colors"
           >
             ↻ Reload Application
           </button>

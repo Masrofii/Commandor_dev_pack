@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
+import PageHeader from '../../../components/PageHeader';
 import {
   LinkIcon,
   PlusIcon,
@@ -116,29 +117,30 @@ export default function WebhooksPage() {
   const webhooks = data || [];
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {t('webhooks.title', 'Webhooks & Real-Time Dispatcher')}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('webhooks.subtitle', 'Dispatch HTTP POST requests in real-time with automated exponential retry backoff, HMAC verification, and delivery tracking.')}
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowAdd((v) => !v)}
-          className="btn-primary py-2 px-3.5 text-xs shadow-sm flex items-center gap-1.5 self-start"
-        >
-          <PlusIcon className="w-4 h-4" />
-          <span>{t('webhooks.add_btn', 'Add Webhook')}</span>
-        </button>
-      </div>
+    <div className="page-container max-w-5xl space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('webhooks.eyebrow', 'Network')}
+          </>
+        }
+        title={t('webhooks.title', 'Webhooks & Real-Time Dispatcher')}
+        description={t('webhooks.subtitle', 'Dispatch HTTP POST requests in real-time with automated exponential retry backoff, HMAC verification, and delivery tracking.')}
+        actions={
+          <button
+            onClick={() => setShowAdd((v) => !v)}
+            className="btn-primary py-2 px-3.5 text-xs shadow-sm flex items-center gap-1.5"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>{t('webhooks.add_btn', 'Add webhook')}</span>
+          </button>
+        }
+      />
 
       {/* Add Webhook Form */}
       {showAdd && (
-        <div className="card p-5 sm:p-6 border-indigo-200 dark:border-indigo-900/80 shadow-md animate-fade-in space-y-4">
+        <div className="card p-5 sm:p-6 border-brand-200 dark:border-brand-900/80 shadow-md animate-fade-in space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">
               {t('webhooks.modal_title', 'Configure New Webhook')}
@@ -201,8 +203,8 @@ export default function WebhooksPage() {
                     onClick={() => toggleEvent(ev)}
                     className={`text-xs px-3 py-1.5 rounded-xl border font-mono transition-all ${
                       form.eventTypes.includes(ev)
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-indigo-300'
+                        ? 'bg-brand-700 text-white border-brand-700 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-brand-300'
                     }`}
                   >
                     {ev}
@@ -299,11 +301,11 @@ export default function WebhooksPage() {
       {/* DELIVERIES & RETRY INSPECTOR MODAL */}
       {inspectWebhook && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card max-w-3xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col border-indigo-200 dark:border-cyber-800 shadow-2xl">
+          <div className="card max-w-3xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col border-brand-200 dark:border-cyber-800 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-cyber-800 pb-3">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <ArrowPathIcon className="w-5 h-5 text-indigo-600 dark:text-cyan-400" />
+                  <ArrowPathIcon className="w-5 h-5 text-brand-600 dark:text-sky-400" />
                   <span>Webhook Delivery Log &amp; Retry Inspector</span>
                 </h3>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">

@@ -168,7 +168,7 @@ export default function EmailDetailPage({ params }) {
             className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 text-slate-700 dark:text-slate-300"
             title={t('inbox_detail.download_eml', 'Download Raw EML')}
           >
-            <DocumentArrowDownIcon className="w-4 h-4 text-cyan-500" />
+            <DocumentArrowDownIcon className="w-4 h-4 text-sky-500" />
             <span className="hidden sm:inline font-mono">EML</span>
           </a>
         </div>
@@ -212,11 +212,11 @@ export default function EmailDetailPage({ params }) {
 
       {/* Smart Summary Card */}
       {summary && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/70 dark:bg-cyber-900 border border-indigo-100 dark:border-cyber-800 text-xs space-y-1.5 shadow-sm">
-          <div className="flex items-center gap-2 font-bold text-indigo-700 dark:text-cyan-400">
+        <div className="p-4 sm:p-5 rounded-2xl bg-brand-50/70 dark:bg-cyber-900 border border-brand-100 dark:border-cyber-800 text-xs space-y-1.5 shadow-sm">
+          <div className="flex items-center gap-2 font-bold text-brand-700 dark:text-sky-400">
             <span>✨ AI & Smart Digest</span>
             {info?.service && (
-              <span className="text-[10px] px-2 py-0.5 bg-indigo-100 dark:bg-cyber-800 text-indigo-800 dark:text-cyan-300 rounded-md font-semibold">
+              <span className="text-[10px] px-2 py-0.5 bg-brand-100 dark:bg-cyber-800 text-brand-800 dark:text-sky-300 rounded-md font-semibold">
                 Service: {info.service}
               </span>
             )}
@@ -261,7 +261,7 @@ export default function EmailDetailPage({ params }) {
                 </span>
                 <button
                   onClick={() => copyToClipboard(email.sender, 'Sender email')}
-                  className="text-slate-400 hover:text-indigo-600 p-0.5"
+                  className="text-slate-400 hover:text-brand-600 p-0.5"
                   title="Copy sender email"
                 >
                   <ClipboardDocumentIcon className="w-3.5 h-3.5" />
@@ -275,7 +275,7 @@ export default function EmailDetailPage({ params }) {
                 </span>
                 <button
                   onClick={() => copyToClipboard(email.alias_address, 'Alias address')}
-                  className="text-slate-400 hover:text-indigo-600 p-0.5"
+                  className="text-slate-400 hover:text-brand-600 p-0.5"
                   title="Copy alias address"
                 >
                   <ClipboardDocumentIcon className="w-3.5 h-3.5" />
@@ -322,7 +322,7 @@ export default function EmailDetailPage({ params }) {
                 <span className="truncate max-w-[200px] sm:max-w-[300px]">{email.message_id}</span>
                 <button
                   onClick={() => copyToClipboard(email.message_id, 'Message-ID')}
-                  className="p-0.5 hover:text-indigo-600 text-slate-400"
+                  className="p-0.5 hover:text-brand-600 text-slate-400"
                   title="Copy Message-ID"
                 >
                   <ClipboardDocumentIcon className="w-3.5 h-3.5" />
@@ -340,7 +340,7 @@ export default function EmailDetailPage({ params }) {
               disabled={!email.clean_html}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'html'
-                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               } disabled:opacity-30`}
             >
@@ -350,7 +350,7 @@ export default function EmailDetailPage({ params }) {
               onClick={() => setActiveTab('text')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'text'
-                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
@@ -403,7 +403,7 @@ export default function EmailDetailPage({ params }) {
                     className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-all ${
                       isInfected
                         ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/30 dark:border-rose-900/50'
-                        : 'bg-white dark:bg-slate-850 border-slate-200/80 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+                        : 'bg-white dark:bg-slate-850 border-slate-200/80 dark:border-slate-700 hover:border-brand-300 dark:hover:border-brand-700'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -441,10 +441,10 @@ export default function EmailDetailPage({ params }) {
 
       {/* Reply Composer Modal / Card */}
       {showReply && (
-        <div className="card p-5 sm:p-6 border-indigo-200 dark:border-indigo-900/80 shadow-lg animate-fade-in space-y-4">
+        <div className="card p-5 sm:p-6 border-brand-200 dark:border-brand-900/80 shadow-lg animate-fade-in space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <ArrowUturnLeftIcon className="w-4 h-4 text-indigo-600" />
+              <ArrowUturnLeftIcon className="w-4 h-4 text-brand-600" />
               <span>{t('inbox_detail.compose_reply', 'Compose Reply to {sender}', { sender: email.sender })}</span>
             </h3>
             <button

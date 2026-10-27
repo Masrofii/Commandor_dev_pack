@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
-import { isAdmin, getUser } from '../../../lib/auth';
+import { isAdmin } from '../../../lib/auth';
 import { formatMemoryMb } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
+import PageHeader, { PageTab } from '../../../components/PageHeader';
 import {
   ShieldCheckIcon,
   UsersIcon,
@@ -38,13 +39,10 @@ import {
 export default function AdminPage() {
   const { t } = useTranslation();
   const [authorized, setAuthorized] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [tab, setTab] = useState('overview'); // 'overview' | 'users' | 'redeem' | 'emails' | 'subdomains' | 'hosting' | 'security' | 'broadcast' | 'logs'
 
   useEffect(() => {
-    const ok = isAdmin();
-    setAuthorized(ok);
-    setCurrentUser(getUser());
+    setAuthorized(isAdmin());
   }, []);
 
   // Search & filter states
@@ -170,8 +168,8 @@ export default function AdminPage() {
         <div className="p-4 bg-red-100 dark:bg-red-950/40 rounded-full text-red-600 mb-4">
           <NoSymbolIcon className="h-10 w-10" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Admin Access Restricted</h2>
-        <p className="mt-2 text-sm text-gray-500 max-w-md">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Admin Access Restricted</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-md">
           This area is strictly restricted to the Platform Owner and Administrators. Your current role is not authorized.
         </p>
       </div>
@@ -450,92 +448,69 @@ export default function AdminPage() {
   const auditLogs = auditLogsData?.logs || [];
 
   return (
-    <div className="space-y-6">
-      {/* Admin Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-gradient-to-r from-rose-900/90 via-indigo-900/90 to-purple-900/90 rounded-2xl text-white shadow-xl border border-rose-500/20">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500 text-white shadow-sm">
-              👑 {t('admin.role', 'Platform Owner Full Access')}
+    <div className="page-container max-w-7xl space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+            {t('admin.eyebrow', 'Administration')}
+            <span className="ml-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold normal-case tracking-normal text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+              {t('admin.role', 'Platform owner')}
             </span>
-            <span className="text-xs text-rose-200">
-              ID: {currentUser?.tg_id || '8319534224'}
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 flex items-center gap-2">
-            {t('admin.title', 'Control Center & Master Admin Panel')}
-          </h1>
-          <p className="text-xs sm:text-sm text-rose-100/80 mt-1 max-w-2xl">
-            {t('admin.subtitle', 'Live infrastructure management: users, system-wide emails, subdomains routing, server nodes, anti-abuse scanner, and global broadcasts.')}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleVacuumDb}
-            disabled={cleaningDb}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-lg text-xs font-medium border border-white/20 transition-all disabled:opacity-50"
-            title="WAL Flush & PRAGMA Optimize"
-          >
-            <WrenchScrewdriverIcon className={`h-4 w-4 ${cleaningDb ? 'animate-spin' : ''}`} />
-            {cleaningDb ? t('common.loading', 'Optimizing...') : t('common.refresh', 'Optimize DB')}
-          </button>
-          <button
-            onClick={() => {
-              mutateStats();
-              mutateUsers();
-              mutateEmails();
-              mutateSubdomains();
-              mutateSites();
-              mutateNodes();
-              toast.success('All admin caches refreshed');
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-lg text-xs font-medium border border-white/20 transition-all"
-          >
-            <ArrowPathIcon className="h-4 w-4" />
-            {t('common.refresh', 'Refresh All')}
-          </button>
-        </div>
-      </div>
-
-      {/* Admin Tab Navigation */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-2 sm:space-x-4 text-xs sm:text-sm font-medium overflow-x-auto pb-1">
-        {[
+          </>
+        }
+        title={t('admin.title', 'Control Center & Master Admin Panel')}
+        description={t('admin.subtitle', 'Live infrastructure management: users, system-wide emails, subdomains routing, server nodes, anti-abuse scanner, and global broadcasts.')}
+        actions={
+          <>
+            <button
+              onClick={handleVacuumDb}
+              disabled={cleaningDb}
+              className="btn-secondary py-2 px-3 text-xs disabled:opacity-50"
+              title="WAL flush and PRAGMA optimize"
+            >
+              <WrenchScrewdriverIcon className={`h-4 w-4 ${cleaningDb ? 'animate-spin' : ''}`} />
+              {cleaningDb ? t('common.loading', 'Optimizing...') : t('admin.optimize_db', 'Optimize database')}
+            </button>
+            <button
+              onClick={() => {
+                mutateStats();
+                mutateUsers();
+                mutateEmails();
+                mutateSubdomains();
+                mutateSites();
+                mutateNodes();
+                toast.success('All admin caches refreshed');
+              }}
+              className="btn-secondary py-2 px-3 text-xs"
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+              {t('admin.refresh_all', 'Refresh all')}
+            </button>
+          </>
+        }
+        tabs={[
           { id: 'overview', label: t('admin.tab_overview', 'System Health'), icon: CircleStackIcon, count: null },
-          { id: 'users', label: t('admin.tab_users', 'Users Directory'), icon: UsersIcon, count: overview.users },
-          { id: 'redeem', label: t('admin.tab_redeem', 'Vouchers & Redeem'), icon: TicketIcon, count: redeemData?.codes?.length || null },
-          { id: 'emails', label: t('admin.tab_emails', 'Live Email Feed'), icon: EnvelopeIcon, count: overview.emails },
+          { id: 'users', label: t('admin.tab_users', 'Users'), icon: UsersIcon, count: overview.users },
+          { id: 'redeem', label: t('admin.tab_redeem', 'Vouchers'), icon: TicketIcon, count: redeemData?.codes?.length || null },
+          { id: 'emails', label: t('admin.tab_emails', 'Email Feed'), icon: EnvelopeIcon, count: overview.emails },
           { id: 'subdomains', label: t('admin.tab_subdomains', 'Subdomains'), icon: GlobeAltIcon, count: overview.subdomains },
-          { id: 'hosting', label: t('admin.tab_hosting', 'Cloud Sites & Nodes'), icon: ServerStackIcon, count: overview.sites },
-          { id: 'security', label: t('admin.tab_security', 'Security Threats'), icon: ShieldExclamationIcon, count: overview.threatsBlocked },
+          { id: 'hosting', label: t('admin.tab_hosting', 'Sites & Nodes'), icon: ServerStackIcon, count: overview.sites },
+          { id: 'security', label: t('admin.tab_security', 'Security'), icon: ShieldExclamationIcon, count: overview.threatsBlocked },
           { id: 'broadcast', label: t('admin.tab_broadcast', 'Broadcast'), icon: MegaphoneIcon, count: null },
           { id: 'logs', label: t('admin.tab_logs', 'Audit Logs'), icon: KeyIcon, count: null }
-        ].map(item => {
+        ].map((item) => {
           const Icon = item.icon;
-          const active = tab === item.id;
           return (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              className={`pb-3 px-2 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-all ${
-                active
-                  ? 'border-rose-600 text-rose-600 dark:text-rose-400 font-bold'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{item.label}</span>
-              {item.count !== null && item.count !== undefined && (
-                <span className={`px-1.5 py-0.2 text-[10px] font-bold rounded-full ${
-                  active ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                }`}>
-                  {item.count}
-                </span>
-              )}
-            </button>
+            <PageTab key={item.id} active={tab === item.id} onClick={() => setTab(item.id)} count={item.count}>
+              <span className="inline-flex items-center gap-1.5">
+                <Icon className="h-3.5 w-3.5" />
+                {item.label}
+              </span>
+            </PageTab>
           );
         })}
-      </div>
+      />
 
       {/* ────────────────────────────────────────────────────────────────────
           TAB 1: SYSTEM HEALTH & OVERVIEW
@@ -544,34 +519,34 @@ export default function AdminPage() {
         <div className="space-y-6">
           {/* Quick Metrics Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="flex items-center justify-between text-gray-500">
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="flex items-center justify-between text-slate-500">
                 <span className="text-xs font-semibold uppercase">{t('admin.stat_total_users', 'Total Users')}</span>
-                <UsersIcon className="h-4 w-4 text-indigo-500" />
+                <UsersIcon className="h-4 w-4 text-brand-500" />
               </div>
-              <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                 {overview.users || 0}
               </div>
               <div className="text-[11px] text-green-600 mt-1 font-medium">{t('admin.stat_registered_hint', 'Registered in Bot & Web')}</div>
             </div>
 
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="flex items-center justify-between text-gray-500">
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="flex items-center justify-between text-slate-500">
                 <span className="text-xs font-semibold uppercase">{t('admin.stat_total_emails', 'Total Emails')}</span>
                 <EnvelopeIcon className="h-4 w-4 text-sky-500" />
               </div>
-              <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                 {overview.emails || 0}
               </div>
-              <div className="text-[11px] text-gray-400 mt-1">{t('admin.stat_unread_count', 'Unread: {count}', { count: overview.unread || 0 })}</div>
+              <div className="text-[11px] text-slate-400 mt-1">{t('admin.stat_unread_count', 'Unread: {count}', { count: overview.unread || 0 })}</div>
             </div>
 
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="flex items-center justify-between text-gray-500">
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="flex items-center justify-between text-slate-500">
                 <span className="text-xs font-semibold uppercase">{t('admin.stat_active_subdomains', 'Active Subdomains')}</span>
                 <GlobeAltIcon className="h-4 w-4 text-emerald-500" />
               </div>
-              <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                 {overview.subdomains || 0}
               </div>
               <div className="text-[11px] text-emerald-600 mt-1 font-medium">
@@ -579,8 +554,8 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="flex items-center justify-between text-gray-500">
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="flex items-center justify-between text-slate-500">
                 <span className="text-xs font-semibold uppercase">{t('admin.stat_threats_blocked', 'Threats Blocked')}</span>
                 <ShieldExclamationIcon className="h-4 w-4 text-rose-500" />
               </div>
@@ -593,76 +568,76 @@ export default function AdminPage() {
 
           {/* Infrastructure Health Status */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
-                <CpuChipIcon className="h-5 w-5 text-indigo-500" />
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white">Runtime Process &amp; RAM</h3>
+                <CpuChipIcon className="h-5 w-5 text-brand-500" />
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Runtime Process &amp; RAM</h3>
               </div>
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Node.js Engine:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Node.js Engine:</span>
                   <span className="font-mono font-semibold">{proc.nodeVersion || 'v22'}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Process PID:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Process PID:</span>
                   <span className="font-mono">{proc.pid || 'N/A'}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Heap Used:</span>
-                  <span className="font-mono font-bold text-indigo-600">{((proc.memoryHeapUsed || 0) / 1024 / 1024).toFixed(1)} MB</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Heap Used:</span>
+                  <span className="font-mono font-bold text-brand-600">{((proc.memoryHeapUsed || 0) / 1024 / 1024).toFixed(1)} MB</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-gray-500">Resident Set (RSS):</span>
+                  <span className="text-slate-500">Resident Set (RSS):</span>
                   <span className="font-mono">{((proc.memoryRss || 0) / 1024 / 1024).toFixed(1)} MB</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <CircleStackIcon className="h-5 w-5 text-emerald-500" />
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white">Database Status</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Database Status</h3>
               </div>
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Storage Engine:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Storage Engine:</span>
                   <span className="font-mono font-semibold text-emerald-600">SQLite WAL</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Total Mailboxes:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Total Mailboxes:</span>
                   <span className="font-mono">{dbInfo.aliases || 0}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Today's Inflow:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Today's Inflow:</span>
                   <span className="font-mono font-bold">{dbInfo.emailsToday || 0} emails</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-gray-500">Spam Rejected:</span>
+                  <span className="text-slate-500">Spam Rejected:</span>
                   <span className="font-mono text-rose-500 font-bold">{dbInfo.spamToday || 0}</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <ServerStackIcon className="h-5 w-5 text-purple-500" />
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white">Edge Cluster Pool</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Edge Cluster Pool</h3>
               </div>
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Online Server Nodes:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Online Server Nodes:</span>
                   <span className="font-mono font-bold text-purple-600">{overview.nodes || 0} active</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Hosted Simple Sites:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Hosted Simple Sites:</span>
                   <span className="font-mono">{overview.sites || 0} deployed</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">Subdomain Gateway:</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-slate-500">Subdomain Gateway:</span>
                   <span className="font-mono text-green-600 font-semibold">Active &amp; Live</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-gray-500">Anti-Miner Engine:</span>
+                  <span className="text-slate-500">Anti-Miner Engine:</span>
                   <span className="font-mono text-green-600 font-semibold">Zero-Tolerance Active</span>
                 </div>
               </div>
@@ -671,11 +646,11 @@ export default function AdminPage() {
 
           {/* Global Storage & Quota Monitor (Physical Filesystem & Multi-Tenant Consumption) */}
           {statsData?.globalStorage && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-2">
-                  <CircleStackIcon className="h-5 w-5 text-indigo-500" />
-                  <h3 className="font-bold text-sm text-gray-900 dark:text-white">Global Storage &amp; Infrastructure Capacity</h3>
+                  <CircleStackIcon className="h-5 w-5 text-brand-500" />
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">Global Storage &amp; Infrastructure Capacity</h3>
                 </div>
                 {statsData.globalStorage.warnings && statsData.globalStorage.warnings.length > 0 ? (
                   <span className={`px-2.5 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 ${
@@ -699,9 +674,9 @@ export default function AdminPage() {
               {/* Storage Capacity Gauges */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                 {/* Physical Host Disk */}
-                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/60 space-y-2">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Host Root Filesystem</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Host Root Filesystem</span>
                     <span className={`font-mono font-bold ${
                       statsData.globalStorage.disk.usagePercent >= 90 ? 'text-red-600' :
                       statsData.globalStorage.disk.usagePercent >= 80 ? 'text-amber-600' : 'text-emerald-600'
@@ -709,7 +684,7 @@ export default function AdminPage() {
                       {statsData.globalStorage.disk.usagePercent}% Used
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                     <div
                       className={`h-2 rounded-full transition-all ${
                         statsData.globalStorage.disk.usagePercent >= 90 ? 'bg-red-500' :
@@ -718,7 +693,7 @@ export default function AdminPage() {
                       style={{ width: `${Math.min(100, statsData.globalStorage.disk.usagePercent)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[11px] text-gray-500">
+                  <div className="flex justify-between text-[11px] text-slate-500">
                     <span>Used: <b>{statsData.globalStorage.disk.usedFormatted}</b></span>
                     <span>Free: <b>{statsData.globalStorage.disk.freeFormatted}</b></span>
                     <span>Total: {statsData.globalStorage.disk.totalFormatted}</span>
@@ -726,40 +701,40 @@ export default function AdminPage() {
                 </div>
 
                 {/* Email Storage Pool */}
-                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/60 space-y-2">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Email &amp; Attachments</span>
-                    <span className="font-mono font-bold text-indigo-600">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Email &amp; Attachments</span>
+                    <span className="font-mono font-bold text-brand-600">
                       {statsData.globalStorage.platform.email.usedFormatted}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-indigo-500 h-2 rounded-full transition-all"
+                      className="bg-brand-500 h-2 rounded-full transition-all"
                       style={{ width: `${Math.min(100, statsData.globalStorage.platform.email.usagePercent)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[11px] text-gray-500">
+                  <div className="flex justify-between text-[11px] text-slate-500">
                     <span>Allocated Quota: <b>{statsData.globalStorage.platform.email.limitFormatted}</b></span>
                     <span>{statsData.globalStorage.platform.email.usagePercent}% utilized</span>
                   </div>
                 </div>
 
                 {/* Website & App Hosting Storage Pool */}
-                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/60 space-y-2">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Website &amp; App Hosting</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Website &amp; App Hosting</span>
                     <span className="font-mono font-bold text-purple-600">
                       {statsData.globalStorage.platform.hosting.usedFormatted}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                     <div
                       className="bg-purple-500 h-2 rounded-full transition-all"
                       style={{ width: `${Math.min(100, statsData.globalStorage.platform.hosting.usagePercent)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[11px] text-gray-500">
+                  <div className="flex justify-between text-[11px] text-slate-500">
                     <span>Allocated Quota: <b>{statsData.globalStorage.platform.hosting.limitFormatted}</b></span>
                     <span>{statsData.globalStorage.platform.hosting.usagePercent}% utilized</span>
                   </div>
@@ -778,13 +753,13 @@ export default function AdminPage() {
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-1">
               <div className="relative flex-1 max-w-xs">
-                <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search username, name, or TG ID..."
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
+                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
                 />
               </div>
 
@@ -792,7 +767,7 @@ export default function AdminPage() {
               <select
                 value={userStatusFilter}
                 onChange={e => setUserStatusFilter(e.target.value)}
-                className="px-2.5 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium outline-none"
+                className="px-2.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium outline-none"
               >
                 <option value="all">All Statuses</option>
                 <option value="active">Active Only</option>
@@ -803,7 +778,7 @@ export default function AdminPage() {
               <select
                 value={userPlanFilter}
                 onChange={e => setUserPlanFilter(e.target.value)}
-                className="px-2.5 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium outline-none"
+                className="px-2.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium outline-none"
               >
                 <option value="all">All Subscription Plans</option>
                 <option value="free">Free Tier</option>
@@ -813,15 +788,15 @@ export default function AdminPage() {
               </select>
             </div>
 
-            <div className="text-xs text-gray-500 shrink-0">
+            <div className="text-xs text-slate-500 shrink-0">
               Showing <b>{usersList.length}</b> users
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 uppercase font-semibold">
                   <tr>
                     <th className="px-3 py-3">Telegram ID</th>
                     <th className="px-3 py-3">User</th>
@@ -835,15 +810,15 @@ export default function AdminPage() {
                     <th className="px-3 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 font-mono">
                   {usersList.map(u => (
-                    <tr key={u.tg_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <tr key={u.tg_id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="px-4 py-3 font-bold">{u.tg_id}</td>
                       <td className="px-4 py-3 font-sans">
-                        <div className="font-semibold text-gray-900 dark:text-white">
+                        <div className="font-semibold text-slate-900 dark:text-white">
                           {u.first_name || 'N/A'} {u.last_name || ''}
                         </div>
-                        <div className="text-[11px] text-indigo-500 font-mono">
+                        <div className="text-[11px] text-brand-500 font-mono">
                           {u.username ? `@${u.username}` : 'No username'}
                         </div>
                       </td>
@@ -851,7 +826,7 @@ export default function AdminPage() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                           u.role === 'admin'
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
-                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                         }`}>
                           {u.role}
                         </span>
@@ -882,12 +857,12 @@ export default function AdminPage() {
                             ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
                             : u.subscription_plan === 'starter'
                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                            : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                            : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                         }`}>
                           {u.subscription_plan || 'free'}
                         </span>
                         {u.subscription_expires_at && (
-                          <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                             Exp: {new Date(u.subscription_expires_at).toLocaleDateString()}
                           </div>
                         )}
@@ -895,19 +870,19 @@ export default function AdminPage() {
                       {/* Email Storage */}
                       <td className="px-3 py-3 font-sans">
                         <div className="flex items-center justify-between gap-1 text-[11px]">
-                          <span className="font-bold text-gray-900 dark:text-white">
+                          <span className="font-bold text-slate-900 dark:text-white">
                             {formatBytesUI(u.email_storage_used || 0)}
                           </span>
-                          <span className="text-gray-400 font-mono text-[10px]">
+                          <span className="text-slate-400 font-mono text-[10px]">
                             / {formatBytesUI(u.email_storage_limit || 1073741824)}
                           </span>
                         </div>
-                        <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1 overflow-hidden">
+                        <div className="w-24 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-1 overflow-hidden">
                           <div
                             className={`h-1.5 rounded-full ${
                               (u.email_storage_used || 0) > (u.email_storage_limit || 1073741824)
                                 ? 'bg-red-500'
-                                : 'bg-indigo-500'
+                                : 'bg-brand-500'
                             }`}
                             style={{
                               width: `${Math.min(100, Math.round(((u.email_storage_used || 0) / (u.email_storage_limit || 1073741824)) * 100))}%`
@@ -924,14 +899,14 @@ export default function AdminPage() {
                       {/* Hosting Storage */}
                       <td className="px-3 py-3 font-sans">
                         <div className="flex items-center justify-between gap-1 text-[11px]">
-                          <span className="font-bold text-gray-900 dark:text-white">
+                          <span className="font-bold text-slate-900 dark:text-white">
                             {formatBytesUI(u.hosting_storage_used || 0)}
                           </span>
-                          <span className="text-gray-400 font-mono text-[10px]">
+                          <span className="text-slate-400 font-mono text-[10px]">
                             / {formatBytesUI(u.hosting_storage_limit || 5368709120)}
                           </span>
                         </div>
-                        <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1 overflow-hidden">
+                        <div className="w-24 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-1 overflow-hidden">
                           <div
                             className={`h-1.5 rounded-full ${
                               (u.hosting_storage_used || 0) > (u.hosting_storage_limit || 5368709120)
@@ -953,9 +928,9 @@ export default function AdminPage() {
                       {/* Aliases Quota (Count-based) */}
                       <td className="px-3 py-3 font-sans">
                         <div className="text-[11px]">
-                          <b>{u.aliases_count || 0}</b> <span className="text-gray-400">/ {u.alias_limit > 900000 ? '∞' : u.alias_limit}</span>
+                          <b>{u.aliases_count || 0}</b> <span className="text-slate-400">/ {u.alias_limit > 900000 ? '∞' : u.alias_limit}</span>
                         </div>
-                        <span className="text-[10px] text-gray-400">Aliases Active</span>
+                        <span className="text-[10px] text-slate-400">Aliases Active</span>
                       </td>
 
                       {/* Domains & Apps */}
@@ -973,7 +948,7 @@ export default function AdminPage() {
                               isLifetime: u.subscription_status === 'lifetime'
                             });
                           }}
-                          className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold rounded text-xs"
+                          className="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/40 text-brand-700 dark:text-brand-300 font-bold rounded text-xs"
                           title="Set Subscription Tier"
                         >
                           Plan
@@ -988,7 +963,7 @@ export default function AdminPage() {
                               hosting_storage_mb: Math.round((u.hosting_storage_limit || 5368709120) / (1024 * 1024))
                             });
                           }}
-                          className="px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded text-xs hover:bg-gray-200 font-medium"
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded text-xs hover:bg-slate-200 font-medium"
                           title="Configure Storage Quotas"
                         >
                           Quotas
@@ -1028,11 +1003,11 @@ export default function AdminPage() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <TicketIcon className="h-5 w-5 text-rose-500" />
                 Vouchers &amp; Promo Codes Manager
               </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Generate promo codes for subscription passes, extra domain quotas, and storage boosts.
               </p>
             </div>
@@ -1042,7 +1017,7 @@ export default function AdminPage() {
                 generateRandomVoucher();
                 setShowCreateCodeModal(true);
               }}
-              className="px-4 py-2 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-2 bg-gradient-to-r from-rose-600 to-brand-600 hover:from-rose-700 hover:to-brand-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <PlusIcon className="h-4 w-4" />
               <span>Create New Voucher</span>
@@ -1050,27 +1025,27 @@ export default function AdminPage() {
           </div>
 
           {/* Vouchers Table */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center justify-between gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-4">
               <div className="relative w-full sm:w-72">
-                <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search code or title..."
                   value={redeemSearch}
                   onChange={e => setRedeemSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs outline-none"
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none"
                 />
               </div>
 
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-slate-500">
                 Total Codes: <b>{redeemData?.codes?.length || 0}</b>
               </div>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 uppercase font-semibold">
                   <tr>
                     <th className="px-4 py-3">Promo Code</th>
                     <th className="px-4 py-3">Description</th>
@@ -1081,12 +1056,12 @@ export default function AdminPage() {
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 font-mono">
                   {(redeemData?.codes || []).map(c => (
-                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-gray-900 dark:text-white px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs tracking-wider">
+                          <span className="font-bold text-slate-900 dark:text-white px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs tracking-wider">
                             {c.code}
                           </span>
                           <button
@@ -1094,14 +1069,14 @@ export default function AdminPage() {
                               navigator.clipboard.writeText(c.code);
                               toast.success(`Copied ${c.code}`);
                             }}
-                            className="text-gray-400 hover:text-indigo-600"
+                            className="text-slate-400 hover:text-brand-600"
                             title="Copy Code"
                           >
                             <ClipboardDocumentIcon className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-sans font-semibold text-gray-800 dark:text-gray-200">
+                      <td className="px-4 py-3 font-sans font-semibold text-slate-800 dark:text-slate-200">
                         {c.title}
                       </td>
                       <td className="px-4 py-3 font-sans">
@@ -1116,10 +1091,10 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 font-mono">
-                        <span className="font-bold text-gray-900 dark:text-white">{c.used_count}</span>
-                        <span className="text-gray-400"> / {c.max_uses === 0 ? '∞' : c.max_uses}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{c.used_count}</span>
+                        <span className="text-slate-400"> / {c.max_uses === 0 ? '∞' : c.max_uses}</span>
                       </td>
-                      <td className="px-4 py-3 font-sans text-gray-500 text-[11px]">
+                      <td className="px-4 py-3 font-sans text-slate-500 text-[11px]">
                         {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : 'Never (Permanent)'}
                       </td>
                       <td className="px-4 py-3 font-sans">
@@ -1128,7 +1103,7 @@ export default function AdminPage() {
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             c.is_active
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 hover:bg-emerald-200'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200'
+                              : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200'
                           }`}
                         >
                           {c.is_active ? 'ACTIVE' : 'DISABLED'}
@@ -1137,7 +1112,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-right font-sans">
                         <button
                           onClick={() => handleDeleteCode(c.id)}
-                          className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                          className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"
                           title="Delete Code"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -1147,7 +1122,7 @@ export default function AdminPage() {
                   ))}
                   {(!redeemData?.codes || redeemData.codes.length === 0) && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-gray-400 font-sans">
+                      <td colSpan={7} className="px-4 py-8 text-center text-slate-400 font-sans">
                         No voucher codes found. Click "Create New Voucher" to generate one.
                       </td>
                     </tr>
@@ -1158,15 +1133,15 @@ export default function AdminPage() {
           </div>
 
           {/* Redemptions Audit Log */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
-            <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <GiftIcon className="h-4 w-4 text-emerald-500" />
               <span>Recent User Redemptions Log</span>
             </h3>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 uppercase font-semibold">
                   <tr>
                     <th className="px-3 py-2">User</th>
                     <th className="px-3 py-2">Voucher Code</th>
@@ -1175,30 +1150,30 @@ export default function AdminPage() {
                     <th className="px-3 py-2">IP Address</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 font-mono">
                   {(redeemLogsData?.logs || []).map(l => (
-                    <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <tr key={l.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="px-3 py-2 font-sans">
                         <b>{l.first_name || l.tg_id}</b>
-                        {l.username && <span className="text-gray-400 font-mono text-[11px] ml-1">(@{l.username})</span>}
+                        {l.username && <span className="text-slate-400 font-mono text-[11px] ml-1">(@{l.username})</span>}
                       </td>
-                      <td className="px-3 py-2 font-bold text-indigo-600 dark:text-indigo-400">
+                      <td className="px-3 py-2 font-bold text-brand-600 dark:text-brand-400">
                         {l.code}
                       </td>
-                      <td className="px-3 py-2 font-sans text-gray-700 dark:text-gray-300">
+                      <td className="px-3 py-2 font-sans text-slate-700 dark:text-slate-300">
                         {l.reward_summary}
                       </td>
-                      <td className="px-3 py-2 text-gray-500 text-[11px] font-sans">
+                      <td className="px-3 py-2 text-slate-500 text-[11px] font-sans">
                         {new Date(l.redeemed_at).toLocaleString()}
                       </td>
-                      <td className="px-3 py-2 text-gray-400 text-[11px]">
+                      <td className="px-3 py-2 text-slate-400 text-[11px]">
                         {l.ip_address || 'N/A'}
                       </td>
                     </tr>
                   ))}
                   {(!redeemLogsData?.logs || redeemLogsData.logs.length === 0) && (
                     <tr>
-                      <td colSpan={5} className="px-3 py-4 text-center text-gray-400 font-sans">
+                      <td colSpan={5} className="px-3 py-4 text-center text-slate-400 font-sans">
                         Zero voucher redemptions recorded yet.
                       </td>
                     </tr>
@@ -1217,36 +1192,36 @@ export default function AdminPage() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative w-full sm:w-96">
-              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search subject, sender, or destination alias..."
                 value={emailSearch}
                 onChange={e => setEmailSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-slate-500">
               Feed updates automatically every 5s • <b>{emailsList.length}</b> emails shown
             </div>
           </div>
 
           {emailsList.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <EnvelopeIcon className="h-10 w-10 text-gray-400 mx-auto" />
-              <p className="mt-2 text-sm text-gray-500">No emails matched your filter.</p>
+            <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <EnvelopeIcon className="h-10 w-10 text-slate-400 mx-auto" />
+              <p className="mt-2 text-sm text-slate-500">No emails matched your filter.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {emailsList.map(e => (
                 <div
                   key={e.id}
-                  className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="space-y-1 max-w-3xl">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold text-gray-400">#{e.id}</span>
-                      <h4 className="font-bold text-sm text-gray-900 dark:text-white">
+                      <span className="font-mono text-xs font-bold text-slate-400">#{e.id}</span>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
                         {e.subject || '(no subject)'}
                       </h4>
                       {e.spam_classification === 'spam' && (
@@ -1255,26 +1230,26 @@ export default function AdminPage() {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-300 flex flex-wrap gap-x-4 gap-y-1">
+                    <div className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap gap-x-4 gap-y-1">
                       <span>From: <b>{e.sender_name ? `${e.sender_name} <${e.sender}>` : e.sender}</b></span>
-                      <span>To Alias: <code className="text-indigo-500">{e.alias_address}</code></span>
+                      <span>To Alias: <code className="text-brand-500">{e.alias_address}</code></span>
                       {e.user_username && <span>Owner: <b>@{e.user_username}</b></span>}
                     </div>
                     {e.text_body && (
-                      <p className="text-xs text-gray-500 line-clamp-2 mt-1 font-mono bg-gray-50 dark:bg-gray-900/60 p-2 rounded">
+                      <p className="text-xs text-slate-500 line-clamp-2 mt-1 font-mono bg-slate-50 dark:bg-slate-900/60 p-2 rounded">
                         {e.text_body}
                       </p>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2 sm:self-center shrink-0">
-                    <span className="text-[11px] text-gray-400">
+                    <span className="text-[11px] text-slate-400">
                       {new Date(e.received_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{' '}
                       {new Date(e.received_at).toLocaleDateString()}
                     </span>
                     <button
                       onClick={() => handleDeleteEmail(e.id)}
-                      className="text-gray-400 hover:text-red-500 p-1.5 rounded transition-colors"
+                      className="text-slate-400 hover:text-red-500 p-1.5 rounded transition-colors"
                       title="Delete email"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -1294,24 +1269,24 @@ export default function AdminPage() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
-              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search subdomain or owner..."
                 value={subSearch}
                 onChange={e => setSubSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-slate-500">
               <b>{subdomainsList.length}</b> total registered subdomains
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold font-sans">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 uppercase font-semibold font-sans">
                   <tr>
                     <th className="px-4 py-3">Subdomain Domain</th>
                     <th className="px-4 py-3">Owner User</th>
@@ -1322,10 +1297,10 @@ export default function AdminPage() {
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                   {subdomainsList.map(s => (
-                    <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                      <td className="px-4 py-3 font-bold text-indigo-600 dark:text-indigo-400">
+                    <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                      <td className="px-4 py-3 font-bold text-brand-600 dark:text-brand-400">
                         <a href={`http://${s.full_domain}`} target="_blank" rel="noreferrer" className="hover:underline">
                           {s.full_domain}
                         </a>
@@ -1336,11 +1311,11 @@ export default function AdminPage() {
                       <td className="px-4 py-3 uppercase text-[11px] font-bold">
                         {s.web_mode}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 max-w-xs truncate">
+                      <td className="px-4 py-3 text-slate-500 max-w-xs truncate">
                         {s.web_target || '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={s.email_catchall ? 'text-green-600 font-bold' : 'text-gray-400'}>
+                        <span className={s.email_catchall ? 'text-green-600 font-bold' : 'text-slate-400'}>
                           {s.email_catchall ? '✅ Active' : '❌ Off'}
                         </span>
                       </td>
@@ -1348,7 +1323,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => handleDeleteSubdomain(s.id, s.full_domain)}
-                          className="text-gray-400 hover:text-red-500 p-1"
+                          className="text-slate-400 hover:text-red-500 p-1"
                           title="Delete subdomain"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -1372,32 +1347,32 @@ export default function AdminPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ServerStackIcon className="h-5 w-5 text-indigo-500" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <ServerStackIcon className="h-5 w-5 text-brand-500" />
                   Cluster Server Nodes ({nodesList.length})
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   Ubuntu VPS containers provisioned to run websites via multi-tenant proxy.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <a
                   href="/nodes"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-cyan-400 rounded-lg text-xs font-semibold border border-indigo-200 dark:border-indigo-800 shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-100 text-brand-700 dark:text-sky-400 rounded-lg text-xs font-semibold border border-brand-200 dark:border-brand-800 shadow-sm"
                 >
                   <ServerStackIcon className="h-4 w-4" />
                   Full Nodes Control Plane ↗
                 </a>
                 <button
                   onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); setShowAddNode(true); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-semibold border border-gray-200 dark:border-gray-600 shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-600 shadow-sm"
                 >
-                  <ListBulletIcon className="h-4 w-4 text-indigo-500" />
+                  <ListBulletIcon className="h-4 w-4 text-brand-500" />
                   Bulk Add SSH
                 </button>
                 <button
                   onClick={() => { setNodeModalTab('single'); setBulkResults(null); setShowAddNode(true); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-semibold shadow-sm"
                 >
                   <PlusIcon className="h-4 w-4" />
                   Add Server Node
@@ -1406,19 +1381,19 @@ export default function AdminPage() {
             </div>
 
             {nodesList.length === 0 ? (
-              <div className="p-8 text-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <ServerStackIcon className="h-10 w-10 text-gray-400 mx-auto" />
-                <p className="mt-2 text-sm text-gray-500">No server nodes added yet.</p>
+              <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                <ServerStackIcon className="h-10 w-10 text-slate-400 mx-auto" />
+                <p className="mt-2 text-sm text-slate-500">No server nodes added yet.</p>
                 <div className="mt-4 flex items-center justify-center gap-2">
                   <button
                     onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); setShowAddNode(true); }}
-                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600"
+                    className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600"
                   >
                     Bulk Add SSH Nodes
                   </button>
                   <button
                     onClick={() => { setNodeModalTab('single'); setBulkResults(null); setShowAddNode(true); }}
-                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg shadow-sm"
+                    className="px-3 py-1.5 bg-brand-700 text-white text-xs font-medium rounded-lg shadow-sm"
                   >
                     Connect Single Node
                   </button>
@@ -1427,32 +1402,32 @@ export default function AdminPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {nodesList.map(n => (
-                  <div key={n.id} className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <div key={n.id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className={`h-2.5 w-2.5 rounded-full ${n.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <h4 className="font-bold text-sm text-gray-900 dark:text-white">{n.name}</h4>
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">{n.name}</h4>
                       </div>
                       <button
                         onClick={() => handleDeleteNode(n.id, n.name)}
-                        className="text-gray-400 hover:text-red-500 p-1"
+                        className="text-slate-400 hover:text-red-500 p-1"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
-                    <p className="font-mono text-xs text-gray-500 mt-1">{n.host}:{n.port}</p>
+                    <p className="font-mono text-xs text-slate-500 mt-1">{n.host}:{n.port}</p>
 
                     <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-[10px] text-gray-400 uppercase">CPUs</span>
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                        <span className="text-[10px] text-slate-400 uppercase">CPUs</span>
                         <div className="font-bold">{n.system_info?.cpus || 1} vCPU</div>
                       </div>
-                      <div className="p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-[10px] text-gray-400 uppercase">RAM</span>
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                        <span className="text-[10px] text-slate-400 uppercase">RAM</span>
                         <div className="font-bold">{formatMemoryMb(n.system_info?.ramTotalMb || n.system_info?.ramMb)}</div>
                       </div>
-                      <div className="p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-[10px] text-gray-400 uppercase">Capacity</span>
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                        <span className="text-[10px] text-slate-400 uppercase">Capacity</span>
                         <div className="font-bold">{n.current_sites} / {n.max_sites}</div>
                       </div>
                     </div>
@@ -1463,21 +1438,21 @@ export default function AdminPage() {
           </div>
 
           {/* Section B: All Deployed Sites across the platform */}
-          <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <GlobeAltIcon className="h-5 w-5 text-emerald-500" />
                   All User Hosted Sites ({sitesList.length})
                 </h3>
-                <p className="text-xs text-gray-500">Live websites deployed by users across your server nodes.</p>
+                <p className="text-xs text-slate-500">Live websites deployed by users across your server nodes.</p>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-semibold font-sans">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 uppercase font-semibold font-sans">
                     <tr>
                       <th className="px-4 py-3">Site Domain</th>
                       <th className="px-4 py-3">Owner</th>
@@ -1488,10 +1463,10 @@ export default function AdminPage() {
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                     {sitesList.map(s => (
-                      <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                        <td className="px-4 py-3 font-bold text-indigo-600 dark:text-indigo-400">
+                      <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                        <td className="px-4 py-3 font-bold text-brand-600 dark:text-brand-400">
                           <a href={`http://${s.full_domain}`} target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
                             {s.full_domain}
                             <ArrowTopRightOnSquareIcon className="h-3 w-3" />
@@ -1500,7 +1475,7 @@ export default function AdminPage() {
                         <td className="px-4 py-3 font-sans">
                           {s.username ? `@${s.username}` : `TG:${s.tg_id}`}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 font-sans">
+                        <td className="px-4 py-3 text-slate-500 font-sans">
                           {s.node_name || 'Node ' + s.node_id}
                         </td>
                         <td className="px-4 py-3">
@@ -1517,7 +1492,7 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() => handleDeleteSite(s.id, s.name)}
-                            className="text-gray-400 hover:text-red-500 p-1"
+                            className="text-slate-400 hover:text-red-500 p-1"
                             title="Force Delete Site"
                           >
                             <TrashIcon className="h-4 w-4" />
@@ -1548,11 +1523,11 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <h3 className="font-bold text-sm text-gray-900 dark:text-white">Security Interceptions ({secLogs.length})</h3>
+          <h3 className="font-bold text-sm text-slate-900 dark:text-white">Security Interceptions ({secLogs.length})</h3>
           {secLogs.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
               <ShieldCheckIcon className="h-10 w-10 text-green-500 mx-auto" />
-              <p className="mt-2 text-sm text-gray-500">No malicious threats detected. Clean cluster.</p>
+              <p className="mt-2 text-sm text-slate-500">No malicious threats detected. Clean cluster.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -1562,7 +1537,7 @@ export default function AdminPage() {
                     <span className="font-bold text-red-700 dark:text-red-400">[{l.threat_type.toUpperCase()}]</span>{' '}
                     <span>File: <b>{l.file_name}</b></span> — Pattern: <code>{l.matched_pattern}</code> (TG: {l.tg_id})
                   </div>
-                  <span className="text-gray-400 text-[11px]">{l.created_at}</span>
+                  <span className="text-slate-400 text-[11px]">{l.created_at}</span>
                 </div>
               ))}
             </div>
@@ -1574,20 +1549,20 @@ export default function AdminPage() {
           TAB 7: TELEGRAM BROADCAST ANNOUNCEMENT
       ────────────────────────────────────────────────────────────────────── */}
       {tab === 'broadcast' && (
-        <div className="max-w-2xl bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm space-y-4">
+        <div className="max-w-2xl bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm space-y-4">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <MegaphoneIcon className="h-6 w-6 text-rose-500" />
               Global Telegram Broadcast
             </h3>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Send an instant push announcement to all registered users of the Telegram Bot. Supports HTML markup (<b>bold</b>, <i>italic</i>, <code>code</code>, &lt;a href="..."&gt;links&lt;/a&gt;).
             </p>
           </div>
 
           <form onSubmit={handleBroadcast} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Announcement Message (HTML)
               </label>
               <textarea
@@ -1596,7 +1571,7 @@ export default function AdminPage() {
                 value={broadcastMsg}
                 onChange={e => setBroadcastMsg(e.target.value)}
                 placeholder="📢 <b>Exciting Update:</b>&#10;&#10;We have launched high-performance Cloud Hosting! Deploy your website instantly with /deploy."
-                className="w-full p-3 font-mono text-xs bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full p-3 font-mono text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
 
@@ -1618,11 +1593,11 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {tab === 'logs' && (
         <div className="space-y-3">
-          <h3 className="font-bold text-sm text-gray-900 dark:text-white">Admin Activity Audit Trail</h3>
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+          <h3 className="font-bold text-sm text-slate-900 dark:text-white">Admin Activity Audit Trail</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase font-sans">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 uppercase font-sans">
                   <tr>
                     <th className="px-4 py-3">ID</th>
                     <th className="px-4 py-3">Action</th>
@@ -1633,16 +1608,16 @@ export default function AdminPage() {
                     <th className="px-4 py-3 text-right">Timestamp</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                   {auditLogs.map(l => (
                     <tr key={l.id}>
                       <td className="px-4 py-3 font-bold">{l.id}</td>
                       <td className="px-4 py-3 font-semibold text-rose-600 dark:text-rose-400">{l.action}</td>
                       <td className="px-4 py-3">{l.resource} {l.resource_id ? `#${l.resource_id}` : ''}</td>
                       <td className="px-4 py-3">{l.tg_id}</td>
-                      <td className="px-4 py-3 text-gray-400">{l.ip_address || '—'}</td>
-                      <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{l.details || '—'}</td>
-                      <td className="px-4 py-3 text-right text-gray-400">{l.created_at}</td>
+                      <td className="px-4 py-3 text-slate-400">{l.ip_address || '—'}</td>
+                      <td className="px-4 py-3 text-slate-500 max-w-xs truncate">{l.details || '—'}</td>
+                      <td className="px-4 py-3 text-right text-slate-400">{l.created_at}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1657,26 +1632,26 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <AdjustmentsHorizontalIcon className="h-5 w-5 text-rose-500" />
                 Edit User: {editingUser.first_name || editingUser.tg_id}
               </h3>
-              <button onClick={() => setEditingUser(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveUser} className="space-y-4 mt-4 text-xs">
               <div>
-                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Role
                 </label>
                 <select
                   value={userForm.role}
                   onChange={e => setUserForm({ ...userForm, role: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-semibold"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-semibold"
                 >
                   <option value="user">User (Standard Access)</option>
                   <option value="admin">Admin (Master Access)</option>
@@ -1684,7 +1659,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Email &amp; Attachments Storage Quota (MB)
                 </label>
                 <div className="flex items-center gap-2">
@@ -1695,19 +1670,19 @@ export default function AdminPage() {
                     required
                     value={userForm.email_storage_mb}
                     onChange={e => setUserForm({ ...userForm, email_storage_mb: e.target.value })}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                   />
-                  <span className="font-semibold text-gray-500 font-mono shrink-0">
+                  <span className="font-semibold text-slate-500 font-mono shrink-0">
                     = {(userForm.email_storage_mb / 1024).toFixed(1)} GB
                   </span>
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-slate-400">
                   Current actual email usage: <b>{formatBytesUI(editingUser.email_storage_used || 0)}</b> (Default: 1024 MB / 1 GB)
                 </p>
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Website &amp; App Hosting Storage Quota (MB)
                 </label>
                 <div className="flex items-center gap-2">
@@ -1718,19 +1693,19 @@ export default function AdminPage() {
                     required
                     value={userForm.hosting_storage_mb}
                     onChange={e => setUserForm({ ...userForm, hosting_storage_mb: e.target.value })}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                   />
-                  <span className="font-semibold text-gray-500 font-mono shrink-0">
+                  <span className="font-semibold text-slate-500 font-mono shrink-0">
                     = {(userForm.hosting_storage_mb / 1024).toFixed(1)} GB
                   </span>
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-slate-400">
                   Current actual hosting usage: <b>{formatBytesUI(editingUser.hosting_storage_used || 0)}</b> (Default: 5120 MB / 5 GB)
                 </p>
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Active Alias Quota (Count)
                 </label>
                 <input
@@ -1739,9 +1714,9 @@ export default function AdminPage() {
                   required
                   value={userForm.alias_limit}
                   onChange={e => setUserForm({ ...userForm, alias_limit: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                 />
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-slate-400">
                   Currently active aliases: <b>{editingUser.aliases_count || 0}</b>
                 </p>
               </div>
@@ -1751,11 +1726,11 @@ export default function AdminPage() {
                 <p>Reducing a user's quota below current usage preserves existing user data and will not delete files or emails. It safely blocks new uploads and incoming mail until usage drops below the limit.</p>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                 >
                   Cancel
                 </button>
@@ -1776,26 +1751,26 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {showAddNode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <ServerStackIcon className="h-5 w-5 text-indigo-500" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ServerStackIcon className="h-5 w-5 text-brand-500" />
                 Add Cloud Server Node (Ubuntu VPS)
               </h2>
-              <button onClick={() => { setShowAddNode(false); setBulkResults(null); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setShowAddNode(false); setBulkResults(null); }} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Tabs: Single vs Bulk */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mt-3">
+            <div className="flex border-b border-slate-200 dark:border-slate-700 mt-3">
               <button
                 type="button"
                 onClick={() => { setNodeModalTab('single'); setBulkResults(null); }}
                 className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors ${
                   nodeModalTab === 'single'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                    ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
                 Single Node
@@ -1805,8 +1780,8 @@ export default function AdminPage() {
                 onClick={() => { setNodeModalTab('bulk'); setBulkResults(null); }}
                 className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
                   nodeModalTab === 'bulk'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                    ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
                 <ListBulletIcon className="h-3.5 w-3.5" />
@@ -1817,7 +1792,7 @@ export default function AdminPage() {
             {nodeModalTab === 'single' ? (
               <form onSubmit={handleAddNode} className="space-y-4 mt-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Connection String (host:port:user:pass)
                   </label>
                   <input
@@ -1826,15 +1801,15 @@ export default function AdminPage() {
                     placeholder="198.51.100.25:22:root:password"
                     value={nodeForm.connection_string}
                     onChange={e => setNodeForm({ ...nodeForm, connection_string: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white outline-none font-mono"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white outline-none font-mono"
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">
+                  <p className="mt-1 text-[11px] text-slate-400">
                     Provide your Ubuntu container SSH host, port, username, and password.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Node Friendly Name (Optional)
                   </label>
                   <input
@@ -1842,27 +1817,27 @@ export default function AdminPage() {
                     placeholder="edge-node-01"
                     value={nodeForm.name}
                     onChange={e => setNodeForm({ ...nodeForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm outline-none"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm outline-none"
                   />
                 </div>
 
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+                <div className="p-3 bg-brand-50 dark:bg-brand-950/40 rounded-lg text-xs text-brand-700 dark:text-brand-300 space-y-1">
                   <p className="font-semibold">⚡ Automated Provisioning:</p>
                   <p>The system will automatically SSH into this container, set up directories, launch the multi-site web runner, and connect it to the hosting cluster.</p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => setShowAddNode(false)}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={addingNode}
-                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
+                    className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                   >
                     {addingNode ? 'Connecting & Provisioning...' : 'Connect Server Node'}
                   </button>
@@ -1870,11 +1845,11 @@ export default function AdminPage() {
               </form>
             ) : bulkResults ? (
               <div className="space-y-4 mt-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Bulk Provisioning Complete</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <h4 className="font-semibold text-sm text-slate-900 dark:text-white">Bulk Provisioning Complete</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {bulkResults.total} node(s) processed
                       </p>
                     </div>
@@ -1902,7 +1877,7 @@ export default function AdminPage() {
                       }`}
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-1.5 font-mono font-medium text-gray-900 dark:text-white">
+                        <div className="flex items-center gap-1.5 font-mono font-medium text-slate-900 dark:text-white">
                           {r.status === 'success' ? (
                             <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
                           ) : (
@@ -1921,7 +1896,7 @@ export default function AdminPage() {
                         </span>
                       </div>
                       {r.status === 'success' ? (
-                        <div className="mt-1 text-gray-600 dark:text-gray-300 pl-5">
+                        <div className="mt-1 text-slate-600 dark:text-slate-300 pl-5">
                           Node: <span className="font-semibold">{r.node?.name || r.name}</span> • {r.node?.system_info?.cpus || 1} vCPU • {formatMemoryMb(r.node?.system_info?.ramTotalMb || r.node?.system_info?.ramMb)} RAM
                         </div>
                       ) : (
@@ -1933,18 +1908,18 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => { setBulkResults(null); setBulkNodesText(''); }}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
                     Import More
                   </button>
                   <button
                     type="button"
                     onClick={() => { setShowAddNode(false); setBulkResults(null); }}
-                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
+                    className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm"
                   >
                     Done &amp; Close
                   </button>
@@ -1954,10 +1929,10 @@ export default function AdminPage() {
               <form onSubmit={handleBulkAddNodes} className="space-y-4 mt-4">
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                       SSH Connection Strings (One per line)
                     </label>
-                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
+                    <span className="text-[11px] text-brand-600 dark:text-brand-400 font-mono font-medium">
                       {bulkNodesText.split('\n').filter(l => l.trim() && !l.trim().startsWith('#') && l.includes(':')).length} nodes detected
                     </span>
                   </div>
@@ -1967,30 +1942,30 @@ export default function AdminPage() {
                     placeholder={`198.51.100.25:22:root:password123 # US-Edge-1\n198.51.100.26:22:root:password456 # US-Edge-2\nubuntu:mypass@198.51.100.27:2222\n10.0.0.15:22:root:secret`}
                     value={bulkNodesText}
                     onChange={e => setBulkNodesText(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-mono text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">
+                  <p className="mt-1 text-[11px] text-slate-400">
                     Format: <code>host:port:user:pass</code> or <code>user:pass@host:port</code>. Append <code># Custom Name</code> to name each node.
                   </p>
                 </div>
 
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+                <div className="p-3 bg-brand-50 dark:bg-brand-950/40 rounded-lg text-xs text-brand-700 dark:text-brand-300 space-y-1">
                   <p className="font-semibold">⚡ Parallel Provisioning (Pool size 3):</p>
                   <p>All nodes will be contacted simultaneously via SSH, verified, hardware specs collected, and integrated into the cluster.</p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => setShowAddNode(false)}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={bulkProvisioning}
-                    className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
+                    className="px-4 py-2 text-sm bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
                   >
                     {bulkProvisioning ? 'Provisioning In Bulk...' : 'Connect & Provision Bulk'}
                   </button>
@@ -2005,13 +1980,13 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {banningUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200 dark:border-red-900/50">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200 dark:border-red-900/50">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
                 <ShieldExclamationIcon className="h-5 w-5" />
                 Suspend User &amp; Terminate Access
               </h2>
-              <button onClick={() => setBanningUser(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setBanningUser(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
@@ -2027,7 +2002,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Reason for Suspension
                 </label>
                 <textarea
@@ -2036,15 +2011,15 @@ export default function AdminPage() {
                   placeholder="Explain why this account is being banned..."
                   value={banReason}
                   onChange={e => setBanReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setBanningUser(null)}
-                  className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 font-medium cursor-pointer"
+                  className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2066,35 +2041,35 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {subscribingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <SparklesIcon className="h-5 w-5 text-indigo-500" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <SparklesIcon className="h-5 w-5 text-brand-500" />
                 Manage User Subscription
               </h2>
-              <button onClick={() => setSubscribingUser(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSubscribingUser(null)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveSubscription} className="space-y-4 mt-4 text-xs">
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900/40 text-indigo-900 dark:text-indigo-200">
+              <div className="p-3 bg-brand-50 dark:bg-brand-950/40 rounded-xl border border-brand-100 dark:border-brand-900/40 text-brand-900 dark:text-brand-200">
                 <div className="font-semibold text-sm">
                   {subscribingUser.first_name || 'N/A'} {subscribingUser.last_name || ''} (@{subscribingUser.username || subscribingUser.tg_id})
                 </div>
-                <div className="text-[11px] mt-1 text-indigo-700 dark:text-indigo-300">
+                <div className="text-[11px] mt-1 text-brand-700 dark:text-brand-300">
                   Current Tier: <span className="font-bold uppercase">{subscribingUser.subscription_plan || 'free'}</span> ({subscribingUser.subscription_status || 'active'})
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Select Subscription Tier
                 </label>
                 <select
                   value={subForm.planId}
                   onChange={e => setSubForm({ ...subForm, planId: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-medium"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-medium"
                 >
                   <option value="free">Free Tier (1 Domain, 3 Apps, 10 Aliases, 1GB)</option>
                   <option value="starter">Starter Pack (3 Domains, 10 Apps, 50 Aliases, 5GB)</option>
@@ -2109,16 +2084,16 @@ export default function AdminPage() {
                   id="isLifetime"
                   checked={subForm.isLifetime}
                   onChange={e => setSubForm({ ...subForm, isLifetime: e.target.checked })}
-                  className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                  className="h-4 w-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500 cursor-pointer"
                 />
-                <label htmlFor="isLifetime" className="font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                <label htmlFor="isLifetime" className="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
                   Grant Permanent / Lifetime Access
                 </label>
               </div>
 
               {!subForm.isLifetime && (
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Duration (Days to add/extend)
                   </label>
                   <input
@@ -2128,26 +2103,26 @@ export default function AdminPage() {
                     required
                     value={subForm.durationDays}
                     onChange={e => setSubForm({ ...subForm, durationDays: parseInt(e.target.value, 10) || 30 })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">
+                  <p className="mt-1 text-[11px] text-slate-400">
                     Will extend from existing expiry date if currently active, or from today.
                   </p>
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setSubscribingUser(null)}
-                  className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 font-medium cursor-pointer"
+                  className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingSub}
-                  className="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 text-xs bg-brand-700 hover:bg-brand-800 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   {submittingSub ? 'Updating...' : 'Apply Subscription'}
                 </button>
@@ -2162,13 +2137,13 @@ export default function AdminPage() {
       ────────────────────────────────────────────────────────────────────── */}
       {showCreateCodeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <TicketIcon className="h-5 w-5 text-rose-500" />
                 Generate Promo / Voucher Code
               </h2>
-              <button onClick={() => setShowCreateCodeModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowCreateCodeModal(false)} className="text-slate-400 hover:text-slate-600">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
@@ -2176,13 +2151,13 @@ export default function AdminPage() {
             <form onSubmit={handleCreateCode} className="space-y-4 mt-4 text-xs">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
                     Voucher Code
                   </label>
                   <button
                     type="button"
                     onClick={generateRandomVoucher}
-                    className="text-xs text-indigo-600 hover:underline font-medium cursor-pointer"
+                    className="text-xs text-brand-600 hover:underline font-medium cursor-pointer"
                   >
                     🎲 Generate Random
                   </button>
@@ -2193,12 +2168,12 @@ export default function AdminPage() {
                   placeholder="e.g. COMMANDOR-PRO-2026"
                   value={codeForm.code}
                   onChange={e => setCodeForm({ ...codeForm, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono uppercase font-bold tracking-wider"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono uppercase font-bold tracking-wider"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Description / Campaign Title
                 </label>
                 <input
@@ -2207,19 +2182,19 @@ export default function AdminPage() {
                   placeholder="e.g. VIP Developer Pass 30 Days"
                   value={codeForm.title}
                   onChange={e => setCodeForm({ ...codeForm, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Reward Type
                   </label>
                   <select
                     value={codeForm.rewardType}
                     onChange={e => setCodeForm({ ...codeForm, rewardType: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-medium"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-medium"
                   >
                     <option value="subscription">Subscription Tier Upgrade</option>
                     <option value="storage_boost">Extra Storage Boost</option>
@@ -2230,13 +2205,13 @@ export default function AdminPage() {
 
                 {codeForm.rewardType === 'subscription' ? (
                   <div>
-                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Target Plan
                     </label>
                     <select
                       value={codeForm.rewardPlan}
                       onChange={e => setCodeForm({ ...codeForm, rewardPlan: e.target.value })}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-medium"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-medium"
                     >
                       <option value="starter">Starter Pack</option>
                       <option value="pro">Pro Developer</option>
@@ -2245,7 +2220,7 @@ export default function AdminPage() {
                   </div>
                 ) : codeForm.rewardType === 'storage_boost' ? (
                   <div>
-                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Storage Size (GB)
                     </label>
                     <input
@@ -2253,12 +2228,12 @@ export default function AdminPage() {
                       min="1"
                       value={Math.round(codeForm.rewardStorageBytes / 1073741824)}
                       onChange={e => setCodeForm({ ...codeForm, rewardStorageBytes: parseInt(e.target.value, 10) * 1073741824 })}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                     />
                   </div>
                 ) : (
                   <div>
-                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Bonus Count
                     </label>
                     <input
@@ -2270,7 +2245,7 @@ export default function AdminPage() {
                         rewardDomainCount: parseInt(e.target.value, 10),
                         rewardAliasCount: parseInt(e.target.value, 10)
                       })}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                     />
                   </div>
                 )}
@@ -2278,7 +2253,7 @@ export default function AdminPage() {
 
               {codeForm.rewardType === 'subscription' && (
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Subscription Duration (Days)
                   </label>
                   <input
@@ -2288,14 +2263,14 @@ export default function AdminPage() {
                     required
                     value={codeForm.rewardDurationDays}
                     onChange={e => setCodeForm({ ...codeForm, rewardDurationDays: parseInt(e.target.value, 10) || 30 })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                   />
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Max Redemptions (0 = Unlimited)
                   </label>
                   <input
@@ -2304,28 +2279,28 @@ export default function AdminPage() {
                     required
                     value={codeForm.maxUses}
                     onChange={e => setCodeForm({ ...codeForm, maxUses: parseInt(e.target.value, 10) || 0 })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-mono"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Expiration Date (Optional)
                   </label>
                   <input
                     type="date"
                     value={codeForm.expiresAt}
                     onChange={e => setCodeForm({ ...codeForm, expiresAt: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg outline-none font-sans"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg outline-none font-sans"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setShowCreateCodeModal(false)}
-                  className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 font-medium cursor-pointer"
+                  className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>

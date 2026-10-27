@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
+import PageHeader from '../../../components/PageHeader';
 import {
   PlusIcon,
   FireIcon,
@@ -149,44 +150,44 @@ export default function AliasesPage() {
   });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 pb-20">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {t('aliases.title', 'Email Aliases')}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('aliases.subtitle', 'Create, manage, and monitor your private temporary and custom email addresses')}
-          </p>
-        </div>
+    <div className="page-container max-w-6xl space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('aliases.eyebrow', 'Email')}
+          </>
+        }
+        title={t('aliases.title', 'Email Aliases')}
+        description={t('aliases.subtitle', 'Create, manage, and monitor your private temporary and custom email addresses')}
+        actions={
+          <>
+            <button
+              onClick={() => handleCreateAlias(true)}
+              disabled={creating}
+              className="btn bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs py-2 px-3.5 shadow-sm font-semibold"
+            >
+              <FireIcon className="w-4 h-4 text-rose-500" />
+              <span>{t('nav.burner_quick', '1-hour burner')}</span>
+            </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleCreateAlias(true)}
-            disabled={creating}
-            className="btn bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs py-2 px-3.5 shadow-sm font-semibold"
-          >
-            <FireIcon className="w-4 h-4 text-rose-500" />
-            <span>{t('nav.burner_quick', '1-Hour Burner')}</span>
-          </button>
-
-          <button
-            onClick={() => setShowCreate((v) => !v)}
-            className="btn-primary py-2 px-3.5 text-xs shadow-sm font-semibold"
-          >
-            <PlusIcon className="w-4 h-4" />
-            <span>{t('aliases.new_btn', 'New Alias')}</span>
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={() => setShowCreate((v) => !v)}
+              className="btn-primary py-2 px-3.5 text-xs shadow-sm font-semibold"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span>{t('aliases.new_btn', 'New alias')}</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Create Alias Modal/Card */}
       {showCreate && (
-        <div className="card p-5 sm:p-6 border-indigo-200 dark:border-cyber-800 shadow-md animate-fade-in space-y-4">
+        <div className="card p-5 sm:p-6 border-brand-200 dark:border-cyber-800 shadow-md animate-fade-in space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <SparklesIcon className="w-4 h-4 text-indigo-500" />
+              <SparklesIcon className="w-4 h-4 text-brand-500" />
               <span>Generate New Email Alias</span>
             </h3>
             <button
@@ -267,7 +268,7 @@ export default function AliasesPage() {
                 onClick={() => setCreateCount(num)}
                 className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-colors ${
                   createCount === num
-                    ? 'border-indigo-600 dark:border-cyan-500 bg-indigo-50 dark:bg-cyan-950/60 text-indigo-700 dark:text-cyan-300'
+                    ? 'border-brand-600 dark:border-sky-500 bg-brand-50 dark:bg-sky-950/60 text-brand-700 dark:text-sky-300'
                     : 'border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-cyber-800'
                 }`}
               >
@@ -310,7 +311,7 @@ export default function AliasesPage() {
               onClick={() => setFilterActive(tab.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 filterActive === tab.id
-                  ? 'bg-indigo-600 dark:bg-cyan-600 text-white shadow-sm'
+                  ? 'bg-brand-700 dark:bg-sky-700 text-white shadow-sm'
                   : 'bg-white dark:bg-cyber-900 border border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-cyber-850'
               }`}
             >
@@ -342,8 +343,8 @@ export default function AliasesPage() {
 
       {/* Bulk Action Bar */}
       {selected.size > 0 && (
-        <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-cyber-850 border border-indigo-100 dark:border-cyber-700 flex items-center justify-between text-xs animate-fade-in shadow-sm">
-          <span className="font-semibold text-indigo-900 dark:text-cyan-300">
+        <div className="p-3 rounded-xl bg-brand-50/80 dark:bg-cyber-850 border border-brand-100 dark:border-cyber-700 flex items-center justify-between text-xs animate-fade-in shadow-sm">
+          <span className="font-semibold text-brand-900 dark:text-sky-300">
             {selected.size} {t('aliases.title', 'alias(es)')}
           </span>
           <div className="flex items-center gap-2">
@@ -390,7 +391,7 @@ export default function AliasesPage() {
           ))
         ) : filteredAliases.length === 0 ? (
           <div className="p-10 text-center space-y-3">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-indigo-100 dark:border-cyber-800">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-50 dark:bg-cyber-850 flex items-center justify-center text-2xl border border-brand-100 dark:border-cyber-800">
               ✉️
             </div>
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">
@@ -415,7 +416,7 @@ export default function AliasesPage() {
                 key={a.address}
                 className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
                   isSelected
-                    ? 'bg-indigo-50/70 dark:bg-cyber-850'
+                    ? 'bg-brand-50/70 dark:bg-cyber-850'
                     : 'hover:bg-slate-50/70 dark:hover:bg-cyber-850/50'
                 }`}
               >
@@ -432,7 +433,7 @@ export default function AliasesPage() {
                         return next;
                       });
                     }}
-                    className="rounded border-slate-300 dark:border-cyber-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1 sm:mt-0"
+                    className="rounded border-slate-300 dark:border-cyber-700 text-brand-600 focus:ring-brand-500 cursor-pointer mt-1 sm:mt-0"
                   />
 
                   {/* Status Indicator */}
@@ -448,11 +449,11 @@ export default function AliasesPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => handleCopy(a.address)}
-                        className="font-mono text-sm font-semibold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-cyan-400 truncate text-left transition-colors flex items-center gap-1.5"
+                        className="font-mono text-sm font-semibold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-sky-400 truncate text-left transition-colors flex items-center gap-1.5"
                         title="Click to copy address"
                       >
                         <span>{a.address}</span>
-                        <ClipboardDocumentIcon className="w-3.5 h-3.5 text-slate-400 hover:text-cyan-500 flex-shrink-0" />
+                        <ClipboardDocumentIcon className="w-3.5 h-3.5 text-slate-400 hover:text-sky-500 flex-shrink-0" />
                       </button>
 
                       {isBurner && (
@@ -511,7 +512,7 @@ export default function AliasesPage() {
                     className="btn-secondary py-1 px-2.5 text-xs font-semibold"
                     title="View emails for this alias"
                   >
-                    <InboxIcon className="w-3.5 h-3.5 text-indigo-500" />
+                    <InboxIcon className="w-3.5 h-3.5 text-brand-500" />
                     <span className="hidden md:inline">Inbox</span>
                   </Link>
 
@@ -522,7 +523,7 @@ export default function AliasesPage() {
                       setQrLoading(true);
                       setQrError(false);
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
                     title="QR Code"
                   >
                     <QrCodeIcon className="w-4 h-4" />
@@ -569,7 +570,7 @@ export default function AliasesPage() {
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-cyber-800 pb-3">
               <div className="text-left">
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <QrCodeIcon className="w-4 h-4 text-indigo-500" />
+                  <QrCodeIcon className="w-4 h-4 text-brand-500" />
                   Alias QR Code
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">Scan with your phone camera to compose or copy</p>
@@ -582,7 +583,7 @@ export default function AliasesPage() {
             <div className="p-4 bg-white rounded-xl inline-flex items-center justify-center shadow-sm relative min-w-[208px] min-h-[208px] mx-auto">
               {qrLoading && !qrError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 rounded-xl z-10">
-                  <ArrowPathIcon className="w-6 h-6 text-indigo-600 animate-spin" />
+                  <ArrowPathIcon className="w-6 h-6 text-brand-600 animate-spin" />
                   <span className="text-[11px] font-medium text-slate-600 mt-2">Generating QR...</span>
                 </div>
               )}
@@ -591,7 +592,7 @@ export default function AliasesPage() {
                   <p className="text-xs font-semibold mb-2">Failed to load QR code</p>
                   <button
                     onClick={() => { setQrError(false); setQrLoading(true); }}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 underline font-medium"
+                    className="text-xs text-brand-600 dark:text-brand-400 underline font-medium"
                   >
                     Tap to retry
                   </button>
@@ -615,7 +616,7 @@ export default function AliasesPage() {
                 onClick={() => { setQrFormat('mailto'); setQrLoading(true); setQrError(false); }}
                 className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   qrFormat === 'mailto'
-                    ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                    ? 'bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
@@ -626,7 +627,7 @@ export default function AliasesPage() {
                 onClick={() => { setQrFormat('plain'); setQrLoading(true); setQrError(false); }}
                 className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   qrFormat === 'plain'
-                    ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                    ? 'bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >

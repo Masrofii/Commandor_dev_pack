@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
@@ -22,12 +22,15 @@ import {
   TicketIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import { SUPPORTED_LANGUAGES, applyLanguage, getSavedLanguage, useTranslation } from '../../../lib/i18n';
+import { SUPPORTED_LANGUAGES, useTranslation } from '../../../lib/i18n';
+import { useTheme } from '../../../hooks/useTheme';
 import VoucherRedeemCard from '../../../components/VoucherRedeemCard';
+import LanguageBadge from '../../../components/LanguageBadge';
+import PageHeader, { PageTab } from '../../../components/PageHeader';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('preferences'); // 'preferences' | 'logs'
-  const [theme, setTheme] = useState('system');
+  const { mode: theme, setMode: setThemeMode } = useTheme();
   const { t, lang, setLanguage, languages } = useTranslation();
 
   // Audit Logs State
@@ -45,82 +48,43 @@ export default function SettingsPage() {
 
   const logs = auditData?.logs || [];
 
-  useEffect(() => {
-    setTheme(localStorage.getItem('theme') || 'system');
-  }, []);
-
-  function changeTheme(tMode) {
-    setTheme(tMode);
-    localStorage.setItem('theme', tMode);
-    const r = document.documentElement;
-    if (tMode === 'dark') {
-      r.classList.add('dark');
-    } else if (tMode === 'light') {
-      r.classList.remove('dark');
-    } else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        r.classList.add('dark');
-      } else {
-        r.classList.remove('dark');
-      }
-    }
-    toast.success(`Theme updated to ${tMode}`);
-  }
-
   function changeLanguage(item) {
     setLanguage(item.id);
     api.updateProfile({ language: item.id }).catch(() => {});
-    toast.success(`Language set to ${item.flag} ${item.native}`);
+    toast.success(`Language set to ${item.native}`);
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 pb-24 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {t('settings.title', 'Settings & Audit Logs')}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('settings.subtitle', 'Customize platform appearance, language preferences, sessions, and review immutable system audit logs.')}
-          </p>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="flex items-center p-1 bg-slate-100 dark:bg-cyber-900 rounded-xl border border-slate-200 dark:border-cyber-800 text-xs font-semibold overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('preferences')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-              activeTab === 'preferences'
-                ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            {t('settings.tab_preferences', 'Preferences & Security')}
-          </button>
-          <button
-            onClick={() => setActiveTab('subscription')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'subscription'
-                ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <TicketIcon className="w-3.5 h-3.5" />
-            <span>{t('voucher.title', 'Subscription & Vouchers')}</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('logs')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'logs'
-                ? 'bg-white dark:bg-cyber-800 text-indigo-700 dark:text-cyan-400 shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <DocumentTextIcon className="w-3.5 h-3.5" />
-            <span>{t('settings.tab_logs', 'Audit Trail')}</span>
-          </button>
-        </div>
-      </div>
+    <div className="page-container max-w-6xl space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('settings.eyebrow', 'Workspace')}
+          </>
+        }
+        title={t('settings.title', 'Settings & Audit Logs')}
+        description={t('settings.subtitle', 'Customize platform appearance, language preferences, sessions, and review immutable system audit logs.')}
+        tabs={
+          <>
+            <PageTab active={activeTab === 'preferences'} onClick={() => setActiveTab('preferences')}>
+              {t('settings.tab_preferences', 'Preferences & Security')}
+            </PageTab>
+            <PageTab active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')}>
+              <span className="inline-flex items-center gap-1.5">
+                <TicketIcon className="h-3.5 w-3.5" />
+                {t('voucher.title', 'Subscription & Vouchers')}
+              </span>
+            </PageTab>
+            <PageTab active={activeTab === 'logs'} onClick={() => setActiveTab('logs')}>
+              <span className="inline-flex items-center gap-1.5">
+                <DocumentTextIcon className="h-3.5 w-3.5" />
+                {t('settings.tab_logs', 'Audit Trail')}
+              </span>
+            </PageTab>
+          </>
+        }
+      />
 
       {activeTab === 'preferences' ? (
         <div className="space-y-6">
@@ -128,7 +92,7 @@ export default function SettingsPage() {
           <div className="card p-5 sm:p-6 space-y-4">
             <div>
               <h2 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                <SunIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+                <SunIcon className="w-4 h-4 text-brand-600 dark:text-sky-400" />
                 <span>{t('settings.theme_title', 'Theme & Visual Mode')}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -147,10 +111,13 @@ export default function SettingsPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => changeTheme(item.id)}
+                    onClick={() => {
+                      setThemeMode(item.id);
+                      toast.success(`Theme updated to ${item.id}`);
+                    }}
                     className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${
                       active
-                        ? 'border-indigo-600 dark:border-cyan-500 bg-indigo-50/50 dark:bg-cyber-850 text-indigo-700 dark:text-cyan-400 font-semibold shadow-xs'
+                        ? 'border-brand-600 dark:border-sky-500 bg-brand-50/50 dark:bg-cyber-850 text-brand-700 dark:text-sky-400 font-semibold shadow-xs'
                         : 'border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-cyber-700'
                     }`}
                   >
@@ -166,7 +133,7 @@ export default function SettingsPage() {
           <div className="card p-5 sm:p-6 space-y-4">
             <div>
               <h2 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                <LanguageIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+                <LanguageIcon className="w-4 h-4 text-brand-600 dark:text-sky-400" />
                 <span>{t('settings.language_title', 'Interface Language')}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -183,16 +150,16 @@ export default function SettingsPage() {
                     onClick={() => changeLanguage(item)}
                     className={`py-3 px-3 rounded-xl border text-xs font-semibold transition-all flex items-center justify-between gap-2 ${
                       active
-                        ? 'border-indigo-600 dark:border-cyan-500 bg-indigo-50/50 dark:bg-cyber-850 text-indigo-700 dark:text-cyan-400 shadow-xs ring-1 ring-cyan-500/20'
+                        ? 'border-brand-600 dark:border-sky-500 bg-brand-50/50 dark:bg-cyber-850 text-brand-700 dark:text-sky-400 shadow-xs ring-1 ring-sky-500/20'
                         : 'border-slate-200 dark:border-cyber-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-cyber-700 hover:bg-slate-50/50 dark:hover:bg-cyber-800/40'
                     }`}
                   >
                     <span className="flex items-center gap-1.5 truncate">
-                      <span className="text-base">{item.flag}</span>
+                      <LanguageBadge id={item.id} />
                       <span className="font-bold">{item.native}</span>
                     </span>
                     {active && (
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0 animate-pulse" />
                     )}
                   </button>
                 );
@@ -235,7 +202,7 @@ export default function SettingsPage() {
           <div className="card p-5 sm:p-6 space-y-4">
             <div>
               <h2 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                <CommandLineIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+                <CommandLineIcon className="w-4 h-4 text-brand-600 dark:text-sky-400" />
                 <span>Telegram Bot Integration</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -248,7 +215,7 @@ export default function SettingsPage() {
                 <div className="font-bold text-xs text-slate-900 dark:text-white">
                   Official Commandor Dev Pack Bot
                 </div>
-                <div className="text-xs text-cyan-600 dark:text-cyan-400 font-mono mt-0.5">
+                <div className="text-xs text-sky-600 dark:text-sky-400 font-mono mt-0.5">
                   @{process.env.NEXT_PUBLIC_BOT_USERNAME || 'CommandorDevBot'}
                 </div>
               </div>
@@ -266,24 +233,24 @@ export default function SettingsPage() {
               <p className="font-semibold text-slate-700 dark:text-slate-300">Quick Bot Commands:</p>
               <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
                 <div className="bg-white dark:bg-cyber-900 p-2 rounded-lg border border-slate-200 dark:border-cyber-800">
-                  <span className="text-indigo-600 dark:text-cyan-400 font-bold">/new</span> — Instant alias
+                  <span className="text-brand-600 dark:text-sky-400 font-bold">/new</span> — Instant alias
                 </div>
                 <div className="bg-white dark:bg-cyber-900 p-2 rounded-lg border border-slate-200 dark:border-cyber-800">
                   <span className="text-rose-500 font-bold">/burner</span> — 1-hour email
                 </div>
                 <div className="bg-white dark:bg-cyber-900 p-2 rounded-lg border border-slate-200 dark:border-cyber-800">
-                  <span className="text-indigo-600 dark:text-cyan-400 font-bold">/inbox</span> — Check mail &amp; codes
+                  <span className="text-brand-600 dark:text-sky-400 font-bold">/inbox</span> — Check mail &amp; codes
                 </div>
                 <div className="bg-white dark:bg-cyber-900 p-2 rounded-lg border border-slate-200 dark:border-cyber-800">
-                  <span className="text-indigo-600 dark:text-cyan-400 font-bold">/login</span> — Web login link
+                  <span className="text-brand-600 dark:text-sky-400 font-bold">/login</span> — Web login link
                 </div>
               </div>
             </div>
           </div>
 
           {/* Progressive Web App Card */}
-          <div className="card p-5 sm:p-6 bg-gradient-to-r from-indigo-50/50 to-cyan-50/50 dark:from-cyber-900 dark:to-cyber-850 border-indigo-100 dark:border-cyber-800 flex items-start gap-3.5">
-            <div className="p-2 rounded-xl bg-indigo-600 text-white flex-shrink-0">
+          <div className="card p-5 sm:p-6 bg-gradient-to-r from-brand-50/50 to-sky-50/50 dark:from-cyber-900 dark:to-cyber-850 border-brand-100 dark:border-cyber-800 flex items-start gap-3.5">
+            <div className="p-2 rounded-xl bg-brand-600 text-white flex-shrink-0">
               <DevicePhoneMobileIcon className="w-5 h-5" />
             </div>
             <div>
@@ -376,7 +343,7 @@ export default function SettingsPage() {
                             {l.category || 'general'}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 font-bold text-indigo-600 dark:text-cyan-400">
+                        <td className="py-2.5 px-3 font-bold text-brand-600 dark:text-sky-400">
                           {l.action}
                         </td>
                         <td className="py-2.5 px-4 text-slate-700 dark:text-slate-300 max-w-md truncate">

@@ -5,6 +5,13 @@ function getWsUrl(){
   if(process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
   if(typeof window!=='undefined'){
     const proto=window.location.protocol==='https:'?'wss:':'ws:';
+    const local=window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1';
+    // `next dev` runs on 3001 while the API + WebSocket server runs on 3000.
+    // Next.js rewrites do not proxy WebSocket upgrades, so target the backend
+    // directly when developing locally on a different port.
+    if(local&&window.location.port&&window.location.port!=='3000'){
+      return `${proto}//${window.location.hostname}:3000`;
+    }
     return `${proto}//${window.location.host}`;
   }
   return 'ws://localhost:3000';

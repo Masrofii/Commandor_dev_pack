@@ -7,6 +7,7 @@ import { isAdmin } from '../../../lib/auth';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
 import InfrastructureTopologyMap from '../../../components/InfrastructureTopologyMap';
+import PageHeader from '../../../components/PageHeader';
 import {
   SignalIcon,
   CpuChipIcon,
@@ -49,27 +50,26 @@ export default function MonitoringPage() {
   const events = overview?.recentEvents || [];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 pb-20">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <SignalIcon className="w-8 h-8 text-indigo-600 dark:text-cyan-400" />
-            <span>{t('monitoring.title', 'Infrastructure Monitoring & Telemetry')}</span>
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {t('monitoring.subtitle', 'Real-time host metrics, cluster node availability, container health, and platform activity.')}
-          </p>
-        </div>
-
-        <button
-          onClick={() => mutate()}
-          className="btn-secondary py-1.5 px-3.5 text-xs font-semibold flex items-center gap-1.5 self-start"
-        >
-          <ArrowPathIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>{t('monitoring.refresh_btn', 'Refresh Metrics')}</span>
-        </button>
-      </div>
+    <div className="page-container space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('monitoring.eyebrow', 'Operations')}
+          </>
+        }
+        title={t('monitoring.title', 'Infrastructure Monitoring & Telemetry')}
+        description={t('monitoring.subtitle', 'Real-time host metrics, cluster node availability, container health, and platform activity.')}
+        actions={
+          <button
+            onClick={() => mutate()}
+            className="btn-secondary py-1.5 px-3.5 text-xs font-semibold flex items-center gap-1.5"
+          >
+            <ArrowPathIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>{t('monitoring.refresh_btn', 'Refresh metrics')}</span>
+          </button>
+        }
+      />
 
       {/* Resource-Capacity Warnings Banner */}
       {overview?.capacityWarnings && overview.capacityWarnings.length > 0 && (
@@ -82,7 +82,7 @@ export default function MonitoringPage() {
             {overview.capacityWarnings.map((w, idx) => (
               <div key={idx} className="flex items-center gap-2 font-mono text-[11px]">
                 <span className={`px-1.5 py-0.5 rounded uppercase font-bold text-[9px] ${
-                  w.level === 'critical' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'
+                  w.level === 'critical' ? 'bg-rose-700 text-white' : 'bg-amber-200 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200'
                 }`}>
                   {w.level}
                 </span>
@@ -102,7 +102,7 @@ export default function MonitoringPage() {
         <div className="card p-5 space-y-2">
           <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
             <span className="flex items-center gap-1.5">
-              <CpuChipIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+              <CpuChipIcon className="w-4 h-4 text-brand-600 dark:text-sky-400" />
               <span>{t('monitoring.cpu_usage', 'CPU Load')}</span>
             </span>
             <span className="font-mono text-[11px]">{host.cpuCount ? `${host.cpuCount} Cores` : '...'}</span>
@@ -119,7 +119,7 @@ export default function MonitoringPage() {
         <div className="card p-5 space-y-2">
           <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
             <span className="flex items-center gap-1.5">
-              <CircleStackIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <CircleStackIcon className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <span>{t('monitoring.memory_usage', 'Memory Usage')}</span>
             </span>
             <span className="font-mono text-[11px]">{host.memory?.usagePercent || 0}% used</span>
@@ -129,7 +129,7 @@ export default function MonitoringPage() {
           </div>
           <div className="w-full bg-slate-100 dark:bg-cyber-850 h-1.5 rounded-full overflow-hidden">
             <div
-              className="bg-indigo-600 dark:bg-cyan-500 h-full rounded-full transition-all"
+              className="bg-brand-600 dark:bg-sky-500 h-full rounded-full transition-all"
               style={{ width: `${host.memory?.usagePercent || 0}%` }}
             />
           </div>
@@ -179,7 +179,7 @@ export default function MonitoringPage() {
         <div className="card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <ServerStackIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+              <ServerStackIcon className="w-4 h-4 text-brand-600 dark:text-sky-400" />
               <span>Compute Nodes ({nodes.total || 0})</span>
             </h3>
             <span className="badge-cyan text-[10px] font-mono font-bold">Cluster</span>
@@ -204,7 +204,7 @@ export default function MonitoringPage() {
         <div className="card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <CommandLineIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <CommandLineIcon className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <span>Applications ({apps.total || 0})</span>
             </h3>
             <span className="badge-cyan text-[10px] font-mono font-bold">Services</span>
@@ -229,18 +229,18 @@ export default function MonitoringPage() {
         <div className="card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <GlobeAltIcon className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+              <GlobeAltIcon className="w-4 h-4 text-brand-600 dark:text-sky-400" />
               <span>Routing &amp; HTTPS</span>
             </h3>
             <span className="badge-cyan text-[10px] font-mono font-bold">Ingress</span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-cyan-950/40 border border-indigo-200 dark:border-cyan-800">
-              <div className="font-bold text-base text-indigo-600 dark:text-cyan-400">{domains.total || 0}</div>
+            <div className="p-2.5 rounded-xl bg-brand-50 dark:bg-sky-950/40 border border-brand-200 dark:border-sky-800">
+              <div className="font-bold text-base text-brand-600 dark:text-sky-400">{domains.total || 0}</div>
               <div className="text-[10px] text-slate-500 mt-0.5">Root Domains</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-cyan-950/40 border border-indigo-200 dark:border-cyan-800">
-              <div className="font-bold text-base text-indigo-600 dark:text-cyan-400">{subdomains.proxyActive || 0}</div>
+            <div className="p-2.5 rounded-xl bg-brand-50 dark:bg-sky-950/40 border border-brand-200 dark:border-sky-800">
+              <div className="font-bold text-base text-brand-600 dark:text-sky-400">{subdomains.proxyActive || 0}</div>
               <div className="text-[10px] text-slate-500 mt-0.5">Active Routes</div>
             </div>
             <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
@@ -269,7 +269,7 @@ export default function MonitoringPage() {
                   <div className="space-y-0.5">
                     <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <span>{d.application_name}</span>
-                      <code className="text-[10px] text-indigo-600 dark:text-cyan-400 font-bold">{d.commit_hash}</code>
+                      <code className="text-[10px] text-brand-600 dark:text-sky-400 font-bold">{d.commit_hash}</code>
                     </div>
                     <div className="text-[11px] text-slate-400 font-mono">
                       {d.duration_ms}ms runtime • {formatTimeAgo(d.created_at)}

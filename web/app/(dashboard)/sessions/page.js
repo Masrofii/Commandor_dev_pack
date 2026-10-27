@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { formatTimeAgo } from '../../../lib/helpers';
 import { useTranslation } from '../../../lib/i18n';
+import PageHeader from '../../../components/PageHeader';
 import {
   ComputerDesktopIcon,
   DevicePhoneMobileIcon,
@@ -40,27 +41,28 @@ export default function SessionsPage() {
   const sessions = data || [];
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {t('sessions.title', 'Active Sessions')}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('sessions.subtitle', 'Manage web sessions and logged-in devices across all platforms')}
-          </p>
-        </div>
-
-        {sessions.length > 1 && (
-          <button
-            onClick={revokeAll}
-            className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
-          >
-            <ArrowRightOnRectangleIcon className="w-4 h-4 text-rose-500 rtl:rotate-180" />
-            <span>{t('sessions.terminate_all_btn', 'Sign Out All Other Devices')}</span>
-          </button>
-        )}
-      </div>
+    <div className="page-container max-w-4xl space-y-6">
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+            {t('sessions.eyebrow', 'Access')}
+          </>
+        }
+        title={t('sessions.title', 'Active Sessions')}
+        description={t('sessions.subtitle', 'Manage web sessions and logged-in devices across all platforms')}
+        actions={
+          sessions.length > 1 ? (
+            <button
+              onClick={revokeAll}
+              className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
+            >
+              <ArrowRightOnRectangleIcon className="w-4 h-4 text-rose-500 rtl:rotate-180" />
+              <span>{t('sessions.terminate_all_btn', 'Sign out all other devices')}</span>
+            </button>
+          ) : null
+        }
+      />
 
       <div className="card overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
         {isLoading ? (
