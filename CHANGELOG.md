@@ -5,7 +5,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [Unreleased] - 2026-10-26
+## [Unreleased] - 2026-10-27
+
+### Added
+- **Cloudflare-Inspired Dashboard Shell**: Rebuilt the dashboard chrome with a grouped sidebar, account bar, global search trigger, breadcrumb header, recent pages, live WebSocket indicator, and a responsive mobile drawer.
+- **Keyboard Command Palette**: Added `Ctrl/Cmd+K` navigation and quick-action search with grouped results, arrow-key traversal, and direct route shortcuts.
+- **Unified Theme Controls**: Added persisted `system` / `light` / `dark` themes with live system-preference tracking, shared theme events, and matching browser theme colors.
+- **Shared Page Headers**: Introduced reusable `PageHeader` and `PageTab` components for consistent eyebrow labels, descriptions, action bars, tab counts, and responsive tab wrapping.
+- **Self-Hosted Typography**: Bundled Inter Variable for body copy and Ubuntu for display headings, eliminating runtime font dependencies.
+- **Brand Identity**: Added the Commandor brand mark, favicon/app icon, application metadata, and Apple web-app settings.
+- **Language Badges**: Replaced platform-dependent country-flag emoji with deterministic language-code badges in the language picker and navigation.
+- **Dashboard Home Upgrade**: Added compact operational metrics, domain inventory, analytics, onboarding checklist, and system-health panels.
+- **Hosting Overview**: Added hosted-site, visitor-hit, storage, and security summary metrics plus richer site cards and plan cards with current-plan highlighting.
+- **Admin Console Refresh**: Reworked the admin overview, stats, storage, users, vouchers, email feed, subdomain, hosting, security, broadcast, and audit-log tabs.
+- **Automatic Cloudflare DNS**: Claimed subdomains now receive proxied Cloudflare `A` records when `CLOUDFLARE_API_TOKEN` is configured, records are cleaned up on deletion, and Cloudflare SSL status is shown in the bot.
+- **Proxy Stream Resilience**: Increased the proxied-request timeout to five minutes and abort upstream streams when the client disconnects.
+
+### Changed
+- **Design System**: Adopted warm neutral `cf` surfaces, Cloudflare orange accents, flatter cards, refined tables, new shadows, motion tokens, and consistent surface styling across all dashboard routes.
+- **Application Shell**: Standardized dashboard, authentication, admin, and error pages on the new typography, spacing, focus, and surface system.
+- **Settings**: Migrated appearance controls to the shared theme hook and refreshed language, security, session, and Telegram integration sections.
+- **Navigation**: Added admin and recent-page discovery, improved active states, and corrected breadcrumbs and document titles.
+- **Accessibility**: Added visible focus rings, reduced-motion handling, RTL safeguards, semantic tab labels, and contrast-safe foreground tokens in both themes.
+- **Responsive Layout**: Reworked pages for desktop, tablet, and 390px mobile widths with consistent containers and no horizontal page overflow.
+- **Local Development**: WebSocket connections now fall back to the local API port when the dashboard runs on an alternate local port.
+- **English Copy**: Refreshed dashboard labels, descriptions, and empty states while keeping all 12 locale catalogs at 626 keys.
+
+### Fixed
+- Fixed the dashboard root-domain inventory to use the domain list API with deduplication and fallback handling.
+- Fixed the inbox message pane height against the fixed dashboard header.
+- Fixed duplicate admin toolbar labels so database optimization and refresh actions are distinct.
+- Fixed admin tab overflow at 1440px while preserving wrapping on smaller screens.
+- Fixed raw emoji rendering in hosting plan and security tabs.
+- Fixed theme persistence and system-theme synchronization across settings and dashboard chrome.
+- Fixed mojibake across frontend pages and removed remaining legacy indigo, cyan, and gray styling remnants.
+- Fixed country-flag rendering on Windows by switching to language-code badges.
+
+## [1.0.0] - 2026-10-26
 
 ### Added
 - **Local Administrator Login**: Optional bcrypt-backed username/password sign-in (`/api/auth/local/login`) with automatic admin bootstrap, login rate limiting, audit logging, and a Telegram-free dashboard login form.
