@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Added HTTPS-upstream SNI (`proxy_ssl_server_name`/`proxy_ssl_name`) and default `:443` to generated Nginx configs.
 - Pre-restore safety snapshots use millisecond timestamps, preventing filename collisions.
 - Clarified in the dashboard that restoring a full archive applies only its database, not Nginx routes or configuration files.
+- Fixed configuration validation test environment isolation when a local `.env` exists on the host filesystem.
 
 ### Changed
 - Upgraded `better-sqlite3` to `^13.0.0` for Node 22/24 compatibility.

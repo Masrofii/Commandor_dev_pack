@@ -1,5 +1,5 @@
 'use strict';
-require('dotenv').config();
+require('dotenv').config({ path: process.env.DOTENV_CONFIG_PATH });
 
 const os = require('os');
 const pkg = require('../package.json');

@@ -27,10 +27,11 @@ function loadConfig(overrides = {}) {
     'NODE_ENV', 'SESSION_SECRET', 'JWT_SECRET', 'ENCRYPTION_KEY',
     'TELEGRAM_BOT_TOKEN', 'LOCAL_AUTH_ENABLED', 'LOCAL_ADMIN_PASSWORD',
     'DOMAINS', 'DEFAULT_DOMAIN', 'INCOMING_SECRET', 'APP_RUNNER',
-    'APP_ALLOW_USER_DEPLOYMENTS', 'ALLOW_PRIVATE_OUTBOUND'
+    'APP_ALLOW_USER_DEPLOYMENTS', 'ALLOW_PRIVATE_OUTBOUND', 'DOTENV_CONFIG_PATH'
   ]) {
     delete env[key];
   }
+  env.DOTENV_CONFIG_PATH = process.platform === 'win32' ? 'NUL' : '/dev/null';
   Object.assign(env, overrides);
 
   const result = spawnSync(process.execPath, ['-e', SCRIPT], {
