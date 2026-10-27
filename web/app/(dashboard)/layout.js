@@ -542,14 +542,14 @@ export default function DashboardLayout({ children }) {
       {mobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 cursor-default bg-cf-950/45 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-40 cursor-default bg-slate-950/60 dark:bg-black/75 backdrop-blur-xs lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 start-0 z-50 flex w-[268px] flex-col border-e border-cf-200 bg-cf-sidebar transition-[width,transform] duration-200 ease-out dark:border-cyber-800 dark:bg-cyber-900 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 start-0 z-50 flex w-[268px] flex-col border-e border-cf-200 bg-white dark:bg-cyber-900 shadow-2xl lg:shadow-none transition-[width,transform] duration-200 ease-out dark:border-cyber-800 lg:static lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : 'max-lg:-translate-x-full max-lg:rtl:translate-x-full'
         } ${collapsed ? 'lg:w-[72px]' : 'lg:w-[248px]'}`}
         aria-label="Primary navigation"

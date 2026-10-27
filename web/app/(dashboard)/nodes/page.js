@@ -871,6 +871,7 @@ export default function NodesPage() {
             const isStale = node.is_stale || (isOnline && (!node.last_ping_at || (Date.now() - new Date(node.last_ping_at.includes('T') ? node.last_ping_at : node.last_ping_at.replace(' ', 'T') + 'Z').getTime() > 15 * 60 * 1000)));
             const sys = node.system_info || {};
             const isSftpStorage = Boolean(sys.sftpOnly || node.sftp_only);
+            const isFtpOnly = Boolean(sys.ftpOnly || node.ftp_only || node.auth_method === 'ftp');
             const ramTotal = parseNodeRamMb(node);
             const ramUsed = Number(sys.ramUsedMb) || 0;
             const ramPercent = ramTotal > 0 ? Math.min(100, Math.round((ramUsed / ramTotal) * 100)) : 0;
@@ -946,11 +947,11 @@ export default function NodesPage() {
                       ))}
 
                       {/* Protocol Badge */}
-                      {sys.sftpOnly || node.sftp_only ? (
+                      {isSftpStorage ? (
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-mono font-bold flex items-center gap-1">
                           🔒 SFTP Node
                         </span>
-                      ) : sys.ftpOnly || node.ftp_only || node.auth_method === 'ftp' ? (
+                      ) : isFtpOnly ? (
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-bold flex items-center gap-1">
                           📁 FTP Node
                         </span>
@@ -961,22 +962,24 @@ export default function NodesPage() {
                       )}
 
                       {/* FTP & SFTP Status Badges */}
-                      {node.ftp_status === 'online' ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono font-bold flex items-center gap-1">
-                          <BoltIcon className="w-3 h-3 text-emerald-500" />
-                          FTP: {node.ftp_port || 21}
-                        </span>
-                      ) : node.ftp_status === 'stopped' ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-medium flex items-center gap-1">
-                          <StopIcon className="w-3 h-3 text-amber-500" />
-                          FTP: Stopped
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-cyber-850 text-slate-500 dark:text-slate-400 font-mono">
-                          FTP: Not Installed
-                        </span>
+                      {!isSftpStorage && (
+                        node.ftp_status === 'online' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono font-bold flex items-center gap-1">
+                            <BoltIcon className="w-3 h-3 text-emerald-500" />
+                            FTP: {node.ftp_port || 21}
+                          </span>
+                        ) : node.ftp_status === 'stopped' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-medium flex items-center gap-1">
+                            <StopIcon className="w-3 h-3 text-amber-500" />
+                            FTP: Stopped
+                          </span>
+                        ) : (isFtpOnly || node.ftp_enabled) ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-cyber-850 text-slate-500 dark:text-slate-400 font-mono">
+                            FTP: Offline
+                          </span>
+                        ) : null
                       )}
-                      {node.sftp_enabled !== false && (
+                      {!isFtpOnly && node.sftp_enabled !== false && (
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 font-mono">
                           SFTP: {node.port || 22}
                         </span>
@@ -986,6 +989,16 @@ export default function NodesPage() {
 
                   {/* Top Action Buttons */}
                   <div className="flex items-center gap-1">
+                    {!isSftpStorage && !isFtpOnly && (
+                      <button
+                        onClick={() => handleProvision(node)}
+                        disabled={isProvisioning}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-cyber-800 transition-colors"
+                        title="Provision Node Daemon"
+                      >
+                        <WrenchScrewdriverIcon className={`w-4 h-4 ${isProvisioning ? 'animate-spin text-brand-500' : ''}`} />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleToggleActive(node)}
                       className={`p-1.5 rounded-lg transition-colors ${
@@ -1050,10 +1063,10 @@ export default function NodesPage() {
                       <CpuChipIcon className="w-3.5 h-3.5 text-brand-500" />
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white">
-                      {isSftpStorage ? 'SFTP Only' : `${sys.cpus || 1} vCPU`}
+                      {isSftpStorage ? 'SFTP Only' : isFtpOnly ? 'FTP Only' : `${sys.cpus || 1} vCPU`}
                     </div>
                     <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                      {isSftpStorage ? 'Storage Subsystem' : `Load: ${sys.loadAvg || '0.00'}`}
+                      {isSftpStorage ? 'Storage Subsystem' : isFtpOnly ? 'File Storage' : `Load: ${sys.loadAvg || '0.00'}`}
                     </div>
                   </div>
 
@@ -1064,7 +1077,7 @@ export default function NodesPage() {
                       <CircleStackIcon className="w-3.5 h-3.5 text-sky-500" />
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between gap-1">
-                      <span>{isSftpStorage ? 'Storage Node' : formatMemoryMb(ramTotal)}</span>
+                      <span>{isSftpStorage ? 'Storage Node' : isFtpOnly ? 'FTP Daemon' : ramTotal > 0 ? formatMemoryMb(ramTotal) : 'N/A'}</span>
                       {sys.containerLimitMb && sys.containerLimitMb < ramTotal && (
                         <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-950/80 text-brand-700 dark:text-sky-400 border border-brand-200/50 dark:border-brand-800/50" title={`Container limit: ${formatMemoryMb(sys.containerLimitMb)}`}>
                           cgroup: {formatMemoryMb(sys.containerLimitMb)}
@@ -1074,6 +1087,10 @@ export default function NodesPage() {
                     {isSftpStorage ? (
                       <div className="text-[10px] text-purple-600 dark:text-purple-400 font-medium truncate mt-0.5">
                         SFTP Storage
+                      </div>
+                    ) : isFtpOnly ? (
+                      <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium truncate mt-0.5">
+                        Standard FTP
                       </div>
                     ) : ramUsed > 0 ? (
                       <div>
@@ -1090,19 +1107,26 @@ export default function NodesPage() {
                       </div>
                     ) : (
                       <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                        Free: {sys.ramAvailableMb || sys.ramFreeMb ? formatMemoryMb(sys.ramAvailableMb || sys.ramFreeMb) : 'Ready'}
+                        {ramTotal > 0
+                          ? (sys.ramAvailableMb || sys.ramFreeMb ? `Free: ${formatMemoryMb(sys.ramAvailableMb || sys.ramFreeMb)}` : 'Ready')
+                          : 'Shared / Restricted'}
                       </div>
                     )}
                   </div>
 
                   {/* Capacity / Disk Box */}
-                  <div className="p-2.5 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800">
+                  <div
+                    onClick={() => handleInspectSites(node)}
+                    className="p-2.5 bg-slate-50 dark:bg-cyber-850 rounded-xl border border-slate-200/70 dark:border-cyber-800 hover:border-brand-400 dark:hover:border-cyber-600 cursor-pointer transition-all group/sites"
+                    title="Click to view hosted sites"
+                  >
                     <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase mb-1">
-                      <span>Sites</span>
+                      <span className="group-hover/sites:text-brand-600 transition-colors">Sites</span>
                       <GlobeAltIcon className="w-3.5 h-3.5 text-emerald-500" />
                     </div>
-                    <div className="font-bold text-slate-900 dark:text-white">
-                      {node.current_sites || 0} / {node.max_sites || 50}
+                    <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                      <span>{node.current_sites || 0} / {node.max_sites || 50}</span>
+                      <span className="text-[10px] text-brand-600 dark:text-brand-400 opacity-0 group-hover/sites:opacity-100 transition-opacity font-normal">View →</span>
                     </div>
                     <div className="text-[10px] text-slate-500 truncate mt-0.5">
                       Disk: {sys.freeDisk || sys.diskFree || 'N/A'}
@@ -1110,45 +1134,36 @@ export default function NodesPage() {
                   </div>
                 </div>
 
-                {/* Status Footer and Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-cyber-800 text-xs">
-                  <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                    <ClockIcon className="w-3.5 h-3.5" />
-                    <span>Pinged {node.last_ping_at ? formatTimeAgo(node.last_ping_at) : 'never'}</span>
+                {/* Grounded Card Footer Bar */}
+                <div className="-mx-5 -mb-5 mt-3 px-4 py-2.5 bg-cf-50/80 dark:bg-cyber-900 border-t border-cf-200 dark:border-cyber-800 rounded-b-xl flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 min-w-0">
+                    <ClockIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">Pinged {node.last_ping_at ? formatTimeAgo(node.last_ping_at) : 'never'}</span>
                     {sys.latencyMs !== undefined && (
-                      <span className="font-mono text-emerald-500 font-medium">({sys.latencyMs}ms)</span>
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
+                        ({sys.latencyMs}ms)
+                      </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleProvision(node)}
-                      disabled={isProvisioning}
-                      className="btn-secondary py-1 px-2 text-xs text-slate-600 dark:text-slate-300 hover:text-brand-600"
-                      title="Provision Node Daemon"
-                    >
-                      <WrenchScrewdriverIcon className={`w-3.5 h-3.5 ${isProvisioning ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button
-                      onClick={() => handleInspectSites(node)}
-                      className="btn-secondary py-1 px-2.5 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800"
-                    >
-                      <span>Sites ({node.current_sites || 0})</span>
-                    </button>
-                    <button
-                      onClick={() => handleOpenTerminal(node)}
-                      className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <CommandLineIcon className="w-3.5 h-3.5 text-brand-500" />
-                      <span>SSH Terminal</span>
-                    </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!isSftpStorage && !isFtpOnly && (
+                      <button
+                        onClick={() => handleOpenTerminal(node)}
+                        className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5 shadow-xs hover:border-brand-500 hover:text-brand-600 transition-all"
+                        title="Open SSH Web Terminal"
+                      >
+                        <CommandLineIcon className="w-3.5 h-3.5 text-brand-500" />
+                        <span>SSH Terminal</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => handleOpenFtpModal(node)}
-                      className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
-                      title="Manage FTP & SFTP service and user accounts"
+                      className="btn-secondary py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-xs"
+                      title="Manage Files, FTP & SFTP Users"
                     >
                       <FolderArrowDownIcon className="w-3.5 h-3.5" />
-                      <span>FTP & SFTP</span>
+                      <span>{isSftpStorage ? 'SFTP Files' : isFtpOnly ? 'FTP Files' : 'Files & FTP'}</span>
                     </button>
                   </div>
                 </div>

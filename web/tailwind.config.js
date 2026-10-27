@@ -24,6 +24,7 @@ module.exports = {
         cf: {
           bg: '#f7f7f5',
           surface: '#ffffff',
+          sidebar: '#ffffff',
           ink: '#1c1c19',
           muted: '#64645e',
           50: '#fafaf9',
